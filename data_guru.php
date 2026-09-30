@@ -15,18 +15,30 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
 <html>
     <head>
         <title>Data guru</title>
+        <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
     </head>
 
-    <body>
-        <h2>Data Guru</h2>
+    <body class="bg-light">
 
-        <a class="tambah" href="tambah_guru.php">
-        + Tambah Guru </a>
+    <div class="container py-4">
 
-        <br><br>
+    <div class="card shadow-sm">
 
-        <table border="1" cellpadding="10" cellspacing="0">
+        <div class="card-body">
 
+        <h2 class="mb-3">Data Guru</h2>
+
+        <a href="tambah_siswa.php" class="btn btn-primary mb-3">
+                + Tambah Siswa
+            </a>
+
+        <div class="table-responsive">
+
+                <table class="table table-bordered table-striped table-hover">
+    <thead class="table-dark">
         <tr>
             <th>No</th>
             <th>NIP</th>
@@ -35,6 +47,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
             <th>Status</th>
             <th>Aksi</th>
         </tr>
+    </thead>
 
         <?php
         $no = 1;
