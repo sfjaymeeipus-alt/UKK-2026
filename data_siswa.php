@@ -14,14 +14,18 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id DESC");
 
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Data Siswa</title>
-        <link
+
+<head>
+
+    <title>Data Siswa</title>
+
+    <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet">
 
-    </head>
-    <body class="bg-light">
+</head>
+
+<body class="bg-light">
 
 <div class="container py-4">
 
@@ -40,7 +44,9 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id DESC");
                 <table class="table table-bordered table-striped table-hover">
 
                     <thead class="table-dark">
+
                         <tr>
+
                             <th>No</th>
                             <th>NIS</th>
                             <th>NISN</th>
@@ -50,56 +56,116 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id DESC");
                             <th>Alamat</th>
                             <th>Status</th>
                             <th>Aksi</th>
+
                         </tr>
+
                     </thead>
 
-    <?php
-    $no = 1;
-    while ($data = mysqli_fetch_assoc($query)) {
-    ?>
+                    <tbody>
 
-    <tr>
+                    <?php
 
-    <td><?= $no++ ?></td>
-    <td><?= $data['nis']; ?></td>
-    <td><?= $data['nisn']; ?></td>
-    <td><?= $data['nama']; ?></td>
-    <td><?= $data['jenis_kelamin']; ?></td>
-    <td><?= $data['tanggal_lahir']; ?></td>
-    <td><?= $data['alamat']; ?></td>
+                    $no = 1;
 
-    <td>
+                    while ($data = mysqli_fetch_assoc($query)) {
 
-    <?php
-    if ($data['status_aktif'] == 1) {
-        echo "Aktif";
-    } else {
-        echo "Tidak Aktif";
-    }
-    ?>
+                    ?>
 
-    </td>
+                        <tr>
 
-    <td>
-        
-    <a href="edit_siswa.php?id=<?= $data['id']; ?>">
-        Edit
-    </a>
+                            <td>
+                                <?= $no++ ?>
+                            </td>
 
-        |
+                            <td>
+                                <?= $data['nis']; ?>
+                            </td>
 
-    <a href="hapus_siswa.php?id=<?php $data['id']; ?>"
-    onclick="return confirm('Yakin ingin mengahapus data ini?')">
-        Hapus
+                            <td>
+                                <?= $data['nisn']; ?>
+                            </td>
 
-    </a>
-    </td>
-    </tr>
-    <?php } ?>
-    </table>
+                            <td>
+                                <?= $data['nama']; ?>
+                            </td>
 
-    <br>
+                            <td>
+                                <?= $data['jenis_kelamin']; ?>
+                            </td>
 
-    <a href="dashboard.php">Kembali ke Dashboard</a>
-    </body>
+                            <td>
+                                <?= $data['tanggal_lahir']; ?>
+                            </td>
+
+                            <td>
+                                <?= $data['alamat']; ?>
+                            </td>
+
+                            <td>
+
+                                <?php
+
+                                if ($data['status_aktif'] == 1) {
+
+                                    echo '<span class="badge bg-success">Aktif</span>';
+
+                                } else {
+
+                                    echo '<span class="badge bg-danger">Tidak Aktif</span>';
+
+                                }
+
+                                ?>
+
+                            </td>
+
+                            <td>
+
+                                <a
+                                    href="edit_siswa.php?id=<?= $data['id']; ?>"
+                                    class="btn btn-warning btn-sm">
+
+                                    Edit
+
+                                </a>
+
+                                <a
+                                    href="hapus_siswa.php?id=<?= $data['id']; ?>"
+                                    class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Yakin ingin menghapus data ini?')">
+
+                                    Hapus
+
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+                    <?php
+
+                    }
+
+                    ?>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+            <br>
+
+            <a href="dashboard.php" class="btn btn-secondary">
+                Kembali ke Dashboard
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+
 </html>

@@ -19,7 +19,7 @@ if (isset($_SESSION['login'])) {
          style="height: 100vh;">
 
          <div style="
-            background-color: #1532a8;
+            background-color: #1556cf;
             width: 100%;
             height: 100%;
             display: flex;
@@ -37,11 +37,11 @@ if (isset($_SESSION['login'])) {
 <form action="proses_login.php" method="POST">
 
     <label class="form-label">Email</label><br>
-    <input type="email" name="email" class="form-control" required>
+    <input type="email" name="email" class="form-control" autocomplete="off">
 
     <br>
     <label>Password</label><br>
-    <input type="password" name="password" class="form-control" required>
+    <input type="password" name="password" class="form-control" autocomplete="new-password">
     <br>
 
     <div class="d-grid gap-2">

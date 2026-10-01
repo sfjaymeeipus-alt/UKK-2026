@@ -67,35 +67,35 @@ $nama = $_SESSION['nama'];
                 </li>
 
                 <li class="nav-item mb-2">
-                    <a href="tahun_ajaran.php"
+                    <a href="data_tahun_ajaran.php"
                        class="nav-link text-white">
                         Tahun Ajaran
                     </a>
                 </li>
 
                 <li class="nav-item mb-2">
-                    <a href="penempatan_siswa.php"
+                    <a href="data_penempatan_siswa.php"
                        class="nav-link text-white">
                         Penempatan Siswa
                     </a>
                 </li>
 
                 <li class="nav-item mb-2">
-                    <a href="wali_kelas.php"
+                    <a href="data_wali_kelas.php"
                        class="nav-link text-white">
                         Wali Kelas
                     </a>
                 </li>
 
                 <li class="nav-item mb-2">
-                    <a href="kategori_pelanggaran.php"
+                    <a href="data_kategori_pelanggaran.php"
                        class="nav-link text-white">
                         Kategori Pelanggaran
                     </a>
                 </li>
 
                 <li class="nav-item mb-2">
-                    <a href="jenis_pelanggaran.php"
+                    <a href="data_jenis_pelanggaran.php"
                        class="nav-link text-white">
                         Jenis Pelanggaran
                     </a>
@@ -155,21 +155,21 @@ $nama = $_SESSION['nama'];
                 </li>
 
                 <li class="nav-item mb-2">
-                    <a href="tindakan.php"
+                    <a href="data_tindakan.php"
                        class="nav-link text-white">
                         Tindakan
                     </a>
                 </li>
 
                 <li class="nav-item mb-2">
-                    <a href="riwayat.php"
+                    <a href="data_riwayat.php"
                        class="nav-link text-white">
                         Riwayat
                     </a>
                 </li>
 
                 <li class="nav-item mb-2">
-                    <a href="rekap_poin.php"
+                    <a href="data_rekap_poin.php"
                        class="nav-link text-white">
                         Rekap Poin
                     </a>
@@ -298,8 +298,139 @@ $nama = $_SESSION['nama'];
 
                 </div>
 
-            </div>
+                
+                <!-- TAHUN AJARAN -->
+                <div class="col-md-4 mb-3">
 
+                    <div class="card shadow-sm">
+
+                        <div class="card-body">
+
+                            <h5 class="card-title">
+                                Data Tahun Ajaran
+                            </h5>
+
+                            <p class="card-text">
+                                Kelola data tahun ajaran.
+                            </p>
+
+                            <a href="data_tahun_ajaran.php"
+                               class="btn btn-primary">
+                                Lihat Data
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- PENEMPATAN SISWA -->
+                <div class="col-md-4 mb-3">
+
+                    <div class="card shadow-sm">
+
+                        <div class="card-body">
+
+                            <h5 class="card-title">
+                                Data Penempatan Siswa
+                            </h5>
+
+                            <p class="card-text">
+                                Kelola data penempatan siswa.
+                            </p>
+
+                            <a href="data_penempatan_siswa.php"
+                               class="btn btn-primary">
+                                Lihat Data
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- WALI KELAS -->
+                <div class="col-md-4 mb-3">
+
+                    <div class="card shadow-sm">
+
+                        <div class="card-body">
+
+                            <h5 class="card-title">
+                                Data Wali Kelas
+                            </h5>
+
+                            <p class="card-text">
+                                Kelola data wali kelas.
+                            </p>
+
+                            <a href="data_wali_kelas.php"
+                               class="btn btn-primary">
+                                Lihat Data
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- KATEGORI PELANGGARAN -->
+                <div class="col-md-4 mb-3">
+
+                    <div class="card shadow-sm">
+
+                        <div class="card-body">
+
+                            <h5 class="card-title">
+                                Data Kategori Pelanggaran
+                            </h5>
+
+                            <p class="card-text">
+                                Kelola data kategori pelanggaran.
+                            </p>
+
+                            <a href="data_kategori_pelanggaran.php"
+                               class="btn btn-primary">
+                                Lihat Data
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- JENIS PELANGGARAN -->
+                <div class="col-md-4 mb-3">
+
+                    <div class="card shadow-sm">
+
+                        <div class="card-body">
+
+                            <h5 class="card-title">
+                                Data Jenis Pelanggaran
+                            </h5>
+
+                            <p class="card-text">
+                                Kelola data jenis pelanggaran.
+                            </p>
+
+                            <a href="data_jenis_pelanggaran.php"
+                               class="btn btn-primary">
+                                Lihat Data
+                            </a>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                
+            </div>
 
             <!-- ================= CARD GURU ================= -->
 
@@ -349,7 +480,7 @@ $nama = $_SESSION['nama'];
                                 Mengelola tindakan terhadap pelanggaran.
                             </p>
 
-                            <a href="tindakan.php"
+                            <a href="data_tindakan.php"
                                class="btn btn-primary">
                                 Buka
                             </a>
@@ -376,7 +507,7 @@ $nama = $_SESSION['nama'];
                                 Melihat riwayat pelanggaran siswa.
                             </p>
 
-                            <a href="riwayat.php"
+                            <a href="data_riwayat.php"
                                class="btn btn-primary">
                                 Buka
                             </a>
@@ -403,7 +534,7 @@ $nama = $_SESSION['nama'];
                                 Melihat rekap poin pelanggaran siswa.
                             </p>
 
-                            <a href="rekap_poin.php"
+                            <a href="data_rekap_poin.php"
                                class="btn btn-primary">
                                 Buka
                             </a>
