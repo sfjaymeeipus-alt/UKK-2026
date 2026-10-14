@@ -1,5 +1,5 @@
-<?php
 
+<?php
 include "middleware/auth.php";
 include "config/koneksi.php";
 
@@ -8,92 +8,292 @@ if ($_SESSION['role'] != 'admin') {
     exit;
 }
 
-$query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC");
+$nama = $_SESSION['nama'];
 
+$query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC");
 ?>
 
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>Data Tahun Ajaran</title>
-        <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet">
+<html lang="id">
 
-    </head>
-    <body class="bg-light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<div class="container py-4">
+    <title>Data Tahun Ajaran - Sistem Informasi Pelanggaran Siswa</title>
 
-    <div class="card shadow-sm">
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+</head>
 
-        <div class="card-body">
+<body class="bg-light">
 
-            <h2 class="mb-3">Data Tahun Ajaran</h2>
+<div class="container-fluid">
+    <div class="row">
 
-            <a href="tambah_tahun_ajaran.php" class="btn btn-primary mb-3">
-                + Tambah Tahun Ajaran
-            </a>
+        <!-- SIDEBAR -->
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
 
-            <div class="table-responsive">
+            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+            <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
-                <table class="table table-bordered table-striped table-hover">
+            <p class="text-secondary small mb-4">
+                Panel Pengelolaan Sekolah
+            </p>
 
-                    <thead class="table-dark">
-                        <tr>
-                            <th>No</th>
-                            <th>Nama</th>
-                            <th>Tanggal Mulai</th>
-                            <th>Tanggal_Selesai</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
+            <p class="text-secondary small fw-bold mb-2">
+                MENU NAVIGASI
+            </p>
 
-    <?php
-    $no = 1;
-    while ($data = mysqli_fetch_assoc($query)) {
-    ?>
+            <nav class="nav flex-column gap-1">
 
-    <tr>
+                <a href="dashboard.php"
+                   class="nav-link text-white rounded py-2">
+                    Dashboard
+                </a>
 
-    <td><?= $no++ ?></td>
-    <td><?= $data['nama']; ?></td>
-    <td><?= $data['tanggal_mulai']; ?></td>
-    <td><?= $data['tanggal_selesai']; ?></td>
+                <a href="data_siswa.php"
+                   class="nav-link text-white rounded py-2">
+                    Data Siswa
+                </a>
 
-    <td>
+                <a href="data_guru.php"
+                   class="nav-link text-white rounded py-2">
+                    Data Guru
+                </a>
 
-    <?php
-    if ($data['status_aktif'] == 1) {
-        echo "Aktif";
-    } else {
-        echo "Tidak Aktif";
-    }
-    ?>
+                <a href="data_kelas.php"
+                   class="nav-link text-white rounded py-2">
+                    Kelas
+                </a>
 
-    </td>
+                <a href="data_tahun_ajaran.php"
+                   class="nav-link active bg-primary text-white rounded py-2">
+                    Tahun Ajaran
+                </a>
 
-    <td>
-        
-    <a href="edit_tahun_ajaran.php?id=<?= $data['id']; ?>">
-        Edit
-    </a>
+                <a href="data_penempatan_siswa.php"
+                   class="nav-link text-white rounded py-2">
+                    Penempatan Siswa
+                </a>
 
-        |
+                <a href="data_wali_kelas.php"
+                   class="nav-link text-white rounded py-2">
+                    Wali Kelas
+                </a>
 
-    <a href="hapus_tahun_ajaran.php?id=<?php $data['id']; ?>"
-    onclick="return confirm('Yakin ingin mengahapus data ini?')">
-        Hapus
+                <a href="data_kategori_pelanggaran.php"
+                   class="nav-link text-white rounded py-2">
+                    Kategori Pelanggaran
+                </a>
 
-    </a>
-    </td>
-    </tr>
-    <?php } ?>
-    </table>
+                <a href="data_jenis_pelanggaran.php"
+                   class="nav-link text-white rounded py-2">
+                    Jenis Pelanggaran
+                </a>
 
-    <br>
+                <a href="data_laporan.php"
+                   class="nav-link text-white rounded py-2">
+                    Laporan
+                </a>
 
-    <a href="dashboard.php">Kembali ke Dashboard</a>
-    </body>
+                <a href="about_me.php"
+                   class="nav-link text-white rounded py-2">
+                    About Me
+                </a>
+
+                <hr class="border-secondary my-2">
+
+                <a href="logout.php"
+                   class="nav-link text-danger rounded py-2">
+                    Logout
+                </a>
+
+            </nav>
+
+        </aside>
+
+        <!-- KONTEN UTAMA -->
+        <main class="col-md-9 col-lg-10 p-0">
+
+            <!-- HEADER -->
+            <header class="bg-white border-bottom p-3 p-md-4
+                           d-flex justify-content-between align-items-center">
+
+                <div>
+                    <h5 class="fw-bold text-dark mb-1">
+                        Data Tahun Ajaran
+                    </h5>
+
+                    <small class="text-secondary">
+                        Sistem Informasi Pelanggaran Siswa
+                    </small>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+
+                    <div class="text-end">
+                        <div class="fw-bold">
+                            <?= htmlspecialchars($nama); ?>
+                        </div>
+
+                        <small class="text-secondary">Admin</small>
+                    </div>
+
+                    <div class="bg-primary-subtle text-primary rounded-circle
+                                d-flex justify-content-center align-items-center
+                                fw-bold flex-shrink-0"
+                         style="width: 42px; height: 42px;">
+                        <?= strtoupper(substr($nama, 0, 1)); ?>
+                    </div>
+
+                </div>
+
+            </header>
+
+            <!-- ISI HALAMAN -->
+            <section class="p-3 p-md-4">
+
+                <h3 class="fw-bold text-dark mb-2">
+                    Data Tahun Ajaran
+                </h3>
+
+                <p class="text-secondary mb-4">
+                    Kelola informasi periode tahun ajaran sekolah.
+                </p>
+
+                <!-- KARTU DATA -->
+                <div class="card border-0 shadow-sm rounded-3">
+
+                    <div class="card-header bg-white p-3 p-md-4
+                                d-flex justify-content-between align-items-center
+                                flex-wrap gap-3">
+
+                        <div>
+                            <h5 class="fw-bold mb-1">
+                                Daftar Tahun Ajaran
+                            </h5>
+
+                            <small class="text-secondary">
+                                Informasi nama, tanggal mulai, tanggal selesai, dan status.
+                            </small>
+                        </div>
+
+                        <a href="tambah_tahun_ajaran.php"
+                           class="btn btn-primary">
+                            + Tambah Tahun Ajaran
+                        </a>
+
+                    </div>
+
+                    <!-- TABEL TAHUN AJARAN -->
+                    <div class="card-body p-0">
+
+                        <div class="table-responsive">
+
+                            <table class="table table-bordered table-hover
+                                          align-middle mb-0">
+
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>No</th>
+                                        <th>Nama</th>
+                                        <th>Tanggal Mulai</th>
+                                        <th>Tanggal Selesai</th>
+                                        <th>Status</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                <?php
+                                $no = 1;
+
+                                while ($data = mysqli_fetch_assoc($query)) {
+                                ?>
+
+                                    <tr>
+                                        <td><?= $no++; ?></td>
+
+                                        <td>
+                                            <?= htmlspecialchars($data['nama']); ?>
+                                        </td>
+
+                                        <td>
+                                            <?= htmlspecialchars($data['tanggal_mulai']); ?>
+                                        </td>
+
+                                        <td>
+                                            <?= htmlspecialchars($data['tanggal_selesai']); ?>
+                                        </td>
+
+                                        <td>
+                                            <?php if ($data['status_aktif'] == 1) { ?>
+
+                                                <span class="badge bg-success">
+                                                    Aktif
+                                                </span>
+
+                                            <?php } else { ?>
+
+                                                <span class="badge bg-danger">
+                                                    Tidak Aktif
+                                                </span>
+
+                                            <?php } ?>
+                                        </td>
+
+                                        <td class="text-nowrap">
+
+                                            <a href="edit_tahun_ajaran.php?id=<?= urlencode($data['id']); ?>"
+                                               class="btn btn-warning btn-sm">
+                                                Edit
+                                            </a>
+
+                                            <a href="hapus_tahun_ajaran.php?id=<?= urlencode($data['id']); ?>"
+                                               class="btn btn-danger btn-sm"
+                                               onclick="return confirm('Yakin ingin menghapus data tahun ajaran ini?')">
+                                                Hapus
+                                            </a>
+
+                                        </td>
+                                    </tr>
+
+                                <?php } ?>
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                    <!-- BAGIAN BAWAH -->
+                    <div class="card-footer bg-white p-3">
+
+                        <a href="dashboard.php"
+                           class="btn btn-outline-secondary btn-sm">
+                            Kembali ke Dashboard
+                        </a>
+
+                    </div>
+
+                </div>
+
+                <!-- FOOTER -->
+                <footer class="text-center text-secondary small mt-4">
+                    Sistem Informasi Pelanggaran Siswa &copy; 2026
+                </footer>
+
+            </section>
+
+        </main>
+
+    </div>
+</div>
+
+</body>
 </html>

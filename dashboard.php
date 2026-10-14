@@ -1,560 +1,281 @@
-<?php
 
+<?php
 include "middleware/auth.php";
 
 $role = $_SESSION['role'];
 $nama = $_SESSION['nama'];
 
+// Menu admin
+$menuAdmin = [
+    ["Dashboard", "dashboard.php"],
+    ["Data Siswa", "data_siswa.php"],
+    ["Data Guru", "data_guru.php"],
+    ["Kelas", "data_kelas.php"],
+    ["Tahun Ajaran", "data_tahun_ajaran.php"],
+    ["Penempatan Siswa", "data_penempatan_siswa.php"],
+    ["Wali Kelas", "data_wali_kelas.php"],
+    ["Kategori Pelanggaran", "data_kategori_pelanggaran.php"],
+    ["Jenis Pelanggaran", "data_jenis_pelanggaran.php"],
+    ["Laporan", "data_laporan.php"],
+    ["About Me", "about_me.php"]
+];
+
+// Menu guru
+$menuGuru = [
+    ["Dashboard", "dashboard.php"],
+    ["Data Siswa", "data_siswa.php"],
+    ["Data Guru", "data_guru.php"],
+    ["Kelas", "data_kelas.php"],
+    ["Tahun Ajaran", "data_tahun_ajaran.php"],
+    ["Penempatan Siswa", "data_penempatan_siswa.php"],
+    ["Wali Kelas", "data_wali_kelas.php"],
+    ["Kategori Pelanggaran", "data_kategori_pelanggaran.php"],
+    ["Jenis Pelanggaran", "data_jenis_pelanggaran.php"],
+    ["Catatan Pelanggaran", "data_pelanggaran.php"],
+    ["Tindakan", "data_tindakan.php"],
+    ["Riwayat", "data_riwayat.php"],
+    ["Rekap Poin", "data_rekap_poin.php"],
+    ["Laporan", "data_laporan.php"],
+    ["About Me", "about_me.php"]
+];
+
+// Pilih menu berdasarkan role
+if ($role == 'admin') {
+    $menu = $menuAdmin;
+} elseif ($role == 'guru') {
+    $menu = $menuGuru;
+} else {
+    die("Anda tidak memiliki akses.");
+}
+
+// Kartu admin
+$kartuAdmin = [
+    ["Data Siswa", "Mengelola informasi data siswa.", "data_siswa.php"],
+    ["Data Guru", "Mengelola informasi data guru.", "data_guru.php"],
+    ["Data Kelas", "Mengelola data kelas siswa.", "data_kelas.php"],
+    ["Tahun Ajaran", "Mengelola periode tahun ajaran.", "data_tahun_ajaran.php"],
+    ["Penempatan Siswa", "Mengelola penempatan siswa ke kelas.", "data_penempatan_siswa.php"],
+    ["Wali Kelas", "Mengelola informasi wali kelas.", "data_wali_kelas.php"],
+    ["Kategori Pelanggaran", "Mengelola kategori pelanggaran siswa.", "data_kategori_pelanggaran.php"],
+    ["Jenis Pelanggaran", "Mengelola jenis pelanggaran siswa.", "data_jenis_pelanggaran.php"],
+    ["Laporan", "Melihat laporan pelanggaran.", "data_laporan.php"]
+];
+
+// Kartu guru
+$kartuGuru = [
+    ["Catatan Pelanggaran", "Mencatat pelanggaran siswa.", "data_pelanggaran.php"],
+    ["Tindakan", "Mengelola tindakan atas pelanggaran.", "data_tindakan.php"],
+    ["Riwayat", "Melihat riwayat pelanggaran siswa.", "data_riwayat.php"],
+    ["Rekap Poin", "Melihat rekap poin pelanggaran siswa.", "data_rekap_poin.php"]
+];
+
+if ($role == 'admin') {
+    $kartu = $kartuAdmin;
+} else {
+    $kartu = $kartuGuru;
+}
+
+$halamanAktif = basename($_SERVER['PHP_SELF']);
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="id">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Dashboard</title>
+    <title>Dashboard - Sistem Informasi Pelanggaran Siswa</title>
 
-    <!-- Bootstrap asli -->
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet">
-
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet">
 </head>
 
-<body>
+<body class="bg-light">
 
 <div class="container-fluid">
-
     <div class="row">
 
-        <!-- = SIDEBAR ADMIN = -->
-        <?php if ($role == 'admin') { ?>
+        <!-- SIDEBAR -->
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
 
-        <div class="col-md-3 col-lg-2 bg-dark min-vh-100 p-3">
+            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+            <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
-            <h4 class="text-white mb-4">
-                Sistem Pelanggaran
-            </h4>
-
-            <ul class="nav nav-pills flex-column">
-
-                <li class="nav-item mb-2">
-                    <a href="dashboard.php"
-                       class="nav-link active">
-                        Dashboard
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="data_siswa.php"
-                       class="nav-link text-white">
-                        Data Siswa
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="data_guru.php"
-                       class="nav-link text-white">
-                        Data Guru
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="data_kelas.php"
-                       class="nav-link text-white">
-                        Kelas
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="data_tahun_ajaran.php"
-                       class="nav-link text-white">
-                        Tahun Ajaran
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="data_penempatan_siswa.php"
-                       class="nav-link text-white">
-                        Penempatan Siswa
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="data_wali_kelas.php"
-                       class="nav-link text-white">
-                        Wali Kelas
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="data_kategori_pelanggaran.php"
-                       class="nav-link text-white">
-                        Kategori Pelanggaran
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="data_jenis_pelanggaran.php"
-                       class="nav-link text-white">
-                        Jenis Pelanggaran
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="cetak_export.php"
-                       class="nav-link text-white">
-                        Cetak / Export
-                    </a>
-                </li>
-
-               <hr class="text-secondary">
-
-<li class="nav-item mb-2">
-    <a href="about_me.php"
-       class="nav-link text-white">
-        About Me
-    </a>
-</li>
-
-<li class="nav-item">
-    <a href="logout.php"
-       class="nav-link text-danger">
-        Logout
-    </a>
-</li>
-
-            </ul>
-
-        </div>
-
-
-        <!-- ================= SIDEBAR GURU ================= -->
-        <?php } elseif ($role == 'guru') { ?>
-
-        <div class="col-md-3 col-lg-2 bg-dark min-vh-100 p-3">
-
-            <h4 class="text-white mb-4">
-                Sistem Pelanggaran
-            </h4>
-
-            <ul class="nav nav-pills flex-column">
-
-                <li class="nav-item mb-2">
-                    <a href="dashboard.php"
-                       class="nav-link active">
-                        Dashboard
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="data_pelanggaran.php"
-                       class="nav-link text-white">
-                        Catatan Pelanggaran
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="data_tindakan.php"
-                       class="nav-link text-white">
-                        Tindakan
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="data_riwayat.php"
-                       class="nav-link text-white">
-                        Riwayat
-                    </a>
-                </li>
-
-                <li class="nav-item mb-2">
-                    <a href="data_rekap_poin.php"
-                       class="nav-link text-white">
-                        Rekap Poin
-                    </a>
-                </li>
-
-               <hr class="text-secondary">
-
-<li class="nav-item mb-2">
-    <a href="about_me.php"
-       class="nav-link text-white">
-        About Me
-    </a>
-</li>
-
-<li class="nav-item">
-    <a href="logout.php"
-       class="nav-link text-danger">
-        Logout
-    </a>
-</li>
-
-            </ul>
-
-        </div>
-
-        <?php } ?>
-
-
-        <!-- ================= KONTEN ================= -->
-
-        <main class="col-md-9 col-lg-10 p-4">
-
-            <h2>
-                Dashboard <?= ucfirst($role); ?>
-            </h2>
-
-            <p>
-                Selamat datang,
-                <b><?= $nama; ?></b>
+            <p class="text-secondary small mb-4">
+                Panel Pengelolaan Sekolah
             </p>
 
+            <p class="text-secondary small fw-bold mb-2">
+                MENU NAVIGASI
+            </p>
 
-            <!-- ================= CARD ADMIN ================= -->
+            <nav class="nav flex-column gap-1">
 
-            <?php if ($role == 'admin') { ?>
+                <?php foreach ($menu as $item) { ?>
 
-            <div class="row">
+                    <a href="<?= htmlspecialchars($item[1]) ?>"
+                       class="nav-link rounded py-2
+                       <?= $halamanAktif == $item[1]
+                           ? 'active bg-primary text-white'
+                           : 'text-white' ?>">
 
-                <!-- SISWA -->
-                <div class="col-md-4 mb-3">
+                        <?= htmlspecialchars($item[0]) ?>
 
-                    <div class="card shadow-sm">
+                    </a>
 
-                        <div class="card-body">
+                <?php } ?>
 
-                            <h5 class="card-title">
-                                Data Siswa
-                            </h5>
+                <hr class="border-secondary">
 
-                            <p class="card-text">
-                                Kelola data siswa.
-                            </p>
+                <a href="logout.php"
+                   class="nav-link text-danger rounded py-2">
+                    Logout
+                </a>
 
-                            <a href="data_siswa.php"
-                               class="btn btn-primary">
-                                Lihat Data
-                            </a>
+            </nav>
 
+        </aside>
+
+        <!-- KONTEN UTAMA -->
+        <main class="col-md-9 col-lg-10 p-0">
+
+            <!-- HEADER -->
+            <header class="bg-white border-bottom p-3 p-md-4
+                           d-flex justify-content-between align-items-center">
+
+                <div>
+                    <h5 class="fw-bold text-dark mb-1">Dashboard</h5>
+
+                    <small class="text-secondary">
+                        Sistem Informasi Pelanggaran Siswa
+                    </small>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+
+                    <div class="text-end">
+                        <div class="fw-bold">
+                            <?= htmlspecialchars($nama) ?>
                         </div>
 
+                        <small class="text-secondary">
+                            <?= htmlspecialchars(ucfirst($role)) ?>
+                        </small>
+                    </div>
+
+                    <div class="bg-primary-subtle text-primary rounded-circle
+                                d-flex align-items-center justify-content-center
+                                fw-bold flex-shrink-0"
+                         style="width: 42px; height: 42px;">
+                        <?= strtoupper(substr($nama, 0, 1)) ?>
                     </div>
 
                 </div>
 
+            </header>
 
-                <!-- GURU -->
-                <div class="col-md-4 mb-3">
+            <!-- ISI DASHBOARD -->
+            <section class="p-3 p-md-4">
 
-                    <div class="card shadow-sm">
+                <!-- SAMBUTAN -->
+                <div class="bg-dark text-white rounded-3 shadow-sm p-4 p-md-5 mb-4">
 
-                        <div class="card-body">
+                    <span class="badge border border-secondary
+                                 text-white mb-3 p-2">
+                        Dashboard <?= htmlspecialchars(ucfirst($role)) ?>
+                    </span>
 
-                            <h5 class="card-title">
-                                Data Guru
-                            </h5>
+                    <h2 class="fw-bold mb-3">
+                        Selamat Datang, <?= htmlspecialchars($nama) ?>
+                    </h2>
 
-                            <p class="card-text">
-                                Kelola data guru.
-                            </p>
-
-                            <a href="data_guru.php"
-                               class="btn btn-primary">
-                                Lihat Data
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- KELAS -->
-                <div class="col-md-4 mb-3">
-
-                    <div class="card shadow-sm">
-
-                        <div class="card-body">
-
-                            <h5 class="card-title">
-                                Data Kelas
-                            </h5>
-
-                            <p class="card-text">
-                                Kelola data kelas.
-                            </p>
-
-                            <a href="data_kelas.php"
-                               class="btn btn-primary">
-                                Lihat Data
-                            </a>
-
-                        </div>
-
-                    </div>
+                    <p class="text-light mb-0 lh-lg">
+                        Selamat datang di Sistem Informasi Pelanggaran Siswa.
+                        Gunakan menu yang tersedia untuk mengelola data sekolah,
+                        mencatat pelanggaran, dan melihat informasi sesuai hak
+                        akses akunmu.
+                    </p>
 
                 </div>
 
-                
-                <!-- TAHUN AJARAN -->
-                <div class="col-md-4 mb-3">
+                <!-- JUDUL MENU -->
+                <div class="d-flex justify-content-between align-items-center
+                            flex-wrap gap-2 mb-3">
 
-                    <div class="card shadow-sm">
+                    <div>
+                        <h4 class="fw-bold text-dark mb-1">
+                            Menu Pengelolaan
+                        </h4>
 
-                        <div class="card-body">
-
-                            <h5 class="card-title">
-                                Data Tahun Ajaran
-                            </h5>
-
-                            <p class="card-text">
-                                Kelola data tahun ajaran.
-                            </p>
-
-                            <a href="data_tahun_ajaran.php"
-                               class="btn btn-primary">
-                                Lihat Data
-                            </a>
-
-                        </div>
-
+                        <p class="text-secondary mb-0">
+                            Pilih halaman yang ingin kamu buka.
+                        </p>
                     </div>
+
+                    <span class="badge bg-primary-subtle text-primary p-2">
+                        Role: <?= htmlspecialchars(ucfirst($role)) ?>
+                    </span>
 
                 </div>
 
-                <!-- PENEMPATAN SISWA -->
-                <div class="col-md-4 mb-3">
+                <!-- KARTU MENU -->
+                <div class="row g-3">
 
-                    <div class="card shadow-sm">
+                    <?php
+                    $nomor = 1;
 
-                        <div class="card-body">
+                    foreach ($kartu as $item) {
+                    ?>
 
-                            <h5 class="card-title">
-                                Data Penempatan Siswa
-                            </h5>
+                        <div class="col-12 col-md-6 col-xl-4">
 
-                            <p class="card-text">
-                                Kelola data penempatan siswa.
-                            </p>
+                            <div class="card h-100 border shadow-sm">
 
-                            <a href="data_penempatan_siswa.php"
-                               class="btn btn-primary">
-                                Lihat Data
-                            </a>
+                                <div class="card-body p-4">
 
-                        </div>
+                                    <p class="text-primary fw-bold small mb-3">
+                                        MENU <?= str_pad($nomor, 2, "0", STR_PAD_LEFT) ?>
+                                    </p>
 
-                    </div>
+                                    <h5 class="card-title fw-bold">
+                                        <?= htmlspecialchars($item[0]) ?>
+                                    </h5>
 
-                </div>
+                                    <p class="card-text text-secondary small mb-4">
+                                        <?= htmlspecialchars($item[1]) ?>
+                                    </p>
 
-                <!-- WALI KELAS -->
-                <div class="col-md-4 mb-3">
+                                    <a href="<?= htmlspecialchars($item[2]) ?>"
+                                       class="btn btn-outline-primary btn-sm">
+                                        Lihat Data
+                                    </a>
 
-                    <div class="card shadow-sm">
+                                </div>
 
-                        <div class="card-body">
-
-                            <h5 class="card-title">
-                                Data Wali Kelas
-                            </h5>
-
-                            <p class="card-text">
-                                Kelola data wali kelas.
-                            </p>
-
-                            <a href="data_wali_kelas.php"
-                               class="btn btn-primary">
-                                Lihat Data
-                            </a>
+                            </div>
 
                         </div>
 
-                    </div>
+                    <?php
+                        $nomor++;
+                    }
+                    ?>
 
                 </div>
 
-                <!-- KATEGORI PELANGGARAN -->
-                <div class="col-md-4 mb-3">
+                <!-- FOOTER -->
+                <footer class="text-center text-secondary small mt-4">
+                    Sistem Informasi Pelanggaran Siswa &copy; 2026
+                </footer>
 
-                    <div class="card shadow-sm">
-
-                        <div class="card-body">
-
-                            <h5 class="card-title">
-                                Data Kategori Pelanggaran
-                            </h5>
-
-                            <p class="card-text">
-                                Kelola data kategori pelanggaran.
-                            </p>
-
-                            <a href="data_kategori_pelanggaran.php"
-                               class="btn btn-primary">
-                                Lihat Data
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <!-- JENIS PELANGGARAN -->
-                <div class="col-md-4 mb-3">
-
-                    <div class="card shadow-sm">
-
-                        <div class="card-body">
-
-                            <h5 class="card-title">
-                                Data Jenis Pelanggaran
-                            </h5>
-
-                            <p class="card-text">
-                                Kelola data jenis pelanggaran.
-                            </p>
-
-                            <a href="data_jenis_pelanggaran.php"
-                               class="btn btn-primary">
-                                Lihat Data
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                
-            </div>
-
-            <!-- ================= CARD GURU ================= -->
-
-            <?php } elseif ($role == 'guru') { ?>
-
-            <div class="row">
-
-                <!-- CATATAN PELANGGARAN -->
-                <div class="col-md-6 mb-3">
-
-                    <div class="card shadow-sm">
-
-                        <div class="card-body">
-
-                            <h5 class="card-title">
-                                Catatan Pelanggaran
-                            </h5>
-
-                            <p class="card-text">
-                                Mencatat data pelanggaran siswa.
-                            </p>
-
-                            <a href="data_pelanggaran.php"
-                               class="btn btn-primary">
-                                Buka
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- TINDAKAN -->
-                <div class="col-md-6 mb-3">
-
-                    <div class="card shadow-sm">
-
-                        <div class="card-body">
-
-                            <h5 class="card-title">
-                                Tindakan
-                            </h5>
-
-                            <p class="card-text">
-                                Mengelola tindakan terhadap pelanggaran.
-                            </p>
-
-                            <a href="data_tindakan.php"
-                               class="btn btn-primary">
-                                Buka
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- RIWAYAT -->
-                <div class="col-md-6 mb-3">
-
-                    <div class="card shadow-sm">
-
-                        <div class="card-body">
-
-                            <h5 class="card-title">
-                                Riwayat
-                            </h5>
-
-                            <p class="card-text">
-                                Melihat riwayat pelanggaran siswa.
-                            </p>
-
-                            <a href="data_riwayat.php"
-                               class="btn btn-primary">
-                                Buka
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <!-- REKAP POIN -->
-                <div class="col-md-6 mb-3">
-
-                    <div class="card shadow-sm">
-
-                        <div class="card-body">
-
-                            <h5 class="card-title">
-                                Rekap Poin
-                            </h5>
-
-                            <p class="card-text">
-                                Melihat rekap poin pelanggaran siswa.
-                            </p>
-
-                            <a href="data_rekap_poin.php"
-                               class="btn btn-primary">
-                                Buka
-                            </a>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <?php } ?>
+            </section>
 
         </main>
 
     </div>
-
 </div>
 
 </body>
-
 </html>

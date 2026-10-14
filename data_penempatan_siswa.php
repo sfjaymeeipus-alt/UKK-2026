@@ -1,3 +1,4 @@
+
 <?php
 
 include "middleware/auth.php";
@@ -7,6 +8,8 @@ if ($_SESSION['role'] != 'admin') {
     echo "Anda tidak memiliki akses";
     exit;
 }
+
+$nama = $_SESSION['nama'];
 
 $query = "
     SELECT
@@ -40,173 +43,330 @@ if (!$result) {
 <html lang="id">
 
 <head>
-
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Data Penempatan Siswa</title>
+
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet">
-
-
 </head>
 
-    <body  class="bg-light">
+<body class="bg-light">
 
-        <div class="container py-4">
+<div class="container-fluid">
+    <div class="row">
 
-         <div class="card-body">
+        <!-- SIDEBAR -->
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
 
-    <h2  class="mb-3">Data Penempatan Siswa</h2>
+            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+            <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
-    <a href="tambah_penempatan_siswa.php" class="btn btn-primary mb-3">
-        + Tambah Penempatan
-    </a>
+            <p class="text-secondary small mb-4">
+                Panel Pengelolaan Sekolah
+            </p>
 
-    <div class="table-responsive">
+            <p class="text-secondary small fw-bold mb-2">
+                MENU NAVIGASI
+            </p>
 
-    <table class="table table-bordered table-striped table-hover">
+            <nav class="nav flex-column gap-1">
 
-        <thead class="table-dark">
+                <a href="dashboard.php"
+                   class="nav-link text-white rounded py-2">
+                    Dashboard
+                </a>
 
-            <tr>
+                <a href="data_siswa.php"
+                   class="nav-link text-white rounded py-2">
+                    Data Siswa
+                </a>
 
-                <th>No</th>
-                <th>NIS</th>
-                <th>Nama Siswa</th>
-                <th>Kelas</th>
-                <th>Tahun Ajaran</th>
-                <th>Tanggal Mulai</th>
-                <th>Tanggal Selesai</th>
-                <th>Status</th>
-                <th>Aksi</th>
+                <a href="data_guru.php"
+                   class="nav-link text-white rounded py-2">
+                    Data Guru
+                </a>
 
-            </tr>
+                <a href="data_kelas.php"
+                   class="nav-link text-white rounded py-2">
+                    Kelas
+                </a>
 
-        </thead>
+                <a href="data_tahun_ajaran.php"
+                   class="nav-link text-white rounded py-2">
+                    Tahun Ajaran
+                </a>
 
-        <tbody>
+                <a href="data_penempatan_siswa.php"
+                   class="nav-link active bg-primary text-white rounded py-2">
+                    Penempatan Siswa
+                </a>
 
-            <?php
+                <a href="data_wali_kelas.php"
+                   class="nav-link text-white rounded py-2">
+                    Wali Kelas
+                </a>
 
-            $no = 1;
+                <a href="data_kategori_pelanggaran.php"
+                   class="nav-link text-white rounded py-2">
+                    Kategori Pelanggaran
+                </a>
 
-            if (mysqli_num_rows($result) > 0) {
+                <a href="data_jenis_pelanggaran.php"
+                   class="nav-link text-white rounded py-2">
+                    Jenis Pelanggaran
+                </a>
 
-                while ($data = mysqli_fetch_assoc($result)) {
+                <a href="data_laporan.php"
+                   class="nav-link text-white rounded py-2">
+                    Laporan
+                </a>
 
-            ?>
+                <a href="about_me.php"
+                   class="nav-link text-white rounded py-2">
+                    About Me
+                </a>
 
-                    <tr>
+                <hr class="border-secondary my-2">
 
-                        <td>
-                            <?= $no++; ?>
-                        </td>
+                <a href="logout.php"
+                   class="nav-link text-danger rounded py-2">
+                    Logout
+                </a>
 
-                        <td>
-                            <?= htmlspecialchars($data['nis']); ?>
-                        </td>
+            </nav>
 
-                        <td>
-                            <?= htmlspecialchars($data['nama_siswa']); ?>
-                        </td>
+        </aside>
 
-                        <td>
-                            <?= htmlspecialchars($data['nama_kelas']); ?>
-                        </td>
+        <!-- KONTEN UTAMA -->
+        <main class="col-md-9 col-lg-10 p-0">
 
-                        <td>
-                            <?= htmlspecialchars($data['tahun_ajaran']); ?>
-                        </td>
+            <!-- HEADER -->
+            <header class="bg-white border-bottom p-3 p-md-4
+                          d-flex justify-content-between align-items-center">
 
-                        <td>
-                            <?= htmlspecialchars($data['tanggal_mulai']); ?>
-                        </td>
+                <div>
+                    <h5 class="fw-bold text-dark mb-1">
+                        Data Penempatan Siswa
+                    </h5>
 
-                        <td>
+                    <small class="text-secondary">
+                        Sistem Informasi Pelanggaran Siswa
+                    </small>
+                </div>
 
-                            <?php
+                <div class="d-flex align-items-center gap-2">
 
-                            if (!empty($data['tanggal_selesai'])) {
+                    <div class="text-end">
+                        <div class="fw-bold">
+                            <?= htmlspecialchars($nama); ?>
+                        </div>
 
-                                echo htmlspecialchars(
-                                    $data['tanggal_selesai']
-                                );
+                        <small class="text-secondary">Admin</small>
+                    </div>
 
-                            } else {
+                    <div class="bg-primary-subtle text-primary rounded-circle
+                                d-flex justify-content-center align-items-center
+                                fw-bold flex-shrink-0"
+                         style="width: 42px; height: 42px;">
+                        <?= strtoupper(substr($nama, 0, 1)); ?>
+                    </div>
 
-                                echo "-";
+                </div>
 
-                            }
+            </header>
 
-                            ?>
+            <!-- ISI HALAMAN -->
+            <section class="p-3 p-md-4">
 
-                        </td>
+                <div class="mb-4">
+                    <h3 class="fw-bold mb-1">
+                        Daftar Penempatan Siswa
+                    </h3>
 
-                        <td>
+                    <p class="text-secondary mb-0">
+                        Kelola penempatan siswa berdasarkan kelas dan tahun ajaran.
+                    </p>
+                </div>
 
-                            <?php
+                <!-- KARTU TABEL -->
+                <div class="card border-0 shadow-sm rounded-3">
 
-                            if ($data['status_aktif'] == 1) {
+                    <!-- HEADER KARTU -->
+                    <div class="card-header bg-white p-3 p-md-4
+                                d-flex justify-content-between align-items-center
+                                flex-wrap gap-3">
 
-                                echo "Aktif";
+                        <div>
+                            <h6 class="fw-bold mb-1">
+                                Tabel Penempatan Siswa
+                            </h6>
 
-                            } else {
+                            <small class="text-secondary">
+                                Data penempatan yang tersimpan di sistem.
+                            </small>
+                        </div>
 
-                                echo "Tidak Aktif";
+                        <a href="tambah_penempatan_siswa.php"
+                           class="btn btn-primary">
+                            + Tambah Penempatan
+                        </a>
 
-                            }
+                    </div>
 
-                            ?>
+                    <!-- TABEL DATA -->
+                    <div class="card-body p-0">
 
-                        </td>
+                        <div class="table-responsive">
 
-                        <td>
+                            <table class="table table-bordered table-hover
+                                          align-middle mb-0">
 
-                            <a href="edit_penempatan_siswa.php?id=<?= $data['id']; ?>">
-                                Edit
-                            </a>
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th class="text-center">No</th>
+                                        <th>NIS</th>
+                                        <th>Nama Siswa</th>
+                                        <th>Kelas</th>
+                                        <th>Tahun Ajaran</th>
+                                        <th>Tanggal Mulai</th>
+                                        <th>Tanggal Selesai</th>
+                                        <th class="text-center">Status</th>
+                                        <th class="text-center">Aksi</th>
+                                    </tr>
+                                </thead>
 
-                            |
+                                <tbody>
 
-                            <a
-                                href="hapus_penempatan_siswa.php?id=<?= $data['id']; ?>"
-                                onclick="return confirm('Yakin ingin menghapus data ini?');"
-                            >
-                                Hapus
-                            </a>
+                                <?php
+                                $no = 1;
 
-                        </td>
+                                if (mysqli_num_rows($result) > 0) {
 
-                    </tr>
+                                    while ($data = mysqli_fetch_assoc($result)) {
+                                ?>
 
-            <?php
+                                    <tr>
+                                        <td class="text-center">
+                                            <?= $no++; ?>
+                                        </td>
 
-                }
+                                        <td>
+                                            <?= htmlspecialchars($data['nis']); ?>
+                                        </td>
 
-            } else {
+                                        <td class="fw-semibold">
+                                            <?= htmlspecialchars($data['nama_siswa']); ?>
+                                        </td>
 
-            ?>
+                                        <td>
+                                            <?= htmlspecialchars($data['nama_kelas']); ?>
+                                        </td>
 
-                <tr>
+                                        <td>
+                                            <?= htmlspecialchars($data['tahun_ajaran']); ?>
+                                        </td>
 
-                    <td colspan="9">
-                        Belum ada data penempatan siswa.
-                    </td>
+                                        <td>
+                                            <?= htmlspecialchars($data['tanggal_mulai']); ?>
+                                        </td>
 
-                </tr>
+                                        <td>
+                                            <?php
+                                            if (!empty($data['tanggal_selesai'])) {
+                                                echo htmlspecialchars($data['tanggal_selesai']);
+                                            } else {
+                                                echo "-";
+                                            }
+                                            ?>
+                                        </td>
 
-            <?php
+                                        <td class="text-center">
+                                            <?php
+                                            if ($data['status_aktif'] == 1) {
+                                                echo '<span class="badge bg-success">Aktif</span>';
+                                            } else {
+                                                echo '<span class="badge bg-danger">Tidak Aktif</span>';
+                                            }
+                                            ?>
+                                        </td>
 
-            }
+                                        <td class="text-center">
+                                            <div class="d-flex justify-content-center gap-1">
 
-            ?>
+                                                <a
+                                                    href="edit_penempatan_siswa.php?id=<?= urlencode($data['id']); ?>"
+                                                    class="btn btn-warning btn-sm">
+                                                    Edit
+                                                </a>
 
-        </tbody>
+                                                <a
+                                                    href="hapus_penempatan_siswa.php?id=<?= urlencode($data['id']); ?>"
+                                                    class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Yakin ingin menghapus data ini?');">
+                                                    Hapus
+                                                </a>
 
-    </table>
-    <br>
-<a href="dashboard.php">Kembali ke Dashboard</a>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                <?php
+                                    }
+
+                                } else {
+                                ?>
+
+                                    <tr>
+                                        <td colspan="9"
+                                            class="text-center text-secondary p-4">
+                                            Belum ada data penempatan siswa.
+                                        </td>
+                                    </tr>
+
+                                <?php
+                                }
+                                ?>
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </div>
+
+                    <!-- FOOTER KARTU -->
+                    <div class="card-footer bg-white p-3
+                                d-flex justify-content-between align-items-center
+                                flex-wrap gap-2">
+
+                        <small class="text-secondary">
+                            Sistem Informasi Pelanggaran Siswa
+                        </small>
+
+                        <a href="dashboard.php"
+                           class="btn btn-outline-secondary btn-sm">
+                            Kembali ke Dashboard
+                        </a>
+
+                    </div>
+
+                </div>
+
+                <!-- FOOTER HALAMAN -->
+                <footer class="text-center text-secondary small mt-4">
+                    Sistem Informasi Pelanggaran Siswa &copy; 2026
+                </footer>
+
+            </section>
+
+        </main>
+
+    </div>
+</div>
+
 </body>
-
 </html>
