@@ -13,27 +13,122 @@ $pesan = "";
 
 if (isset($_POST['simpan'])) {
 
-    $nip = mysqli_real_escape_string($koneksi, $_POST['nip']);
-    $nama_guru = mysqli_real_escape_string($koneksi, $_POST['nama']);
-    $email = mysqli_real_escape_string($koneksi, $_POST['email']);
+    $nip = trim($_POST['nip']);
+    $nama_guru = trim($_POST['nama']);
+    $email = trim($_POST['email']);
     $status_aktif = (int) $_POST['status_aktif'];
 
-    $query = "
-        INSERT INTO t_guru
-        (nip, nama, email, status_aktif)
-        VALUES
-        ('$nip', '$nama_guru', '$email', '$status_aktif')
-    ";
+    // Periksa apakah email sudah digunakan
+    $cek = mysqli_prepare(
+        $koneksi,
+        "SELECT id FROM t_users WHERE email = ?"
+    );
 
-    if (mysqli_query($koneksi, $query)) {
+    mysqli_stmt_bind_param($cek, "s", $email);
+    mysqli_stmt_execute($cek);
+    $hasil_cek = mysqli_stmt_get_result($cek);
 
-        header("Location: data_guru.php");
-        exit;
+    if (mysqli_num_rows($hasil_cek) > 0) {
+
+        $pesan = "Email sudah digunakan oleh akun lain.";
 
     } else {
 
-        $pesan = "Gagal menyimpan data guru: " . mysqli_error($koneksi);
+        // Periksa apakah NIP sudah digunakan
+        $cek_nip = mysqli_prepare(
+            $koneksi,
+            "SELECT id FROM t_guru WHERE nip = ?"
+        );
 
+        mysqli_stmt_bind_param($cek_nip, "s", $nip);
+        mysqli_stmt_execute($cek_nip);
+        $hasil_nip = mysqli_stmt_get_result($cek_nip);
+
+        if (mysqli_num_rows($hasil_nip) > 0) {
+
+            $pesan = "NIP sudah terdaftar.";
+
+        } else {
+
+            // Buat password awal secara acak
+            $password_awal = bin2hex(random_bytes(6));
+            $password_hash = password_hash(
+                $password_awal,
+                PASSWORD_DEFAULT
+            );
+
+            // Mulai transaksi database
+            mysqli_begin_transaction($koneksi);
+
+            try {
+
+                // Buat akun pengguna
+                $role = "guru";
+
+                $buat_user = mysqli_prepare(
+                    $koneksi,
+                    "INSERT INTO t_users (name, email, password, role)
+                     VALUES (?, ?, ?, ?)"
+                );
+
+                mysqli_stmt_bind_param(
+                    $buat_user,
+                    "ssss",
+                    $nama_guru,
+                    $email,
+                    $password_hash,
+                    $role
+                );
+
+                if (!mysqli_stmt_execute($buat_user)) {
+                    throw new Exception(mysqli_stmt_error($buat_user));
+                }
+
+                // Ambil ID akun yang baru dibuat
+                $user_id = mysqli_insert_id($koneksi);
+
+                // Simpan data guru dengan user_id yang benar
+                $buat_guru = mysqli_prepare(
+                    $koneksi,
+                    "INSERT INTO t_guru
+                     (nip, nama, email, status_aktif, user_id)
+                     VALUES (?, ?, ?, ?, ?)"
+                );
+
+                mysqli_stmt_bind_param(
+                    $buat_guru,
+                    "sssii",
+                    $nip,
+                    $nama_guru,
+                    $email,
+                    $status_aktif,
+                    $user_id
+                );
+
+                if (!mysqli_stmt_execute($buat_guru)) {
+                    throw new Exception(mysqli_stmt_error($buat_guru));
+                }
+
+                // Simpan kedua data jika semuanya berhasil
+                mysqli_commit($koneksi);
+
+                // Tampilkan password awal sekali kepada admin
+                $_SESSION['password_guru_baru'] = [
+                    'nama' => $nama_guru,
+                    'email' => $email,
+                    'password' => $password_awal
+                ];
+
+                header("Location: data_guru.php?berhasil=tambah");
+                exit;
+
+            } catch (Throwable $e) {
+
+                mysqli_rollback($koneksi);
+
+                $pesan = "Gagal menambahkan guru: " . $e->getMessage();
+            }
+        }
     }
 }
 

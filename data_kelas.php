@@ -250,7 +250,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id DESC");
                                                class="btn btn-warning btn-sm">
                                                 Edit
                                             </a>
-
+                                            
                                             <a href="hapus_kelas.php?id=<?= urlencode($data['id']); ?>"
                                                class="btn btn-danger btn-sm"
                                                onclick="return confirm('Yakin ingin menghapus data kelas ini?')">

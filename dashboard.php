@@ -22,20 +22,10 @@ $menuAdmin = [
 
 // Menu guru
 $menuGuru = [
-    ["Dashboard", "dashboard.php"],
-    ["Data Siswa", "data_siswa.php"],
-    ["Data Guru", "data_guru.php"],
-    ["Kelas", "data_kelas.php"],
-    ["Tahun Ajaran", "data_tahun_ajaran.php"],
-    ["Penempatan Siswa", "data_penempatan_siswa.php"],
-    ["Wali Kelas", "data_wali_kelas.php"],
-    ["Kategori Pelanggaran", "data_kategori_pelanggaran.php"],
-    ["Jenis Pelanggaran", "data_jenis_pelanggaran.php"],
     ["Catatan Pelanggaran", "data_pelanggaran.php"],
     ["Tindakan", "data_tindakan.php"],
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
-    ["Laporan", "data_laporan.php"],
     ["About Me", "about_me.php"]
 ];
 
