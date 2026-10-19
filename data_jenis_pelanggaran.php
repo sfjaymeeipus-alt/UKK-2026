@@ -1,4 +1,3 @@
-
 <?php
 
 include "middleware/auth.php";
@@ -43,9 +42,15 @@ if (!$result) {
 
     <title>Data Jenis Pelanggaran - Sistem Informasi Pelanggaran Siswa</title>
 
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet">
+    <!-- Bootstrap 5.3.3 -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <!-- DataTables Bootstrap 5 -->
+    <link
+        href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
+        rel="stylesheet">
 </head>
 
 <body class="bg-light">
@@ -60,7 +65,7 @@ if (!$result) {
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
             <p class="text-secondary small mb-4">
-                Panel Pengelolaan Sekolah
+                 SMK Muhammadiyah Kota Tasikmalaya
             </p>
 
             <p class="text-secondary small fw-bold mb-2">
@@ -209,12 +214,13 @@ if (!$result) {
                     </div>
 
                     <!-- TABEL DATA -->
-                    <div class="card-body p-0">
+                    <div class="card-body">
 
                         <div class="table-responsive">
 
-                            <table class="table table-bordered table-hover
-                                          align-middle mb-0">
+                            <table id="tabelJenisPelanggaran"
+                                   class="table table-bordered table-hover
+                                          align-middle w-100">
 
                                 <thead class="table-dark">
                                     <tr>
@@ -259,7 +265,7 @@ if (!$result) {
 
                                         <td class="text-center">
                                             <span class="badge bg-info text-dark">
-                                                <?= htmlspecialchars((string) $data['poin']); ?>
+                                                <?= htmlspecialchars((string) ($data['poin'] ?? 0)); ?>
                                             </span>
                                         </td>
 
@@ -268,33 +274,27 @@ if (!$result) {
                                         </td>
 
                                         <td class="text-center">
-
-                                            <?php if ($data['status_aktif'] == 1) { ?>
-
-                                                <span class="badge bg-success">
-                                                    Aktif
-                                                </span>
-
-                                            <?php } else { ?>
-
-                                                <span class="badge bg-danger">
-                                                    Tidak Aktif
-                                                </span>
-
-                                            <?php } ?>
-
+                                            <?php
+                                            if ($data['status_aktif'] == 1) {
+                                                echo '<span class="badge bg-success">Aktif</span>';
+                                            } else {
+                                                echo '<span class="badge bg-danger">Tidak Aktif</span>';
+                                            }
+                                            ?>
                                         </td>
 
                                         <td class="text-center text-nowrap">
 
-                                            <a href="edit_jenis_pelanggaran.php?id=<?= urlencode($data['id']); ?>"
-                                               class="btn btn-warning btn-sm">
+                                            <a
+                                                href="edit_jenis_pelanggaran.php?id=<?= urlencode($data['id']); ?>"
+                                                class="btn btn-warning btn-sm">
                                                 Edit
                                             </a>
 
-                                            <a href="hapus_jenis_pelanggaran.php?id=<?= urlencode($data['id']); ?>"
-                                               class="btn btn-danger btn-sm"
-                                               onclick="return confirm('Yakin ingin menghapus jenis pelanggaran ini?');">
+                                            <a
+                                                href="hapus_jenis_pelanggaran.php?id=<?= urlencode($data['id']); ?>"
+                                                class="btn btn-danger btn-sm"
+                                                onclick="return confirm('Yakin ingin menghapus jenis pelanggaran ini?');">
                                                 Hapus
                                             </a>
 
@@ -305,17 +305,6 @@ if (!$result) {
                                 <?php
                                     }
 
-                                } else {
-                                ?>
-
-                                    <tr>
-                                        <td colspan="8"
-                                            class="text-center text-secondary p-4">
-                                            Belum ada data jenis pelanggaran.
-                                        </td>
-                                    </tr>
-
-                                <?php
                                 }
                                 ?>
 
@@ -350,6 +339,54 @@ if (!$result) {
 
     </div>
 </div>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- DataTables -->
+<script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- Konfigurasi DataTables -->
+<script>
+$(document).ready(function () {
+
+    $('#tabelJenisPelanggaran').DataTable({
+        pageLength: 10,
+        lengthMenu: [5, 10, 25, 50, 100],
+        ordering: true,
+        searching: true,
+        paging: true,
+        info: true,
+
+        columnDefs: [
+            {
+                targets: 7,
+                orderable: false,
+                searchable: false
+            }
+        ],
+
+        language: {
+            search: "Cari data:",
+            lengthMenu: "Tampilkan _MENU_ data",
+            info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+            infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+            infoFiltered: "(difilter dari _MAX_ total data)",
+            zeroRecords: "Data jenis pelanggaran tidak ditemukan",
+            emptyTable: "Belum ada data jenis pelanggaran",
+
+            paginate: {
+                first: "Pertama",
+                last: "Terakhir",
+                next: "Berikutnya",
+                previous: "Sebelumnya"
+            }
+        }
+    });
+
+});
+</script>
 
 </body>
 </html>

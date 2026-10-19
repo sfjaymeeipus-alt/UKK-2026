@@ -1,4 +1,3 @@
-
 <?php
 
 include "middleware/auth.php";
@@ -47,8 +46,14 @@ if (!$result) {
 
     <title>Data Wali Kelas</title>
 
+    <!-- Bootstrap 5.3.3 -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
+    <!-- DataTables Bootstrap 5 -->
+    <link
+        href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
         rel="stylesheet">
 </head>
 
@@ -216,12 +221,13 @@ if (!$result) {
                     </div>
 
                     <!-- TABEL DATA -->
-                    <div class="card-body p-0">
+                    <div class="card-body">
 
                         <div class="table-responsive">
 
-                            <table class="table table-bordered table-hover
-                                          align-middle mb-0">
+                            <table id="tabelWaliKelas"
+                                   class="table table-bordered table-hover
+                                          align-middle w-100">
 
                                 <thead class="table-dark">
                                     <tr>
@@ -252,19 +258,19 @@ if (!$result) {
                                         </td>
 
                                         <td class="fw-semibold">
-                                            <?= htmlspecialchars($data['nama_guru']); ?>
+                                            <?= htmlspecialchars($data['nama_guru'] ?? ''); ?>
                                         </td>
 
                                         <td>
-                                            <?= htmlspecialchars($data['nama_kelas']); ?>
+                                            <?= htmlspecialchars($data['nama_kelas'] ?? ''); ?>
                                         </td>
 
                                         <td>
-                                            <?= htmlspecialchars($data['tahun_ajaran']); ?>
+                                            <?= htmlspecialchars($data['tahun_ajaran'] ?? ''); ?>
                                         </td>
 
                                         <td>
-                                            <?= htmlspecialchars($data['tanggal_mulai']); ?>
+                                            <?= htmlspecialchars($data['tanggal_mulai'] ?? ''); ?>
                                         </td>
 
                                         <td>
@@ -310,17 +316,6 @@ if (!$result) {
                                 <?php
                                     }
 
-                                } else {
-                                ?>
-
-                                    <tr>
-                                        <td colspan="8"
-                                            class="text-center text-secondary p-4">
-                                            Belum ada data wali kelas.
-                                        </td>
-                                    </tr>
-
-                                <?php
                                 }
                                 ?>
 
@@ -361,6 +356,54 @@ if (!$result) {
 
     </div>
 </div>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- DataTables -->
+<script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- Konfigurasi DataTables -->
+<script>
+$(document).ready(function () {
+
+    $('#tabelWaliKelas').DataTable({
+        pageLength: 10,
+        lengthMenu: [5, 10, 25, 50, 100],
+        ordering: true,
+        searching: true,
+        paging: true,
+        info: true,
+
+        columnDefs: [
+            {
+                targets: 7,
+                orderable: false,
+                searchable: false
+            }
+        ],
+
+        language: {
+            search: "Cari data:",
+            lengthMenu: "Tampilkan _MENU_ data",
+            info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+            infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+            infoFiltered: "(difilter dari _MAX_ total data)",
+            zeroRecords: "Data wali kelas tidak ditemukan",
+            emptyTable: "Belum ada data wali kelas",
+
+            paginate: {
+                first: "Pertama",
+                last: "Terakhir",
+                next: "Berikutnya",
+                previous: "Sebelumnya"
+            }
+        }
+    });
+
+});
+</script>
 
 </body>
 </html>

@@ -1,4 +1,3 @@
-
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -25,6 +24,10 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet">
+
+    <!-- DataTables Bootstrap 5 CSS -->
+    <link href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
+          rel="stylesheet">
 </head>
 
 <body class="bg-light">
@@ -48,23 +51,19 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
 
             <nav class="nav flex-column gap-1">
 
-                <a href="dashboard.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="dashboard.php" class="nav-link text-white rounded py-2">
                     Dashboard
                 </a>
 
-                <a href="data_siswa.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_siswa.php" class="nav-link text-white rounded py-2">
                     Data Siswa
                 </a>
 
-                <a href="data_guru.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_guru.php" class="nav-link text-white rounded py-2">
                     Data Guru
                 </a>
 
-                <a href="data_kelas.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_kelas.php" class="nav-link text-white rounded py-2">
                     Kelas
                 </a>
 
@@ -73,40 +72,33 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
                     Tahun Ajaran
                 </a>
 
-                <a href="data_penempatan_siswa.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">
                     Penempatan Siswa
                 </a>
 
-                <a href="data_wali_kelas.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_wali_kelas.php" class="nav-link text-white rounded py-2">
                     Wali Kelas
                 </a>
 
-                <a href="data_kategori_pelanggaran.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">
                     Kategori Pelanggaran
                 </a>
 
-                <a href="data_jenis_pelanggaran.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">
                     Jenis Pelanggaran
                 </a>
 
-                <a href="data_laporan.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_laporan.php" class="nav-link text-white rounded py-2">
                     Laporan
                 </a>
 
-                <a href="about_me.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="about_me.php" class="nav-link text-white rounded py-2">
                     About Me
                 </a>
 
                 <hr class="border-secondary my-2">
 
-                <a href="logout.php"
-                   class="nav-link text-danger rounded py-2">
+                <a href="logout.php" class="nav-link text-danger rounded py-2">
                     Logout
                 </a>
 
@@ -188,11 +180,12 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
                     </div>
 
                     <!-- TABEL TAHUN AJARAN -->
-                    <div class="card-body p-0">
+                    <div class="card-body">
 
                         <div class="table-responsive">
 
-                            <table class="table table-bordered table-hover
+                            <table id="tabelTahunAjaran"
+                                   class="table table-bordered table-hover
                                           align-middle mb-0">
 
                                 <thead class="table-dark">
@@ -211,26 +204,27 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
                                 <?php
                                 $no = 1;
 
-                                while ($data = mysqli_fetch_assoc($query)) {
+                                if ($query && mysqli_num_rows($query) > 0) {
+                                    while ($data = mysqli_fetch_assoc($query)) {
                                 ?>
 
                                     <tr>
                                         <td><?= $no++; ?></td>
 
                                         <td>
-                                            <?= htmlspecialchars($data['nama']); ?>
+                                            <?= htmlspecialchars($data['nama'] ?? ''); ?>
                                         </td>
 
                                         <td>
-                                            <?= htmlspecialchars($data['tanggal_mulai']); ?>
+                                            <?= htmlspecialchars($data['tanggal_mulai'] ?? ''); ?>
                                         </td>
 
                                         <td>
-                                            <?= htmlspecialchars($data['tanggal_selesai']); ?>
+                                            <?= htmlspecialchars($data['tanggal_selesai'] ?? ''); ?>
                                         </td>
 
                                         <td>
-                                            <?php if ($data['status_aktif'] == 1) { ?>
+                                            <?php if (($data['status_aktif'] ?? 0) == 1) { ?>
 
                                                 <span class="badge bg-success">
                                                     Aktif
@@ -261,7 +255,10 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
                                         </td>
                                     </tr>
 
-                                <?php } ?>
+                                <?php
+                                    }
+                                }
+                                ?>
 
                                 </tbody>
 
@@ -294,6 +291,56 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
 
     </div>
 </div>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- DataTables JavaScript -->
+<script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
+
+<!-- DataTables Bootstrap 5 JavaScript -->
+<script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- Inisialisasi DataTables -->
+<script>
+    $(document).ready(function () {
+
+        $('#tabelTahunAjaran').DataTable({
+            pageLength: 10,
+            lengthMenu: [5, 10, 25, 50, 100],
+            ordering: true,
+            searching: true,
+            paging: true,
+            info: true,
+
+            columnDefs: [
+                {
+                    targets: 5,
+                    orderable: false,
+                    searchable: false
+                }
+            ],
+
+            language: {
+                search: "Cari data:",
+                lengthMenu: "Tampilkan _MENU_ data",
+                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+                infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+                infoFiltered: "(difilter dari _MAX_ total data)",
+                zeroRecords: "Data tahun ajaran tidak ditemukan",
+                emptyTable: "Belum ada data tahun ajaran",
+
+                paginate: {
+                    first: "Pertama",
+                    last: "Terakhir",
+                    next: "Berikutnya",
+                    previous: "Sebelumnya"
+                }
+            }
+        });
+
+    });
+</script>
 
 </body>
 </html>
