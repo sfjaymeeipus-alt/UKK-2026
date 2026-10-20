@@ -22,7 +22,8 @@ $menuAdmin = [
 
 // Menu guru
 $menuGuru = [
-    ["Catatan Pelanggaran", "data_pelanggaran.php"],
+    ["Dashboard", "dashboard.php"],
+    ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
     ["Tindakan", "data_tindakan.php"],
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
@@ -117,7 +118,7 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
 
                 <?php } ?>
 
-                <hr class="border-secondary">
+                <hr class="border-secondary my-2">
 
                 <a href="logout.php"
                    class="nav-link text-danger rounded py-2">

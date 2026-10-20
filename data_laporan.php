@@ -97,7 +97,7 @@ if ($siswa_id > 0) {
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
             <p class="text-secondary small mb-4">
-                Panel Pengelolaan Sekolah
+                SMK Muhammadiyah Kota Tasikmalaya
             </p>
 
             <p class="text-secondary small fw-bold mb-2">

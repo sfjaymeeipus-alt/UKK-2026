@@ -65,94 +65,75 @@ if (isset($_POST['simpan'])) {
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark min-vh-100 p-3">
+<aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
 
-            <h4 class="text-white mb-4">Sistem Pelanggaran</h4>
+    <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+    <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
-            <p class="text-white">
-                Halo, <?= htmlspecialchars($nama); ?>
-            </p>
+    <p class="text-secondary small mb-4">
+        SMK Muhammadiyah Kota Tasikmalaya
+    </p>
 
-            <ul class="nav nav-pills flex-column gap-2">
+    <p class="text-secondary small fw-bold mb-2">
+        MENU NAVIGASI
+    </p>
 
-                <li class="nav-item">
-                    <a href="dashboard.php" class="nav-link text-white">
-                        Dashboard
-                    </a>
-                </li>
+    <nav class="nav flex-column gap-1">
 
-                <li class="nav-item">
-                    <a href="data_siswa.php" class="nav-link active">
-                        Data Siswa
-                    </a>
-                </li>
+        <a href="dashboard.php" class="nav-link text-white rounded py-2">
+            Dashboard
+        </a>
 
-                <li class="nav-item">
-                    <a href="data_guru.php" class="nav-link text-white">
-                        Data Guru
-                    </a>
-                </li>
+        <a href="data_siswa.php"
+           class="nav-link active bg-primary text-white rounded py-2">
+            Data Siswa
+        </a>
 
-                <li class="nav-item">
-                    <a href="data_kelas.php" class="nav-link text-white">
-                        Kelas
-                    </a>
-                </li>
+        <a href="data_guru.php" class="nav-link text-white rounded py-2">
+            Data Guru
+        </a>
 
-                <li class="nav-item">
-                    <a href="data_tahun_ajaran.php" class="nav-link text-white">
-                        Tahun Ajaran
-                    </a>
-                </li>
+        <a href="data_kelas.php" class="nav-link text-white rounded py-2">
+            Kelas
+        </a>
 
-                <li class="nav-item">
-                    <a href="data_penempatan_siswa.php" class="nav-link text-white">
-                        Penempatan Siswa
-                    </a>
-                </li>
+        <a href="data_tahun_ajaran.php" class="nav-link text-white rounded py-2">
+            Tahun Ajaran
+        </a>
 
-                <li class="nav-item">
-                    <a href="data_wali_kelas.php" class="nav-link text-white">
-                        Wali Kelas
-                    </a>
-                </li>
+        <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">
+            Penempatan Siswa
+        </a>
 
-                <li class="nav-item">
-                    <a href="data_kategori_pelanggaran.php" class="nav-link text-white">
-                        Kategori Pelanggaran
-                    </a>
-                </li>
+        <a href="data_wali_kelas.php" class="nav-link text-white rounded py-2">
+            Wali Kelas
+        </a>
 
-                <li class="nav-item">
-                    <a href="data_jenis_pelanggaran.php" class="nav-link text-white">
-                        Jenis Pelanggaran
-                    </a>
-                </li>
+        <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">
+            Kategori Pelanggaran
+        </a>
 
-                <li class="nav-item">
-                    <a href="data_laporan.php" class="nav-link text-white">
-                        Laporan
-                    </a>
-                </li>
+        <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">
+            Jenis Pelanggaran
+        </a>
 
-                <li class="nav-item">
-                    <a href="about_me.php" class="nav-link text-white">
-                        About Me
-                    </a>
-                </li>
+        <a href="data_laporan.php" class="nav-link text-white rounded py-2">
+            Laporan
+        </a>
 
-                <hr class="text-secondary">
+        <a href="about_me.php" class="nav-link text-white rounded py-2">
+            About Me
+        </a>
 
-                <li class="nav-item">
-                    <a href="logout.php" class="nav-link text-danger">
-                        Logout
-                    </a>
-                </li>
+        <hr class="border-secondary my-2">
 
-            </ul>
+        <a href="logout.php" class="nav-link text-danger rounded py-2">
+            Logout
+        </a>
 
-        </aside>
+    </nav>
 
+</aside>
         <!-- KONTEN TAMBAH SISWA -->
         <main class="col-md-9 col-lg-10 p-4">
 

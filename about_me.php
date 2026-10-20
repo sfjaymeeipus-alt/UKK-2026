@@ -34,7 +34,7 @@ $nama = "Puspita Dewi";
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
             <p class="text-secondary small mb-4">
-                Panel Pengelolaan Sekolah
+                SMK Muhammadiyah Kota Tasikmalaya
             </p>
 
             <p class="text-secondary small fw-bold mb-2">
@@ -48,49 +48,24 @@ $nama = "Puspita Dewi";
                     Dashboard
                 </a>
 
-                <a href="data_siswa.php"
+                <a href="data_catatan_pelanggaran.php"
                    class="nav-link text-white rounded py-2">
-                    Data Siswa
+                    Catatan Pelanggaran
                 </a>
 
-                <a href="data_guru.php"
+                <a href="data_tindakan.php"
                    class="nav-link text-white rounded py-2">
-                    Data Guru
+                    Tindakan
                 </a>
 
-                <a href="data_kelas.php"
+                <a href="data_riwayat.php"
                    class="nav-link text-white rounded py-2">
-                    Kelas
+                   Riwayat
                 </a>
 
-                <a href="data_tahun_ajaran.php"
+                <a href="data_rekap_poin.php"
                    class="nav-link text-white rounded py-2">
-                    Tahun Ajaran
-                </a>
-
-                <a href="data_penempatan_siswa.php"
-                   class="nav-link text-white rounded py-2">
-                    Penempatan Siswa
-                </a>
-
-                <a href="data_wali_kelas.php"
-                   class="nav-link text-white rounded py-2">
-                    Wali Kelas
-                </a>
-
-                <a href="data_kategori_pelanggaran.php"
-                   class="nav-link text-white rounded py-2">
-                    Kategori Pelanggaran
-                </a>
-
-                <a href="data_jenis_pelanggaran.php"
-                   class="nav-link text-white rounded py-2">
-                    Jenis Pelanggaran
-                </a>
-
-                <a href="data_laporan.php"
-                   class="nav-link text-white rounded py-2">
-                    Laporan
+                    Rekap Poin
                 </a>
 
                 <a href="about_me.php"
@@ -334,7 +309,7 @@ $nama = "Puspita Dewi";
                                 </span>
 
                                 <span class="badge bg-light text-primary px-3 py-2">
-                                    CSS
+                                    Bootstrap
                                 </span>
 
                                 <span class="badge bg-light text-primary px-3 py-2">

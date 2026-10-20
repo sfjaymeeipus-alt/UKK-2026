@@ -42,7 +42,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id DESC");
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
             <p class="text-secondary small mb-4">
-                Panel Pengelolaan Sekolah
+                SMK Muhammadiyah Kota Tasikmalaya
             </p>
 
             <p class="text-secondary small fw-bold mb-2">
