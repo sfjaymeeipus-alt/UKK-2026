@@ -22,83 +22,101 @@ if (isset($_SESSION['login'])) {
 
 <body class="bg-light">
 
-<div class="container-fluid min-vh-100 d-flex
-            justify-content-center align-items-center p-3"
+<div class="container-fluid min-vh-100 d-flex justify-content-center align-items-center p-3"
      style="background: linear-gradient(135deg, #a3b1c6, #3b82f6, #93c5fd);">
 
     <div class="card border-0 shadow-lg rounded-4"
-         style="width: 100%; max-width: 430px;">
+         style="width: 100%; max-width: 400px;">
 
-        <div class="card-body p-4 p-md-5">
+        <div class="card-body p-4">
 
-            <div class="text-center mb-4">
+            <!-- LOGO DAN IDENTITAS SEKOLAH -->
+            <div class="text-center mb-3">
 
-                <div class="bg-primary text-white rounded-circle
-                            d-inline-flex justify-content-center
-                            align-items-center mb-3"
-                     style="width: 75px; height: 75px;">
+                <img src="logo-smkmtsm.png"
+                     alt="Logo SMK Muhammadiyah Tasikmalaya"
+                     class="rounded-circle shadow mb-3 border border-3 border-white"
+                     width="100"
+                     height="100"
+                     style="object-fit: contain; background-color: white; padding: 5px;">
 
-                    <span class="fw-bold fs-2">S</span>
-
-                </div>
-
-                <h4 class="fw-bold text-dark mb-2">
+                <h5 class="fw-bold text-dark mb-1">
                     Selamat Datang
-                </h4>
+                </h5>
 
-                <h6 class="text-primary fw-semibold">
+                <h6 class="text-primary fw-semibold mb-1">
                     Sistem Informasi Pelanggaran Siswa
                 </h6>
 
-                <p class="text-secondary small mt-2 mb-0">
+                <p class="text-dark fw-semibold small mb-1">
+                    SMK Muhammadiyah Tasikmalaya
+                </p>
+
+                <p class="text-secondary small mb-0">
                     Silakan masuk menggunakan akun Anda
                 </p>
 
             </div>
 
-            <hr class="text-secondary mb-4">
+            <hr class="text-secondary mb-3">
 
-            <form action="proses_login.php" method="POST">
+            <!-- FORM LOGIN -->
+            <form action="proses_login.php"
+                  method="POST"
+                  autocomplete="off">
 
                 <div class="mb-3">
-                    <label class="form-label fw-semibold">
+
+                    <label for="email" class="form-label fw-semibold small">
                         Email
                     </label>
 
                     <input type="email"
                            name="email"
-                           class="form-control form-control-lg rounded-3"
+                           id="email"
+                           class="form-control rounded-3"
                            placeholder="Masukkan email Anda"
                            autocomplete="off"
+                           autocapitalize="none"
+                           spellcheck="false"
                            required>
+
                 </div>
 
-                <div class="mb-4">
-                    <label class="form-label fw-semibold">
+                <div class="mb-3">
+
+                    <label for="password" class="form-label fw-semibold small">
                         Password
                     </label>
 
                     <input type="password"
                            name="password"
-                           class="form-control form-control-lg rounded-3"
+                           id="password"
+                           class="form-control rounded-3"
                            placeholder="Masukkan password Anda"
-                           autocomplete="current-password"
+                           autocomplete="new-password"
                            required>
+
                 </div>
 
                 <div class="d-grid">
+
                     <button type="submit"
-                            class="btn btn-primary btn-lg rounded-3 fw-semibold">
+                            class="btn btn-primary rounded-3 fw-semibold">
                         Masuk ke Sistem
                     </button>
+
                 </div>
 
             </form>
 
-            <div class="text-center mt-4">
+            <!-- FOOTER -->
+            <div class="text-center mt-3">
+
                 <p class="text-secondary small mb-0">
-                    Sistem Informasi Pelanggaran Siswa
+                    &copy; 2026 SMK Muhammadiyah Tasikmalaya
                 </p>
+
             </div>
 
         </div>

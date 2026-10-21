@@ -30,13 +30,16 @@ if (!$result_siswa) {
     die("Query siswa gagal: " . mysqli_error($koneksi));
 }
 
-/* Mengambil riwayat pelanggaran siswa yang dipilih */
-$result_laporan = null;
+/* Variabel laporan dan statistik */
 $nama_siswa = '';
 $nama_kelas = '';
 $total_poin = 0;
+$total_pelanggaran = 0;
+$pelanggaran_selesai = 0;
+$sedang_diproses = 0;
 $data_laporan = [];
 
+/* Mengambil laporan siswa yang dipilih */
 if ($siswa_id > 0) {
 
     $query_laporan = "
@@ -52,19 +55,26 @@ if ($siswa_id > 0) {
         die("Query laporan gagal: " . mysqli_error($koneksi));
     }
 
-    if (mysqli_num_rows($result_laporan) > 0) {
+    while ($data = mysqli_fetch_assoc($result_laporan)) {
+        $data_laporan[] = $data;
+    }
 
-        $data_pertama = mysqli_fetch_assoc($result_laporan);
+    if (!empty($data_laporan)) {
 
-        $nama_siswa = $data_pertama['nama_siswa'];
-        $nama_kelas = $data_pertama['nama_kelas'];
-        $total_poin = (int) $data_pertama['poin'];
+        $nama_siswa = $data_laporan[0]['nama_siswa'];
+        $nama_kelas = $data_laporan[0]['nama_kelas'];
 
-        $data_laporan[] = $data_pertama;
+        /* Menghitung statistik */
+        foreach ($data_laporan as $data) {
 
-        while ($data = mysqli_fetch_assoc($result_laporan)) {
-            $data_laporan[] = $data;
             $total_poin += (int) $data['poin'];
+            $total_pelanggaran++;
+
+            if (strtolower(trim($data['status'])) == 'selesai') {
+                $pelanggaran_selesai++;
+            } else {
+                $sedang_diproses++;
+            }
         }
     }
 }
@@ -106,65 +116,53 @@ if ($siswa_id > 0) {
 
             <nav class="nav flex-column gap-1">
 
-                <a href="dashboard.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="dashboard.php" class="nav-link text-white rounded py-2">
                     Dashboard
                 </a>
 
-                <a href="data_siswa.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_siswa.php" class="nav-link text-white rounded py-2">
                     Data Siswa
                 </a>
 
-                <a href="data_guru.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_guru.php" class="nav-link text-white rounded py-2">
                     Data Guru
                 </a>
 
-                <a href="data_kelas.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_kelas.php" class="nav-link text-white rounded py-2">
                     Kelas
                 </a>
 
-                <a href="data_tahun_ajaran.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_tahun_ajaran.php" class="nav-link text-white rounded py-2">
                     Tahun Ajaran
                 </a>
 
-                <a href="data_penempatan_siswa.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">
                     Penempatan Siswa
                 </a>
 
-                <a href="data_wali_kelas.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_wali_kelas.php" class="nav-link text-white rounded py-2">
                     Wali Kelas
                 </a>
 
-                <a href="data_kategori_pelanggaran.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">
                     Kategori Pelanggaran
                 </a>
 
-                <a href="data_jenis_pelanggaran.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">
                     Jenis Pelanggaran
                 </a>
 
-                <a href="data_laporan.php"
-                   class="nav-link active bg-primary text-white rounded py-2">
+                <a href="data_laporan.php" class="nav-link active bg-primary text-white rounded py-2">
                     Laporan
                 </a>
 
-                <a href="about_me.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="about_me.php" class="nav-link text-white rounded py-2">
                     About Me
                 </a>
 
                 <hr class="border-secondary my-2">
 
-                <a href="logout.php"
-                   class="nav-link text-danger rounded py-2">
+                <a href="logout.php" class="nav-link text-danger rounded py-2">
                     Logout
                 </a>
 
@@ -213,6 +211,96 @@ if ($siswa_id > 0) {
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
+                <!-- 4 KOTAK STATISTIK -->
+                <div class="row g-3 mb-4">
+
+                    <!-- KOTAK 1 -->
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body p-3">
+
+                                <p class="text-secondary mb-2">
+                                    Pelanggaran Selesai
+                                </p>
+
+                                <h3 class="fw-bold text-success mb-1">
+                                    <?= $pelanggaran_selesai; ?>
+                                </h3>
+
+                                <small class="text-secondary">
+                                    Kasus selesai ditangani
+                                </small>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KOTAK 2 -->
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body p-3">
+
+                                <p class="text-secondary mb-2">
+                                    Sedang Diproses
+                                </p>
+
+                                <h3 class="fw-bold text-warning mb-1">
+                                    <?= $sedang_diproses; ?>
+                                </h3>
+
+                                <small class="text-secondary">
+                                    Kasus belum selesai
+                                </small>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KOTAK 3 -->
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body p-3">
+
+                                <p class="text-secondary mb-2">
+                                    Total Poin
+                                </p>
+
+                                <h3 class="fw-bold text-primary mb-1">
+                                    <?= $total_poin; ?>
+                                </h3>
+
+                                <small class="text-secondary">
+                                    Akumulasi poin pelanggaran
+                                </small>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KOTAK 4 -->
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body p-3">
+
+                                <p class="text-secondary mb-2">
+                                    Total Pelanggaran
+                                </p>
+
+                                <h3 class="fw-bold text-danger mb-1">
+                                    <?= $total_pelanggaran; ?>
+                                </h3>
+
+                                <small class="text-secondary">
+                                    Seluruh kasus tercatat
+                                </small>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- AKHIR 4 KOTAK STATISTIK -->
+
                 <h3 class="fw-bold text-dark mb-2">
                     Laporan Pelanggaran
                 </h3>
@@ -255,7 +343,11 @@ if ($siswa_id > 0) {
                                             -- Pilih Siswa --
                                         </option>
 
-                                        <?php while ($siswa = mysqli_fetch_assoc($result_siswa)) { ?>
+                                        <?php
+                                        mysqli_data_seek($result_siswa, 0);
+
+                                        while ($siswa = mysqli_fetch_assoc($result_siswa)) {
+                                        ?>
 
                                             <option
                                                 value="<?= (int) $siswa['siswa_id']; ?>"
@@ -428,7 +520,7 @@ if ($siswa_id > 0) {
                                                     </td>
 
                                                     <td>
-                                                        <?php if (strtolower($data['status']) == 'selesai') { ?>
+                                                        <?php if (strtolower(trim($data['status'])) == 'selesai') { ?>
 
                                                             <span class="badge bg-success">
                                                                 <?= htmlspecialchars($data['status']); ?>

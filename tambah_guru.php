@@ -16,117 +16,134 @@ if (isset($_POST['simpan'])) {
     $nip = trim($_POST['nip']);
     $nama_guru = trim($_POST['nama']);
     $email = trim($_POST['email']);
+    $password_awal = $_POST['password'];
+    $konfirmasi_password = $_POST['konfirmasi_password'];
     $status_aktif = (int) $_POST['status_aktif'];
 
-    // Periksa apakah email sudah digunakan
-    $cek = mysqli_prepare(
-        $koneksi,
-        "SELECT id FROM t_users WHERE email = ?"
-    );
+    // Validasi password
+    if ($password_awal !== $konfirmasi_password) {
 
-    mysqli_stmt_bind_param($cek, "s", $email);
-    mysqli_stmt_execute($cek);
-    $hasil_cek = mysqli_stmt_get_result($cek);
+        $pesan = "Konfirmasi password tidak cocok.";
 
-    if (mysqli_num_rows($hasil_cek) > 0) {
+    } elseif (strlen($password_awal) < 6) {
 
-        $pesan = "Email sudah digunakan oleh akun lain.";
+        $pesan = "Password minimal 6 karakter.";
 
     } else {
 
-        // Periksa apakah NIP sudah digunakan
-        $cek_nip = mysqli_prepare(
+        // Periksa apakah email sudah digunakan
+        $cek = mysqli_prepare(
             $koneksi,
-            "SELECT id FROM t_guru WHERE nip = ?"
+            "SELECT id FROM t_users WHERE email = ?"
         );
 
-        mysqli_stmt_bind_param($cek_nip, "s", $nip);
-        mysqli_stmt_execute($cek_nip);
-        $hasil_nip = mysqli_stmt_get_result($cek_nip);
+        mysqli_stmt_bind_param($cek, "s", $email);
+        mysqli_stmt_execute($cek);
+        $hasil_cek = mysqli_stmt_get_result($cek);
 
-        if (mysqli_num_rows($hasil_nip) > 0) {
+        if (mysqli_num_rows($hasil_cek) > 0) {
 
-            $pesan = "NIP sudah terdaftar.";
+            $pesan = "Email sudah digunakan oleh akun lain.";
 
         } else {
 
-            // Buat password awal secara acak
-            $password_awal = bin2hex(random_bytes(6));
-            $password_hash = password_hash(
-                $password_awal,
-                PASSWORD_DEFAULT
+            // Periksa apakah NIP sudah digunakan
+            $cek_nip = mysqli_prepare(
+                $koneksi,
+                "SELECT id FROM t_guru WHERE nip = ?"
             );
 
-            // Mulai transaksi database
-            mysqli_begin_transaction($koneksi);
+            mysqli_stmt_bind_param($cek_nip, "s", $nip);
+            mysqli_stmt_execute($cek_nip);
+            $hasil_nip = mysqli_stmt_get_result($cek_nip);
 
-            try {
+            if (mysqli_num_rows($hasil_nip) > 0) {
 
-                // Buat akun pengguna
-                $role = "guru";
+                $pesan = "NIP sudah terdaftar.";
 
-                $buat_user = mysqli_prepare(
-                    $koneksi,
-                    "INSERT INTO t_users (name, email, password, role)
-                     VALUES (?, ?, ?, ?)"
+            } else {
+
+                // Enkripsi password
+                $password_hash = password_hash(
+                    $password_awal,
+                    PASSWORD_DEFAULT
                 );
 
-                mysqli_stmt_bind_param(
-                    $buat_user,
-                    "ssss",
-                    $nama_guru,
-                    $email,
-                    $password_hash,
-                    $role
-                );
+                // Mulai transaksi database
+                mysqli_begin_transaction($koneksi);
 
-                if (!mysqli_stmt_execute($buat_user)) {
-                    throw new Exception(mysqli_stmt_error($buat_user));
+                try {
+
+                    // Buat akun pengguna
+                    $role = "guru";
+
+                    $buat_user = mysqli_prepare(
+                        $koneksi,
+                        "INSERT INTO t_users (name, email, password, role)
+                         VALUES (?, ?, ?, ?)"
+                    );
+
+                    mysqli_stmt_bind_param(
+                        $buat_user,
+                        "ssss",
+                        $nama_guru,
+                        $email,
+                        $password_hash,
+                        $role
+                    );
+
+                    if (!mysqli_stmt_execute($buat_user)) {
+                        throw new Exception(
+                            mysqli_stmt_error($buat_user)
+                        );
+                    }
+
+                    // Ambil ID akun pengguna
+                    $user_id = mysqli_insert_id($koneksi);
+
+                    // Simpan data guru
+                    $buat_guru = mysqli_prepare(
+                        $koneksi,
+                        "INSERT INTO t_guru
+                         (nip, nama, email, status_aktif, user_id)
+                         VALUES (?, ?, ?, ?, ?)"
+                    );
+
+                    mysqli_stmt_bind_param(
+                        $buat_guru,
+                        "sssii",
+                        $nip,
+                        $nama_guru,
+                        $email,
+                        $status_aktif,
+                        $user_id
+                    );
+
+                    if (!mysqli_stmt_execute($buat_guru)) {
+                        throw new Exception(
+                            mysqli_stmt_error($buat_guru)
+                        );
+                    }
+
+                    // Simpan transaksi
+                    mysqli_commit($koneksi);
+
+                    // Simpan informasi akun baru untuk admin
+                    $_SESSION['password_guru_baru'] = [
+                        'nama' => $nama_guru,
+                        'email' => $email,
+                        'password' => $password_awal
+                    ];
+
+                    header("Location: data_guru.php?berhasil=tambah");
+                    exit;
+
+                } catch (Throwable $e) {
+
+                    mysqli_rollback($koneksi);
+
+                    $pesan = "Gagal menambahkan guru: " . $e->getMessage();
                 }
-
-                // Ambil ID akun yang baru dibuat
-                $user_id = mysqli_insert_id($koneksi);
-
-                // Simpan data guru dengan user_id yang benar
-                $buat_guru = mysqli_prepare(
-                    $koneksi,
-                    "INSERT INTO t_guru
-                     (nip, nama, email, status_aktif, user_id)
-                     VALUES (?, ?, ?, ?, ?)"
-                );
-
-                mysqli_stmt_bind_param(
-                    $buat_guru,
-                    "sssii",
-                    $nip,
-                    $nama_guru,
-                    $email,
-                    $status_aktif,
-                    $user_id
-                );
-
-                if (!mysqli_stmt_execute($buat_guru)) {
-                    throw new Exception(mysqli_stmt_error($buat_guru));
-                }
-
-                // Simpan kedua data jika semuanya berhasil
-                mysqli_commit($koneksi);
-
-                // Tampilkan password awal sekali kepada admin
-                $_SESSION['password_guru_baru'] = [
-                    'nama' => $nama_guru,
-                    'email' => $email,
-                    'password' => $password_awal
-                ];
-
-                header("Location: data_guru.php?berhasil=tambah");
-                exit;
-
-            } catch (Throwable $e) {
-
-                mysqli_rollback($koneksi);
-
-                $pesan = "Gagal menambahkan guru: " . $e->getMessage();
             }
         }
     }
@@ -162,7 +179,7 @@ if (isset($_POST['simpan'])) {
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
             <p class="text-secondary small mb-4">
-                 SMK Muhammadiyah Kota Tasikmalaya
+                SMK Muhammadiyah Kota Tasikmalaya
             </p>
 
             <p class="text-secondary small fw-bold mb-2">
@@ -247,8 +264,9 @@ if (isset($_POST['simpan'])) {
 
                     <?php } ?>
 
-                    <form method="POST" action="">
+                    <form method="POST" action="" autocomplete="off">
 
+                        <!-- NIP -->
                         <div class="mb-3">
                             <label for="nip" class="form-label">NIP</label>
 
@@ -257,9 +275,12 @@ if (isset($_POST['simpan'])) {
                                 name="nip"
                                 id="nip"
                                 class="form-control"
+                                autocomplete="off"
+                                value="<?= htmlspecialchars($_POST['nip'] ?? '') ?>"
                                 required>
                         </div>
 
+                        <!-- NAMA GURU -->
                         <div class="mb-3">
                             <label for="nama" class="form-label">Nama Guru</label>
 
@@ -268,9 +289,12 @@ if (isset($_POST['simpan'])) {
                                 name="nama"
                                 id="nama"
                                 class="form-control"
+                                autocomplete="off"
+                                value="<?= htmlspecialchars($_POST['nama'] ?? '') ?>"
                                 required>
                         </div>
 
+                        <!-- EMAIL -->
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
 
@@ -279,9 +303,48 @@ if (isset($_POST['simpan'])) {
                                 name="email"
                                 id="email"
                                 class="form-control"
+                                autocomplete="off"
+                                value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
                                 required>
                         </div>
 
+                        <!-- PASSWORD -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label">
+                                Password
+                            </label>
+
+                            <input
+                                type="password"
+                                name="password"
+                                id="password"
+                                class="form-control"
+                                minlength="6"
+                                autocomplete="new-password"
+                                required>
+
+                            <div class="form-text">
+                                Password minimal 6 karakter.
+                            </div>
+                        </div>
+
+                        <!-- KONFIRMASI PASSWORD -->
+                        <div class="mb-3">
+                            <label for="konfirmasi_password" class="form-label">
+                                Konfirmasi Password
+                            </label>
+
+                            <input
+                                type="password"
+                                name="konfirmasi_password"
+                                id="konfirmasi_password"
+                                class="form-control"
+                                minlength="6"
+                                autocomplete="new-password"
+                                required>
+                        </div>
+
+                        <!-- STATUS -->
                         <div class="mb-3">
                             <label for="status_aktif" class="form-label">
                                 Status
@@ -299,6 +362,7 @@ if (isset($_POST['simpan'])) {
                             </select>
                         </div>
 
+                        <!-- TOMBOL -->
                         <button
                             type="submit"
                             name="simpan"

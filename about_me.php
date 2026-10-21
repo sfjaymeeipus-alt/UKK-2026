@@ -1,11 +1,14 @@
-
 <?php
-
 include "middleware/auth.php";
+include "config/koneksi.php";
 
+if (!isset($_SESSION['role'])) {
+    header("Location: login.php");
+    exit;
+}
+
+$nama = $_SESSION['nama'] ?? 'Pengguna';
 $role = $_SESSION['role'];
-$nama = "Puspita Dewi";
-
 ?>
 
 <!DOCTYPE html>
@@ -17,7 +20,6 @@ $nama = "Puspita Dewi";
 
     <title>About Me - Sistem Informasi Pelanggaran Siswa</title>
 
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet">
 </head>
@@ -48,25 +50,76 @@ $nama = "Puspita Dewi";
                     Dashboard
                 </a>
 
-                <a href="data_catatan_pelanggaran.php"
-                   class="nav-link text-white rounded py-2">
-                    Catatan Pelanggaran
-                </a>
+                <?php if ($role == 'admin') { ?>
 
-                <a href="data_tindakan.php"
-                   class="nav-link text-white rounded py-2">
-                    Tindakan
-                </a>
+                    <a href="data_siswa.php"
+                       class="nav-link text-white rounded py-2">
+                        Data Siswa
+                    </a>
 
-                <a href="data_riwayat.php"
-                   class="nav-link text-white rounded py-2">
-                   Riwayat
-                </a>
+                    <a href="data_guru.php"
+                       class="nav-link text-white rounded py-2">
+                        Data Guru
+                    </a>
 
-                <a href="data_rekap_poin.php"
-                   class="nav-link text-white rounded py-2">
-                    Rekap Poin
-                </a>
+                    <a href="data_kelas.php"
+                       class="nav-link text-white rounded py-2">
+                        Kelas
+                    </a>
+
+                    <a href="data_tahun_ajaran.php"
+                       class="nav-link text-white rounded py-2">
+                        Tahun Ajaran
+                    </a>
+
+                    <a href="data_penempatan_siswa.php"
+                       class="nav-link text-white rounded py-2">
+                        Penempatan Siswa
+                    </a>
+
+                    <a href="data_wali_kelas.php"
+                       class="nav-link text-white rounded py-2">
+                        Wali Kelas
+                    </a>
+
+                    <a href="data_kategori_pelanggaran.php"
+                       class="nav-link text-white rounded py-2">
+                        Kategori Pelanggaran
+                    </a>
+
+                    <a href="data_jenis_pelanggaran.php"
+                       class="nav-link text-white rounded py-2">
+                        Jenis Pelanggaran
+                    </a>
+
+                    <a href="data_laporan.php"
+                       class="nav-link text-white rounded py-2">
+                        Laporan
+                    </a>
+
+                <?php } elseif ($role == 'guru') { ?>
+
+                    <a href="data_catatan_pelanggaran.php"
+                       class="nav-link text-white rounded py-2">
+                        Catatan Pelanggaran
+                    </a>
+
+                    <a href="data_tindakan.php"
+                       class="nav-link text-white rounded py-2">
+                        Tindakan
+                    </a>
+
+                    <a href="data_riwayat.php"
+                       class="nav-link text-white rounded py-2">
+                        Riwayat
+                    </a>
+
+                    <a href="data_rekap_poin.php"
+                       class="nav-link text-white rounded py-2">
+                        Rekap Poin
+                    </a>
+
+                <?php } ?>
 
                 <a href="about_me.php"
                    class="nav-link active bg-primary text-white rounded py-2">
@@ -88,108 +141,122 @@ $nama = "Puspita Dewi";
         <main class="col-md-9 col-lg-10 p-0">
 
             <!-- HEADER -->
-            <header class="bg-white border-bottom p-3 p-md-4
+            <header class="bg-white border-bottom px-4 py-3
                            d-flex justify-content-between align-items-center">
 
                 <div>
-                    <h5 class="fw-bold text-dark mb-1">
-                        About Me
-                    </h5>
-
+                    <h5 class="fw-bold mb-1">About Me</h5>
                     <small class="text-secondary">
                         Sistem Informasi Pelanggaran Siswa
                     </small>
                 </div>
 
-                <div class="d-flex align-items-center gap-2">
-
+                <div class="d-flex align-items-center gap-3">
                     <div class="text-end">
                         <div class="fw-bold">
                             <?= htmlspecialchars($nama); ?>
                         </div>
-
                         <small class="text-secondary">
                             <?= htmlspecialchars(ucfirst($role)); ?>
                         </small>
                     </div>
 
-                    <div class="bg-primary-subtle text-primary rounded-circle
+                    <div class="rounded-circle bg-primary-subtle text-primary
                                 d-flex justify-content-center align-items-center
-                                fw-bold flex-shrink-0"
+                                fw-bold"
                          style="width: 42px; height: 42px;">
                         <?= strtoupper(substr($nama, 0, 1)); ?>
                     </div>
-
                 </div>
 
             </header>
 
-            <!-- ISI HALAMAN -->
-            <section class="p-3 p-md-4">
+            <div class="p-3 p-md-4">
 
-                <h3 class="fw-bold text-dark mb-2">
-                    About Me
-                </h3>
-
-                <p class="text-secondary mb-4">
-                    Sedikit cerita tentang saya dan proyek yang saya buat.
-                </p>
+                <!-- JUDUL HALAMAN -->
+                <div class="mb-4">
+                    <h3 class="fw-bold mb-2">Tentang Saya</h3>
+                    <p class="text-secondary mb-0">
+                        Kenali profil pengembang dan proyek yang saya buat.
+                    </p>
+                </div>
 
                 <!-- KARTU PROFIL -->
-                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
 
-                    <div class="card-header bg-white p-3 p-md-4">
-                        <h5 class="fw-bold mb-1">
-                            Profil Pengembang
-                        </h5>
-
-                        <small class="text-secondary">
-                            Informasi singkat mengenai diri saya.
-                        </small>
-                    </div>
-
-                    <div class="card-body p-3 p-md-4">
+<div class="bg-primary-subtle p-4 text-primary-emphasis">
+    <h5 class="fw-bold mb-1">Profil Pengembang</h5>
+    <p class="mb-0 small">
+        Informasi singkat mengenai diri saya.
+    </p>
+</div>
+                    <div class="card-body p-4 p-md-5">
 
                         <div class="row align-items-center g-4">
 
-                            <!-- FOTO PROFIL -->
-                            <div class="col-12 col-lg-4 text-center">
+                            <div class="col-md-4 text-center">
 
-                                <div class="d-inline-block p-2 rounded-circle bg-white shadow-sm">
+                                <img src="foto_profil.jpeg"
+                                     alt="Foto Puspita Dewi"
+                                     class="rounded-circle img-thumbnail shadow-sm"
+                                     style="width: 210px; height: 210px;
+                                            object-fit: cover;">
 
-                                    <img src="foto_profil.jpeg"
-                                         alt="Foto profil Puspita Dewi"
-                                         class="rounded-circle img-fluid"
-                                         style="width: 220px; height: 220px; object-fit: cover;">
-
+                                <div class="mt-3">
+                                    <span class="badge rounded-pill text-bg-primary px-3 py-2">
+                                        XII RPL 2
+                                    </span>
                                 </div>
 
                             </div>
 
-                            <!-- IDENTITAS -->
-                            <div class="col-12 col-lg-8">
+                            <div class="col-md-8">
 
-                                <p class="text-primary fw-semibold mb-2">
-                                    HALO, SAYA
+                                <p class="text-primary fw-bold small mb-2">
+                                    HALO, PERKENALKAN
                                 </p>
 
-                                <h2 class="fw-bold text-dark mb-2">
-                                    <?= htmlspecialchars($nama); ?>
-                                </h2>
+                                <h1 class="fw-bold mb-2">
+                                    Puspita Dewi
+                                </h1>
 
-                                <h5 class="text-secondary mb-4">
+                                <h5 class="text-secondary mb-3">
                                     Siswa Rekayasa Perangkat Lunak
                                 </h5>
 
-                                <p class="text-secondary">
-                                    Saya merupakan siswa kelas XII RPL 2 di
-                                    SMK Muhammadiyah Tasikmalaya. Saya sedang belajar
-                                    mengembangkan aplikasi berbasis web menggunakan
-                                    PHP Native dan MySQL.
+                                <p class="text-secondary lh-lg">
+                                    Saya merupakan siswa kelas XII RPL 2
+                                    di SMK Muhammadiyah Tasikmalaya.
+                                    Saya memiliki minat dalam pengembangan
+                                    aplikasi berbasis web dan sedang
+                                    mengembangkan kemampuan pemrograman
+                                    menggunakan PHP Native dan MySQL.
                                 </p>
 
+                                <div class="d-flex flex-wrap gap-2 mt-4">
+                                    <span class="badge border text-dark bg-light p-2">
+                                        PHP Native
+                                    </span>
+
+                                    <span class="badge border text-dark bg-light p-2">
+                                        MySQL
+                                    </span>
+
+                                    <span class="badge border text-dark bg-light p-2">
+                                        HTML
+                                    </span>
+
+                                    <span class="badge border text-dark bg-light p-2">
+                                        JavaScript
+                                    </span>
+
+                                    <span class="badge border text-dark bg-light p-2">
+                                        Bootstrap
+                                    </span>
+                                </div>
+
                                 <a href="dashboard.php"
-                                   class="btn btn-outline-secondary btn-sm mt-2">
+                                   class="btn btn-primary rounded-3 mt-4 px-4">
                                     Kembali ke Dashboard
                                 </a>
 
@@ -201,120 +268,118 @@ $nama = "Puspita Dewi";
 
                 </div>
 
-                <!-- INFORMASI DIRI -->
-                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <!-- INFORMASI PENDIDIKAN DAN KEAHLIAN -->
+                <div class="row g-4 mb-4">
 
-                    <div class="card-header bg-white p-3 p-md-4">
-                        <h5 class="fw-bold mb-1">
-                            Informasi Saya
-                        </h5>
+                    <div class="col-md-6">
 
-                        <small class="text-secondary">
-                            Pendidikan dan bidang keahlian.
-                        </small>
+                        <div class="card border-0 shadow-sm rounded-4 h-100">
+                            <div class="card-body p-4">
+
+                                <div class="rounded-3 bg-primary-subtle text-primary
+                                            d-flex justify-content-center align-items-center mb-3"
+                                     style="width: 48px; height: 48px;">
+                                    <span class="fw-bold fs-5">01</span>
+                                </div>
+
+                                <h5 class="fw-bold mb-3">Pendidikan</h5>
+
+                                <h6 class="fw-bold mb-1">XII RPL 2</h6>
+
+                                <p class="text-secondary mb-2">
+                                    SMK Muhammadiyah Tasikmalaya
+                                </p>
+
+                                <p class="small text-secondary mb-0">
+                                    Kompetensi Keahlian Rekayasa Perangkat Lunak.
+                                </p>
+
+                            </div>
+                        </div>
+
                     </div>
 
-                    <div class="card-body p-3 p-md-4">
+                    <div class="col-md-6">
 
-                        <div class="row g-3">
+                        <div class="card border-0 shadow-sm rounded-4 h-100">
+                            <div class="card-body p-4">
 
-                            <div class="col-12 col-md-6">
-
-                                <div class="border rounded-3 p-4 h-100">
-
-                                    <p class="text-primary fw-semibold mb-2">
-                                        PENDIDIKAN
-                                    </p>
-
-                                    <h6 class="fw-bold">
-                                        XII RPL 2
-                                    </h6>
-
-                                    <p class="text-secondary mb-0">
-                                        SMK Muhammadiyah Tasikmalaya
-                                    </p>
-
+                                <div class="rounded-3 bg-success-subtle text-success
+                                            d-flex justify-content-center align-items-center mb-3"
+                                     style="width: 48px; height: 48px;">
+                                    <span class="fw-bold fs-5">02</span>
                                 </div>
 
-                            </div>
+                                <h5 class="fw-bold mb-3">Keahlian</h5>
 
-                            <div class="col-12 col-md-6">
+                                <h6 class="fw-bold mb-1">
+                                    Pengembangan Aplikasi Web
+                                </h6>
 
-                                <div class="border rounded-3 p-4 h-100">
+                                <p class="text-secondary mb-2">
+                                    Rekayasa Perangkat Lunak
+                                </p>
 
-                                    <p class="text-primary fw-semibold mb-2">
-                                        KEAHLIAN
-                                    </p>
-
-                                    <h6 class="fw-bold">
-                                        Rekayasa Perangkat Lunak
-                                    </h6>
-
-                                    <p class="text-secondary mb-0">
-                                        Pengembangan aplikasi web
-                                    </p>
-
-                                </div>
+                                <p class="small text-secondary mb-0">
+                                    Mempelajari pembuatan aplikasi web,
+                                    pengolahan basis data, dan desain antarmuka.
+                                </p>
 
                             </div>
-
                         </div>
 
                     </div>
 
                 </div>
 
-                <!-- INFORMASI PROYEK -->
-                <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <!-- TENTANG PROYEK -->
+                <div class="card border-0 shadow-sm rounded-4 mb-4">
 
-                    <div class="card-header bg-white p-3 p-md-4">
-                        <h5 class="fw-bold mb-1">
-                            Proyek yang Sedang Dikerjakan
-                        </h5>
+                    <div class="card-body p-4 p-md-5">
 
-                        <small class="text-secondary">
-                            Teknologi yang digunakan dalam pengembangan aplikasi.
-                        </small>
-                    </div>
+                        <div class="row align-items-center g-4">
 
-                    <div class="card-body p-3 p-md-4">
+                            <div class="col-md-8">
 
-                        <div class="bg-primary text-white rounded-3 p-4 p-md-5">
-
-                            <p class="text-white-50 fw-semibold mb-2">
-                                PROJECT SEKOLAH
-                            </p>
-
-                            <h3 class="fw-bold mb-3">
-                                Sistem Informasi Pelanggaran Siswa
-                            </h3>
-
-                            <p class="mb-4">
-                                Aplikasi berbasis web untuk membantu pengelolaan
-                                data dan informasi pelanggaran siswa secara terstruktur.
-                            </p>
-
-                            <div class="d-flex flex-wrap gap-2">
-
-                                <span class="badge bg-light text-primary px-3 py-2">
-                                    PHP Native
+                                <span class="badge text-bg-primary mb-3">
+                                    PROYEK SEKOLAH
                                 </span>
 
-                                <span class="badge bg-light text-primary px-3 py-2">
-                                    MySQL
-                                </span>
+                                <h4 class="fw-bold mb-3">
+                                    Sistem Informasi Pelanggaran Siswa
+                                </h4>
 
-                                <span class="badge bg-light text-primary px-3 py-2">
-                                    HTML
-                                </span>
+                                <p class="text-secondary lh-lg mb-3">
+                                    Aplikasi berbasis web ini dibuat untuk
+                                    membantu sekolah mengelola informasi
+                                    pelanggaran siswa secara lebih terstruktur.
+                                    Sistem menyediakan pengelolaan data dan
+                                    informasi pelanggaran sesuai hak akses pengguna.
+                                </p>
 
-                                <span class="badge bg-light text-primary px-3 py-2">
-                                    Bootstrap
-                                </span>
+                                <p class="text-secondary mb-0">
+                                    <strong>Teknologi:</strong>
+                                    PHP Native, MySQL, HTML, JavaScript,
+                                    dan Bootstrap.
+                                </p>
 
-                                <span class="badge bg-light text-primary px-3 py-2">
-                                    JavaScript
-                                </span>
+                            </div>
+
+                            <div class="col-md-4">
+
+                                <div class="bg-light border rounded-4 p-4 text-center">
+                                    <h2 class="fw-bold text-primary mb-2">
+                                        RPL
+                                    </h2>
+
+                                    <p class="fw-semibold mb-1">
+                                        Rekayasa Perangkat Lunak
+                                    </p>
+
+                                    <small class="text-secondary">
+                                        Belajar, berkarya, dan berkembang.
+                                    </small>
+                                </div>
 
                             </div>
 
@@ -325,18 +390,19 @@ $nama = "Puspita Dewi";
                 </div>
 
                 <!-- FOOTER -->
-                <footer class="text-center text-secondary small mt-4">
-                    Sistem Informasi Pelanggaran Siswa &copy; 2026
-                </footer>
+                <div class="text-center py-3">
+                    <small class="text-secondary">
+                        &copy; 2026 Sistem Informasi Pelanggaran Siswa
+                        | Dibuat oleh Puspita Dewi
+                    </small>
+                </div>
 
-            </section>
+            </div>
 
         </main>
 
     </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>
