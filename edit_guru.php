@@ -234,6 +234,9 @@ if (isset($_POST['simpan'])) {
                                        name="nip"
                                        id="nip"
                                        class="form-control"
+                                       maxlength="18"
+                                       minlength="18"
+                                       title="NIP harus terdiri dari tepat 18"
                                        value="<?= htmlspecialchars($data['nip'] ?? ''); ?>"
                                        required>
                             </div>

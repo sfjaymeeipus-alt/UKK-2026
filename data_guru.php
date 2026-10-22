@@ -114,9 +114,9 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
                            d-flex justify-content-between align-items-center">
 
                 <div>
-                    <h5 class="fw-bold text-dark mb-1">
+                    <h4 class="fw-bold text-dark mb-1">
                         Data Guru
-                    </h5>
+                    </h4>
 
                     <small class="text-secondary">
                         Sistem Informasi Pelanggaran Siswa
@@ -147,13 +147,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                <h3 class="fw-bold text-dark mb-2">
-                    Data Guru
-                </h3>
-
-                <p class="text-secondary mb-4">
-                    Kelola informasi guru yang terdaftar di sekolah.
-                </p>
+                
 
                 <!-- KARTU DATA GURU -->
                 <div class="card border-0 shadow-sm rounded-3">

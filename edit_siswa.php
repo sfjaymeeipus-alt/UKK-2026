@@ -220,6 +220,9 @@ if (isset($_POST['update'])) {
                                 <input type="text"
                                        name="nis"
                                        class="form-control"
+                                       maxlength="10"
+                                       minlength="10"
+                                       pattern="[0-9]{10}"
                                        value="<?= htmlspecialchars($data['nis'] ?? ''); ?>"
                                        required>
                             </div>
@@ -228,6 +231,9 @@ if (isset($_POST['update'])) {
                                 <label class="form-label fw-semibold">NISN</label>
                                 <input type="text"
                                        name="nisn"
+                                       maxlength="10"
+                                       minlength="10"
+                                       pattern="[0-9]{10}"
                                        class="form-control"
                                        value="<?= htmlspecialchars($data['nisn'] ?? ''); ?>"
                                        required>

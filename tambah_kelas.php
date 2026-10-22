@@ -1,3 +1,4 @@
+
 <?php
 
 include "middleware/auth.php";
@@ -18,22 +19,37 @@ if (isset($_POST['simpan'])) {
     $jurusan = mysqli_real_escape_string($koneksi, $_POST['jurusan']);
     $status_aktif = (int) $_POST['status_aktif'];
 
-    $query = "
-        INSERT INTO t_kelas
-        (nama, tingkat, jurusan, status_aktif)
-        VALUES
-        ('$nama_kelas', '$tingkat', '$jurusan', '$status_aktif')
-    ";
+    // TAMBAHAN: CEK APAKAH NAMA KELAS SUDAH TERDATA
+    $cek = mysqli_query($koneksi, "
+        SELECT id
+        FROM t_kelas
+        WHERE nama = '$nama_kelas'
+        LIMIT 1
+    ");
 
-    if (mysqli_query($koneksi, $query)) {
+    if (mysqli_num_rows($cek) > 0) {
 
-        header("Location: data_kelas.php");
-        exit;
+        $pesan = "Data kelas sudah terdata. Silakan gunakan nama kelas yang lain.";
 
     } else {
 
-        $pesan = "Gagal menyimpan data kelas: " . mysqli_error($koneksi);
+        $query = "
+            INSERT INTO t_kelas
+            (nama, tingkat, jurusan, status_aktif)
+            VALUES
+            ('$nama_kelas', '$tingkat', '$jurusan', '$status_aktif')
+        ";
 
+        if (mysqli_query($koneksi, $query)) {
+
+            header("Location: data_kelas.php");
+            exit;
+
+        } else {
+
+            $pesan = "Gagal menyimpan data kelas: " . mysqli_error($koneksi);
+
+        }
     }
 }
 

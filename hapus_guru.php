@@ -20,7 +20,31 @@ if (isset($_GET['id'])) {
         exit;
     }
 
-    // Menghapus data guru berdasarkan ID
+    // Memeriksa apakah guru digunakan dalam data pelanggaran
+    $cek = mysqli_prepare(
+        $koneksi,
+        "SELECT COUNT(*) AS total
+         FROM t_pelanggaran_siswa
+         WHERE guru_id = ?"
+    );
+
+    mysqli_stmt_bind_param($cek, "i", $id);
+    mysqli_stmt_execute($cek);
+
+    $hasil = mysqli_stmt_get_result($cek);
+    $data = mysqli_fetch_assoc($hasil);
+
+    mysqli_stmt_close($cek);
+
+    // Jika guru masih memiliki riwayat pelanggaran
+    if ($data['total'] > 0) {
+        echo "Data guru tidak dapat dihapus karena masih digunakan dalam riwayat pelanggaran siswa.";
+        echo "<br>Jumlah data terkait: " . (int) $data['total'];
+        echo "<br><a href='data_guru.php'>Kembali ke Data Guru</a>";
+        exit;
+    }
+
+    // Menghapus data guru dari database
     $query = mysqli_prepare(
         $koneksi,
         "DELETE FROM t_guru WHERE id = ?"
@@ -42,8 +66,11 @@ if (isset($_GET['id'])) {
         }
 
     } else {
+        $error = mysqli_stmt_error($query);
         mysqli_stmt_close($query);
+
         echo "Gagal menghapus data guru.";
+        echo "<br>Detail error: " . htmlspecialchars($error);
         exit;
     }
 

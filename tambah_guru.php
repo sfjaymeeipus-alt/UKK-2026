@@ -1,3 +1,4 @@
+
 <?php
 
 include "middleware/auth.php";
@@ -31,13 +32,15 @@ if (isset($_POST['simpan'])) {
 
     } else {
 
-        // Periksa apakah email sudah digunakan
+        // Periksa apakah email sudah digunakan di t_users atau t_guru
         $cek = mysqli_prepare(
             $koneksi,
-            "SELECT id FROM t_users WHERE email = ?"
+            "SELECT id FROM t_users WHERE email = ?
+             UNION
+             SELECT id FROM t_guru WHERE email = ?"
         );
 
-        mysqli_stmt_bind_param($cek, "s", $email);
+        mysqli_stmt_bind_param($cek, "ss", $email, $email);
         mysqli_stmt_execute($cek);
         $hasil_cek = mysqli_stmt_get_result($cek);
 
@@ -276,6 +279,9 @@ if (isset($_POST['simpan'])) {
                                 id="nip"
                                 class="form-control"
                                 autocomplete="off"
+                                maxlength="18"
+                                minlength="18"
+                                title="NIP harus terdiri dari tepat 18"
                                 value="<?= htmlspecialchars($_POST['nip'] ?? '') ?>"
                                 required>
                         </div>
@@ -314,14 +320,38 @@ if (isset($_POST['simpan'])) {
                                 Password
                             </label>
 
-                            <input
-                                type="password"
-                                name="password"
-                                id="password"
-                                class="form-control"
-                                minlength="6"
-                                autocomplete="new-password"
-                                required>
+                            <div class="input-group">
+                                <input
+                                    type="password"
+                                    name="password"
+                                    id="password"
+                                    class="form-control"
+                                    minlength="6"
+                                    autocomplete="new-password"
+                                    required>
+
+                                <button
+                                    class="btn btn-outline-secondary"
+                                    type="button"
+                                    aria-label="Tampilkan atau sembunyikan password"
+                                    onclick="togglePassword('password', 'ikonPassword')">
+
+                                    <svg id="ikonPassword"
+                                         xmlns="http://www.w3.org/2000/svg"
+                                         width="20"
+                                         height="20"
+                                         viewBox="0 0 24 24"
+                                         fill="none"
+                                         stroke="currentColor"
+                                         stroke-width="2"
+                                         stroke-linecap="round"
+                                         stroke-linejoin="round">
+                                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+
+                                </button>
+                            </div>
 
                             <div class="form-text">
                                 Password minimal 6 karakter.
@@ -334,14 +364,38 @@ if (isset($_POST['simpan'])) {
                                 Konfirmasi Password
                             </label>
 
-                            <input
-                                type="password"
-                                name="konfirmasi_password"
-                                id="konfirmasi_password"
-                                class="form-control"
-                                minlength="6"
-                                autocomplete="new-password"
-                                required>
+                            <div class="input-group">
+                                <input
+                                    type="password"
+                                    name="konfirmasi_password"
+                                    id="konfirmasi_password"
+                                    class="form-control"
+                                    minlength="6"
+                                    autocomplete="new-password"
+                                    required>
+
+                                <button
+                                    class="btn btn-outline-secondary"
+                                    type="button"
+                                    aria-label="Tampilkan atau sembunyikan konfirmasi password"
+                                    onclick="togglePassword('konfirmasi_password', 'ikonKonfirmasi')">
+
+                                    <svg id="ikonKonfirmasi"
+                                         xmlns="http://www.w3.org/2000/svg"
+                                         width="20"
+                                         height="20"
+                                         viewBox="0 0 24 24"
+                                         fill="none"
+                                         stroke="currentColor"
+                                         stroke-width="2"
+                                         stroke-linecap="round"
+                                         stroke-linejoin="round">
+                                        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+
+                                </button>
+                            </div>
                         </div>
 
                         <!-- STATUS -->
@@ -384,6 +438,37 @@ if (isset($_POST['simpan'])) {
 
     </div>
 </div>
+
+<script>
+function togglePassword(inputId, ikonId) {
+
+    const password = document.getElementById(inputId);
+    const ikon = document.getElementById(ikonId);
+
+    if (password.type === "password") {
+
+        password.type = "text";
+
+        ikon.innerHTML = `
+            <path d="M3 3l18 18"/>
+            <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/>
+            <path d="M9.9 5.2A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a16 16 0 0 1-4 4.6"/>
+            <path d="M6.2 6.2C3.5 8 2 12 2 12s3.6 7 10 7c1.3 0 2.5-.3 3.6-.8"/>
+        `;
+
+    } else {
+
+        password.type = "password";
+
+        ikon.innerHTML = `
+            <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/>
+            <circle cx="12" cy="12" r="3"/>
+        `;
+
+    }
+
+}
+</script>
 
 </body>
 </html>

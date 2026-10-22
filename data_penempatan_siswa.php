@@ -153,9 +153,9 @@ if (!$result) {
                           d-flex justify-content-between align-items-center">
 
                 <div>
-                    <h5 class="fw-bold text-dark mb-1">
+                    <h4 class="fw-bold text-dark mb-1">
                         Data Penempatan Siswa
-                    </h5>
+                    </h4>
 
                     <small class="text-secondary">
                         Sistem Informasi Pelanggaran Siswa
@@ -186,15 +186,7 @@ if (!$result) {
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                <div class="mb-4">
-                    <h3 class="fw-bold mb-1">
-                        Daftar Penempatan Siswa
-                    </h3>
-
-                    <p class="text-secondary mb-0">
-                        Kelola penempatan siswa berdasarkan kelas dan tahun ajaran.
-                    </p>
-                </div>
+                
 
                 <!-- KARTU TABEL -->
                 <div class="card border-0 shadow-sm rounded-3">
@@ -205,9 +197,9 @@ if (!$result) {
                                 flex-wrap gap-3">
 
                         <div>
-                            <h6 class="fw-bold mb-1">
+                            <h5 class="fw-bold mb-1">
                                 Tabel Penempatan Siswa
-                            </h6>
+                            </h5>
 
                             <small class="text-secondary">
                                 Data penempatan yang tersimpan di sistem.

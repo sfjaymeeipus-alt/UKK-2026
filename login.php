@@ -89,13 +89,39 @@ if (isset($_SESSION['login'])) {
                         Password
                     </label>
 
-                    <input type="password"
-                           name="password"
-                           id="password"
-                           class="form-control rounded-3"
-                           placeholder="Masukkan password Anda"
-                           autocomplete="new-password"
-                           required>
+                    <div class="input-group">
+
+                        <input type="password"
+                               name="password"
+                               id="password"
+                               class="form-control rounded-start-3"
+                               placeholder="Masukkan password Anda"
+                               autocomplete="new-password"
+                               required>
+
+                        <button class="btn btn-outline-secondary rounded-end-3"
+                                type="button"
+                                id="togglePassword"
+                                aria-label="Lihat password"
+                                title="Lihat password">
+
+                            <!-- Ikon mata -->
+                            <svg id="eyeIcon"
+                                 xmlns="http://www.w3.org/2000/svg"
+                                 width="20"
+                                 height="20"
+                                 fill="currentColor"
+                                 viewBox="0 0 16 16">
+
+                                <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zm-8 4a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/>
+
+                                <path d="M8 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+
+                            </svg>
+
+                        </button>
+
+                    </div>
 
                 </div>
 
@@ -124,6 +150,44 @@ if (isset($_SESSION['login'])) {
     </div>
 
 </div>
+
+<!-- JAVASCRIPT UNTUK LIHAT PASSWORD -->
+<script>
+    const password = document.getElementById("password");
+    const togglePassword = document.getElementById("togglePassword");
+    const eyeIcon = document.getElementById("eyeIcon");
+
+    togglePassword.addEventListener("click", function () {
+
+        if (password.type === "password") {
+
+            password.type = "text";
+
+            eyeIcon.innerHTML = `
+                <path d="M13.359 11.238C15.06 9.72 16 8 16 8s-3-5.5-8-5.5a7.3 7.3 0 0 0-2.79.55l1.23 1.23A4 4 0 0 1 12 8c0 .68-.17 1.32-.47 1.88l1.83 1.36z"/>
+                <path d="M11.297 13.176 9.96 11.84A7.7 7.7 0 0 1 8 12.5C3 12.5 0 8 0 8s1.3-2.38 3.53-3.93L1.39 2.53l.71-.71 12 12-.71.71-2.1-1.35z"/>
+                <path d="M5.354 6.06A3 3 0 0 0 9.94 10.646L5.354 6.06z"/>
+            `;
+
+            togglePassword.setAttribute("aria-label", "Sembunyikan password");
+            togglePassword.setAttribute("title", "Sembunyikan password");
+
+        } else {
+
+            password.type = "password";
+
+            eyeIcon.innerHTML = `
+                <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zm-8 4a4 4 0 1 1 0-8 4 4 0 0 1 0 8z"/>
+                <path d="M8 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/>
+            `;
+
+            togglePassword.setAttribute("aria-label", "Lihat password");
+            togglePassword.setAttribute("title", "Lihat password");
+
+        }
+
+    });
+</script>
 
 </body>
 </html>

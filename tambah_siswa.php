@@ -1,3 +1,4 @@
+
 <?php
 
 include "middleware/auth.php";
@@ -21,23 +22,37 @@ if (isset($_POST['simpan'])) {
     $alamat = mysqli_real_escape_string($koneksi, $_POST['alamat']);
     $status_aktif = (int) $_POST['status_aktif'];
 
-    $query = "
-        INSERT INTO t_siswa
-        (nis, nisn, nama, jenis_kelamin, tanggal_lahir, alamat, status_aktif)
-        VALUES
-        ('$nis', '$nisn', '$nama_siswa', '$jenis_kelamin',
-         '$tanggal_lahir', '$alamat', '$status_aktif')
-    ";
+    // Cek apakah NIS atau NISN sudah terdaftar
+    $cek = mysqli_query($koneksi, "
+        SELECT id FROM t_siswa
+        WHERE nis = '$nis' OR nisn = '$nisn'
+        LIMIT 1
+    ");
 
-    if (mysqli_query($koneksi, $query)) {
+    if (mysqli_num_rows($cek) > 0) {
 
-        header("Location: data_siswa.php");
-        exit;
+        $pesan = "Data gagal disimpan! NIS atau NISN sudah terdaftar.";
 
     } else {
 
-        $pesan = "Gagal menyimpan data: " . mysqli_error($koneksi);
+        $query = "
+            INSERT INTO t_siswa
+            (nis, nisn, nama, jenis_kelamin, tanggal_lahir, alamat, status_aktif)
+            VALUES
+            ('$nis', '$nisn', '$nama_siswa', '$jenis_kelamin',
+             '$tanggal_lahir', '$alamat', '$status_aktif')
+        ";
 
+        if (mysqli_query($koneksi, $query)) {
+
+            header("Location: data_siswa.php");
+            exit;
+
+        } else {
+
+            $pesan = "Gagal menyimpan data: " . mysqli_error($koneksi);
+
+        }
     }
 }
 
@@ -65,75 +80,76 @@ if (isset($_POST['simpan'])) {
     <div class="row">
 
         <!-- SIDEBAR -->
-<aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
 
-    <h5 class="fw-bold mb-1">Sistem Informasi</h5>
-    <h6 class="fw-bold">Pelanggaran Siswa</h6>
+            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+            <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
-    <p class="text-secondary small mb-4">
-        SMK Muhammadiyah Kota Tasikmalaya
-    </p>
+            <p class="text-secondary small mb-4">
+                SMK Muhammadiyah Kota Tasikmalaya
+            </p>
 
-    <p class="text-secondary small fw-bold mb-2">
-        MENU NAVIGASI
-    </p>
+            <p class="text-secondary small fw-bold mb-2">
+                MENU NAVIGASI
+            </p>
 
-    <nav class="nav flex-column gap-1">
+            <nav class="nav flex-column gap-1">
 
-        <a href="dashboard.php" class="nav-link text-white rounded py-2">
-            Dashboard
-        </a>
+                <a href="dashboard.php" class="nav-link text-white rounded py-2">
+                    Dashboard
+                </a>
 
-        <a href="data_siswa.php"
-           class="nav-link active bg-primary text-white rounded py-2">
-            Data Siswa
-        </a>
+                <a href="data_siswa.php"
+                   class="nav-link active bg-primary text-white rounded py-2">
+                    Data Siswa
+                </a>
 
-        <a href="data_guru.php" class="nav-link text-white rounded py-2">
-            Data Guru
-        </a>
+                <a href="data_guru.php" class="nav-link text-white rounded py-2">
+                    Data Guru
+                </a>
 
-        <a href="data_kelas.php" class="nav-link text-white rounded py-2">
-            Kelas
-        </a>
+                <a href="data_kelas.php" class="nav-link text-white rounded py-2">
+                    Kelas
+                </a>
 
-        <a href="data_tahun_ajaran.php" class="nav-link text-white rounded py-2">
-            Tahun Ajaran
-        </a>
+                <a href="data_tahun_ajaran.php" class="nav-link text-white rounded py-2">
+                    Tahun Ajaran
+                </a>
 
-        <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">
-            Penempatan Siswa
-        </a>
+                <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">
+                    Penempatan Siswa
+                </a>
 
-        <a href="data_wali_kelas.php" class="nav-link text-white rounded py-2">
-            Wali Kelas
-        </a>
+                <a href="data_wali_kelas.php" class="nav-link text-white rounded py-2">
+                    Wali Kelas
+                </a>
 
-        <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">
-            Kategori Pelanggaran
-        </a>
+                <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">
+                    Kategori Pelanggaran
+                </a>
 
-        <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">
-            Jenis Pelanggaran
-        </a>
+                <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">
+                    Jenis Pelanggaran
+                </a>
 
-        <a href="data_laporan.php" class="nav-link text-white rounded py-2">
-            Laporan
-        </a>
+                <a href="data_laporan.php" class="nav-link text-white rounded py-2">
+                    Laporan
+                </a>
 
-        <a href="about_me.php" class="nav-link text-white rounded py-2">
-            About Me
-        </a>
+                <a href="about_me.php" class="nav-link text-white rounded py-2">
+                    About Me
+                </a>
 
-        <hr class="border-secondary my-2">
+                <hr class="border-secondary my-2">
 
-        <a href="logout.php" class="nav-link text-danger rounded py-2">
-            Logout
-        </a>
+                <a href="logout.php" class="nav-link text-danger rounded py-2">
+                    Logout
+                </a>
 
-    </nav>
+            </nav>
 
-</aside>
+        </aside>
+
         <!-- KONTEN TAMBAH SISWA -->
         <main class="col-md-9 col-lg-10 p-4">
 
@@ -158,24 +174,33 @@ if (isset($_POST['simpan'])) {
                     <form method="POST" action="">
 
                         <div class="mb-3">
-                            <label for="nis" class="form-label">NIS</label>
-                            <input
-                                type="text"
-                                name="nis"
-                                id="nis"
-                                class="form-control"
-                                required>
-                        </div>
+    <label for="nis" class="form-label">NIS</label>
+    <input
+        type="text"
+        name="nis"
+        id="nis"
+        class="form-control"
+        maxlength="10"
+        minlength="10"
+        pattern="[0-9]{10}"
+        title="NIS harus terdiri dari tepat 10 angka."
+        required>
+</div>
 
-                        <div class="mb-3">
-                            <label for="nisn" class="form-label">NISN</label>
-                            <input
-                                type="text"
-                                name="nisn"
-                                id="nisn"
-                                class="form-control"
-                                required>
-                        </div>
+                        
+<div class="mb-3">
+    <label for="nisn" class="form-label">NISN</label>
+    <input
+        type="text"
+        name="nisn"
+        id="nisn"
+        class="form-control"
+        maxlength="10"
+        minlength="10"
+        pattern="[0-9]{10}"
+        title="NISN harus terdiri dari tepat 10 angka."
+        required>
+</div>
 
                         <div class="mb-3">
                             <label for="nama" class="form-label">Nama Siswa</label>

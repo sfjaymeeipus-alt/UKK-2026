@@ -145,9 +145,11 @@ $role = $_SESSION['role'];
                            d-flex justify-content-between align-items-center">
 
                 <div>
-                    <h5 class="fw-bold mb-1">About Me</h5>
+                    <h4 class="fw-bold mb-1">About Me</h4>
                     <small class="text-secondary">
-                        Sistem Informasi Pelanggaran Siswa
+                        
+                        Kenali profil pengembang dan proyek yang saya buat.
+                   
                     </small>
                 </div>
 
@@ -173,13 +175,6 @@ $role = $_SESSION['role'];
 
             <div class="p-3 p-md-4">
 
-                <!-- JUDUL HALAMAN -->
-                <div class="mb-4">
-                    <h3 class="fw-bold mb-2">Tentang Saya</h3>
-                    <p class="text-secondary mb-0">
-                        Kenali profil pengembang dan proyek yang saya buat.
-                    </p>
-                </div>
 
                 <!-- KARTU PROFIL -->
                 <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">

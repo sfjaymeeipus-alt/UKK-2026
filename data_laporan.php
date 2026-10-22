@@ -178,9 +178,9 @@ if ($siswa_id > 0) {
                            d-flex justify-content-between align-items-center">
 
                 <div>
-                    <h5 class="fw-bold text-dark mb-1">
+                    <h4 class="fw-bold text-dark mb-1">
                         Laporan Pelanggaran
-                    </h5>
+                    </h4>
 
                     <small class="text-secondary">
                         Sistem Informasi Pelanggaran Siswa
