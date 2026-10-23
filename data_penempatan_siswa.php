@@ -327,12 +327,7 @@ if (!$result) {
 
                     <!-- FOOTER KARTU -->
                     <div class="card-footer bg-white p-3
-                                d-flex justify-content-between align-items-center
-                                flex-wrap gap-2">
-
-                        <small class="text-secondary">
-                            Sistem Informasi Pelanggaran Siswa
-                        </small>
+                                d-flex justify-content-start align-items-center">
 
                         <a href="dashboard.php"
                            class="btn btn-outline-secondary btn-sm">

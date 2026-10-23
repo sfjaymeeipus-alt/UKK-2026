@@ -311,7 +311,8 @@ if (!$result) {
                     </div>
 
                     <!-- BAGIAN BAWAH -->
-                    <div class="card-footer bg-white p-3">
+                    <div class="card-footer bg-white p-3
+                                d-flex justify-content-start align-items-center">
 
                         <a href="dashboard.php"
                            class="btn btn-outline-secondary btn-sm">

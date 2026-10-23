@@ -141,9 +141,9 @@ $role = $_SESSION['role'];
         <main class="col-md-9 col-lg-10 p-0">
 
             <!-- HEADER -->
-            <header class="bg-white border-bottom px-4 py-3
+            <header class="bg-white border-bottomp-3 p-md-4
                            d-flex justify-content-between align-items-center">
-
+                           
                 <div>
                     <h4 class="fw-bold mb-1">About Me</h4>
                     <small class="text-secondary">

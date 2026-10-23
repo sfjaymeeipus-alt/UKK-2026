@@ -1,82 +1,58 @@
-
 <?php
-
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
 include "middleware/auth.php";
 include "config/koneksi.php";
 
-if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
+if ($_SESSION['role'] != 'admin') {
     echo "Anda tidak memiliki akses";
     exit;
 }
 
-$nama = $_SESSION['nama'] ?? 'Admin';
+$nama = $_SESSION['nama'];
 
-$siswa_id = isset($_GET['siswa_id']) ? (int) $_GET['siswa_id'] : 0;
-
-/* Mengambil daftar siswa untuk dropdown */
-$query_siswa = "
-    SELECT siswa_id, nama_siswa, MAX(nama_kelas) AS nama_kelas
-    FROM t_pelanggaran_siswa
-    GROUP BY siswa_id, nama_siswa
-    ORDER BY nama_siswa ASC
-";
-
-$result_siswa = mysqli_query($koneksi, $query_siswa);
-
-if (!$result_siswa) {
-    die("Query siswa gagal: " . mysqli_error($koneksi));
-}
-
-/* Variabel laporan dan statistik */
-$nama_siswa = '';
-$nama_kelas = '';
+$total_selesai = 0;
+$total_proses = 0;
 $total_poin = 0;
 $total_pelanggaran = 0;
-$pelanggaran_selesai = 0;
-$sedang_diproses = 0;
-$data_laporan = [];
 
-/* Mengambil laporan siswa yang dipilih */
-if ($siswa_id > 0) {
+$query_statistik = mysqli_query($koneksi, "
+    SELECT
+        COUNT(*) AS total_pelanggaran,
+        COALESCE(SUM(poin), 0) AS total_poin,
+        SUM(CASE WHEN status = 'Selesai' THEN 1 ELSE 0 END) AS total_selesai,
+        SUM(CASE WHEN status != 'Selesai' OR status IS NULL THEN 1 ELSE 0 END) AS total_proses
+    FROM t_pelanggaran_siswa
+");
 
-    $query_laporan = "
+if ($query_statistik) {
+    $statistik = mysqli_fetch_assoc($query_statistik);
+
+    $total_selesai = (int) $statistik['total_selesai'];
+    $total_proses = (int) $statistik['total_proses'];
+    $total_poin = (int) $statistik['total_poin'];
+    $total_pelanggaran = (int) $statistik['total_pelanggaran'];
+}
+
+$siswa = mysqli_query($koneksi, "
+    SELECT DISTINCT siswa_id, nama_siswa
+    FROM t_pelanggaran_siswa
+    WHERE siswa_id IS NOT NULL
+    ORDER BY nama_siswa ASC
+");
+
+$siswa_id = "";
+$laporan = false;
+
+if (isset($_POST['tampilkan'])) {
+
+    $siswa_id = (int) $_POST['siswa_id'];
+
+    $laporan = mysqli_query($koneksi, "
         SELECT *
         FROM t_pelanggaran_siswa
         WHERE siswa_id = $siswa_id
-        ORDER BY tanggal DESC, id DESC
-    ";
-
-    $result_laporan = mysqli_query($koneksi, $query_laporan);
-
-    if (!$result_laporan) {
-        die("Query laporan gagal: " . mysqli_error($koneksi));
-    }
-
-    while ($data = mysqli_fetch_assoc($result_laporan)) {
-        $data_laporan[] = $data;
-    }
-
-    if (!empty($data_laporan)) {
-
-        $nama_siswa = $data_laporan[0]['nama_siswa'];
-        $nama_kelas = $data_laporan[0]['nama_kelas'];
-
-        /* Menghitung statistik */
-        foreach ($data_laporan as $data) {
-
-            $total_poin += (int) $data['poin'];
-            $total_pelanggaran++;
-
-            if (strtolower(trim($data['status'])) == 'selesai') {
-                $pelanggaran_selesai++;
-            } else {
-                $sedang_diproses++;
-            }
-        }
-    }
+        ORDER BY tanggal DESC
+    ");
 }
 
 ?>
@@ -85,14 +61,16 @@ if ($siswa_id > 0) {
 <html lang="id">
 
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Laporan Pelanggaran - Sistem Informasi Pelanggaran Siswa</title>
+    <title>Laporan Pelanggaran</title>
 
-    <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
+
 </head>
 
 <body class="bg-light">
@@ -152,7 +130,8 @@ if ($siswa_id > 0) {
                     Jenis Pelanggaran
                 </a>
 
-                <a href="data_laporan.php" class="nav-link active bg-primary text-white rounded py-2">
+                <a href="data_laporan.php"
+                   class="nav-link active bg-primary text-white rounded py-2">
                     Laporan
                 </a>
 
@@ -191,182 +170,190 @@ if ($siswa_id > 0) {
 
                     <div class="text-end">
                         <div class="fw-bold">
-                            <?= htmlspecialchars($nama); ?>
+                            <?= htmlspecialchars($nama) ?>
                         </div>
 
                         <small class="text-secondary">Admin</small>
                     </div>
 
                     <div class="bg-primary-subtle text-primary rounded-circle
-                                d-flex justify-content-center align-items-center
+                                d-flex align-items-center justify-content-center
                                 fw-bold flex-shrink-0"
                          style="width: 42px; height: 42px;">
-                        <?= strtoupper(substr($nama, 0, 1)); ?>
+                        <?= strtoupper(substr($nama, 0, 1)) ?>
                     </div>
 
                 </div>
 
             </header>
 
-            <!-- ISI HALAMAN -->
+            <!-- ISI LAPORAN -->
             <section class="p-3 p-md-4">
 
-                <!-- 4 KOTAK STATISTIK -->
+                <!-- KARTU STATISTIK -->
                 <div class="row g-3 mb-4">
 
-                    <!-- KOTAK 1 -->
-                    <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="col-12 col-md-6 col-xl-3">
                         <div class="card border-0 shadow-sm h-100">
-                            <div class="card-body p-3">
-
-                                <p class="text-secondary mb-2">
+                            <div class="card-body">
+                                <p class="text-secondary small mb-2">
                                     Pelanggaran Selesai
                                 </p>
 
-                                <h3 class="fw-bold text-success mb-1">
-                                    <?= $pelanggaran_selesai; ?>
-                                </h3>
+                                <h4 class="fw-bold text-success mb-2">
+                                    <?= number_format($total_selesai, 0, ',', '.') ?>
+                                </h4>
 
                                 <small class="text-secondary">
                                     Kasus selesai ditangani
                                 </small>
-
                             </div>
                         </div>
                     </div>
 
-                    <!-- KOTAK 2 -->
-                    <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="col-12 col-md-6 col-xl-3">
                         <div class="card border-0 shadow-sm h-100">
-                            <div class="card-body p-3">
-
-                                <p class="text-secondary mb-2">
+                            <div class="card-body">
+                                <p class="text-secondary small mb-2">
                                     Sedang Diproses
                                 </p>
 
-                                <h3 class="fw-bold text-warning mb-1">
-                                    <?= $sedang_diproses; ?>
-                                </h3>
+                                <h4 class="fw-bold text-warning mb-2">
+                                    <?= number_format($total_proses, 0, ',', '.') ?>
+                                </h4>
 
                                 <small class="text-secondary">
                                     Kasus belum selesai
                                 </small>
-
                             </div>
                         </div>
                     </div>
 
-                    <!-- KOTAK 3 -->
-                    <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="col-12 col-md-6 col-xl-3">
                         <div class="card border-0 shadow-sm h-100">
-                            <div class="card-body p-3">
-
-                                <p class="text-secondary mb-2">
+                            <div class="card-body">
+                                <p class="text-secondary small mb-2">
                                     Total Poin
                                 </p>
 
-                                <h3 class="fw-bold text-primary mb-1">
-                                    <?= $total_poin; ?>
-                                </h3>
+                                <h4 class="fw-bold text-primary mb-2">
+                                    <?= number_format($total_poin, 0, ',', '.') ?>
+                                </h4>
 
                                 <small class="text-secondary">
                                     Akumulasi poin pelanggaran
                                 </small>
-
                             </div>
                         </div>
                     </div>
 
-                    <!-- KOTAK 4 -->
-                    <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="col-12 col-md-6 col-xl-3">
                         <div class="card border-0 shadow-sm h-100">
-                            <div class="card-body p-3">
-
-                                <p class="text-secondary mb-2">
+                            <div class="card-body">
+                                <p class="text-secondary small mb-2">
                                     Total Pelanggaran
                                 </p>
 
-                                <h3 class="fw-bold text-danger mb-1">
-                                    <?= $total_pelanggaran; ?>
-                                </h3>
+                                <h4 class="fw-bold text-danger mb-2">
+                                    <?= number_format($total_pelanggaran, 0, ',', '.') ?>
+                                </h4>
 
                                 <small class="text-secondary">
                                     Seluruh kasus tercatat
                                 </small>
-
                             </div>
                         </div>
                     </div>
 
                 </div>
-                <!-- AKHIR 4 KOTAK STATISTIK -->
 
-                <h3 class="fw-bold text-dark mb-2">
-                    Laporan Pelanggaran
-                </h3>
+                <!-- JUDUL LAPORAN DAN TOMBOL KEMBALI -->
+                <div class="d-flex justify-content-between align-items-center
+                            flex-wrap gap-2 mb-3">
 
-                <p class="text-secondary mb-4">
-                    Pilih siswa untuk melihat riwayat dan total poin pelanggarannya.
-                </p>
+                    <div>
+                        <h4 class="fw-bold text-dark mb-1">
+                            Laporan Pelanggaran
+                        </h4>
 
-                <!-- KARTU PILIH SISWA -->
-                <div class="card border-0 shadow-sm rounded-3 mb-4">
-
-                    <div class="card-header bg-white p-3 p-md-4">
-                        <h5 class="fw-bold mb-1">
-                            Pilih Siswa
-                        </h5>
-
-                        <small class="text-secondary">
-                            Tentukan siswa untuk menampilkan laporan pelanggaran.
-                        </small>
+                        <p class="text-secondary mb-0">
+                            Pilih siswa untuk melihat riwayat dan total poin pelanggarannya.
+                        </p>
                     </div>
 
-                    <div class="card-body p-3 p-md-4">
+                    <!-- TOMBOL KEMBALI KE DASHBOARD -->
+                    <a href="dashboard.php" class="btn btn-secondary">
+                        Kembali ke Dashboard
+                    </a>
 
-                        <form method="GET" action="data_laporan.php">
+                </div>
 
-                            <div class="row align-items-end g-3">
+                <!-- FORM PILIH SISWA -->
+                <div class="card border-0 shadow-sm mb-4">
 
-                                <div class="col-md-9">
+                    <div class="card-body p-4 border-bottom">
 
-                                    <label for="siswa_id" class="form-label fw-semibold">
+                        <h6 class="fw-bold mb-1">Pilih Siswa</h6>
+
+                        <p class="text-secondary small mb-0">
+                            Tentukan siswa untuk menampilkan laporan pelanggaran.
+                        </p>
+
+                    </div>
+
+                    <div class="card-body p-4">
+
+                        <form method="POST" action="">
+
+                            <div class="row g-3 align-items-end">
+
+                                <div class="col-12 col-md-9">
+
+                                    <label for="siswa_id" class="form-label">
                                         Nama Siswa
                                     </label>
 
-                                    <select name="siswa_id"
-                                            id="siswa_id"
-                                            class="form-select"
-                                            required>
+                                    <select
+                                        name="siswa_id"
+                                        id="siswa_id"
+                                        class="form-select"
+                                        required>
 
                                         <option value="">
                                             -- Pilih Siswa --
                                         </option>
 
                                         <?php
-                                        mysqli_data_seek($result_siswa, 0);
-
-                                        while ($siswa = mysqli_fetch_assoc($result_siswa)) {
+                                        if ($siswa) {
+                                            while ($data_siswa = mysqli_fetch_assoc($siswa)) {
                                         ?>
 
                                             <option
-                                                value="<?= (int) $siswa['siswa_id']; ?>"
-                                                <?= ($siswa_id == $siswa['siswa_id']) ? 'selected' : ''; ?>>
+                                                value="<?= (int) $data_siswa['siswa_id'] ?>"
+                                                <?= ($siswa_id == $data_siswa['siswa_id']) ? 'selected' : '' ?>>
 
-                                                <?= htmlspecialchars($siswa['nama_siswa']); ?>
+                                                <?= htmlspecialchars($data_siswa['nama_siswa']) ?>
 
                                             </option>
 
-                                        <?php } ?>
+                                        <?php
+                                            }
+                                        }
+                                        ?>
 
                                     </select>
 
                                 </div>
 
-                                <div class="col-md-3">
+                                <div class="col-12 col-md-3">
 
-                                    <button type="submit" class="btn btn-primary w-100">
+                                    <button
+                                        type="submit"
+                                        name="tampilkan"
+                                        class="btn btn-primary w-100">
+
                                         Tampilkan Laporan
+
                                     </button>
 
                                 </div>
@@ -380,116 +367,32 @@ if ($siswa_id > 0) {
                 </div>
 
                 <!-- HASIL LAPORAN -->
-                <?php if ($siswa_id > 0) { ?>
+                <?php if (isset($_POST['tampilkan'])) { ?>
 
-                    <?php if (!empty($data_laporan)) { ?>
+                    <div class="card border-0 shadow-sm">
 
-                        <!-- INFORMASI SISWA -->
-                        <div class="card border-0 shadow-sm rounded-3 mb-4">
+                        <div class="card-body p-4">
 
-                            <div class="card-header bg-white p-3 p-md-4">
-                                <h5 class="fw-bold mb-1">
-                                    Informasi Pelanggaran Siswa
-                                </h5>
+                            <h5 class="fw-bold mb-3">
+                                Riwayat Pelanggaran Siswa
+                            </h5>
 
-                                <small class="text-secondary">
-                                    Ringkasan data pelanggaran siswa yang dipilih.
-                                </small>
-                            </div>
-
-                            <div class="card-body p-3 p-md-4">
-
-                                <div class="row g-3">
-
-                                    <div class="col-md-6">
-                                        <div class="border rounded-3 p-3 h-100">
-                                            <small class="text-secondary d-block mb-1">
-                                                Nama Siswa
-                                            </small>
-
-                                            <h5 class="fw-bold mb-0">
-                                                <?= htmlspecialchars($nama_siswa); ?>
-                                            </h5>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-3">
-                                        <div class="border rounded-3 p-3 h-100">
-                                            <small class="text-secondary d-block mb-1">
-                                                Kelas
-                                            </small>
-
-                                            <h5 class="fw-bold mb-0">
-                                                <?= htmlspecialchars($nama_kelas); ?>
-                                            </h5>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-3">
-                                        <div class="bg-primary-subtle rounded-3 p-3 h-100">
-                                            <small class="text-primary d-block mb-1">
-                                                Total Poin
-                                            </small>
-
-                                            <h3 class="fw-bold text-primary mb-0">
-                                                <?= $total_poin; ?>
-                                            </h3>
-                                        </div>
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <!-- TABEL RIWAYAT PELANGGARAN -->
-                        <div class="card border-0 shadow-sm rounded-3">
-
-                            <div class="card-header bg-white p-3 p-md-4
-                                        d-flex justify-content-between align-items-center
-                                        flex-wrap gap-3">
-
-                                <div>
-                                    <h5 class="fw-bold mb-1">
-                                        Riwayat Pelanggaran
-                                    </h5>
-
-                                    <small class="text-secondary">
-                                        Daftar pelanggaran siswa berdasarkan tanggal.
-                                    </small>
-                                </div>
-
-                                <div class="d-flex flex-wrap gap-2">
-
-                                    <button type="button"
-                                            class="btn btn-primary"
-                                            onclick="window.print()">
-                                        Cetak
-                                    </button>
-
-                                    <a href="export_pelanggaran.php?siswa_id=<?= $siswa_id; ?>"
-                                       class="btn btn-success">
-                                        Export
-                                    </a>
-
-                                </div>
-
-                            </div>
-
-                            <div class="card-body p-0">
+                            <?php if ($laporan && mysqli_num_rows($laporan) > 0) { ?>
 
                                 <div class="table-responsive">
 
-                                    <table class="table table-bordered table-hover
-                                                  align-middle mb-0">
+                                    <table class="table table-bordered table-striped align-middle">
 
                                         <thead class="table-dark">
                                             <tr>
                                                 <th>No</th>
-                                                <th>Pelanggaran</th>
+                                                <th>Nama Siswa</th>
+                                                <th>Kelas</th>
+                                                <th>Jenis Pelanggaran</th>
+                                                <th>Guru</th>
                                                 <th>Tanggal</th>
                                                 <th>Poin</th>
+                                                <th>Tindakan</th>
                                                 <th>Status</th>
                                             </tr>
                                         </thead>
@@ -499,56 +402,22 @@ if ($siswa_id > 0) {
                                             <?php
                                             $no = 1;
 
-                                            foreach ($data_laporan as $data) {
+                                            while ($data = mysqli_fetch_assoc($laporan)) {
                                             ?>
 
                                                 <tr>
-                                                    <td><?= $no++; ?></td>
-
-                                                    <td>
-                                                        <?= htmlspecialchars($data['nama_pelanggaran']); ?>
-                                                    </td>
-
-                                                    <td>
-                                                        <?= htmlspecialchars($data['tanggal']); ?>
-                                                    </td>
-
-                                                    <td>
-                                                        <span class="badge bg-warning text-dark">
-                                                            <?= (int) $data['poin']; ?> Poin
-                                                        </span>
-                                                    </td>
-
-                                                    <td>
-                                                        <?php if (strtolower(trim($data['status'])) == 'selesai') { ?>
-
-                                                            <span class="badge bg-success">
-                                                                <?= htmlspecialchars($data['status']); ?>
-                                                            </span>
-
-                                                        <?php } else { ?>
-
-                                                            <span class="badge bg-secondary">
-                                                                <?= htmlspecialchars($data['status']); ?>
-                                                            </span>
-
-                                                        <?php } ?>
-                                                    </td>
+                                                    <td><?= $no++ ?></td>
+                                                    <td><?= htmlspecialchars($data['nama_siswa'] ?? '-') ?></td>
+                                                    <td><?= htmlspecialchars($data['nama_kelas'] ?? '-') ?></td>
+                                                    <td><?= htmlspecialchars($data['nama_pelanggaran'] ?? '-') ?></td>
+                                                    <td><?= htmlspecialchars($data['nama_guru'] ?? '-') ?></td>
+                                                    <td><?= htmlspecialchars($data['tanggal'] ?? '-') ?></td>
+                                                    <td><?= (int) ($data['poin'] ?? 0) ?></td>
+                                                    <td><?= htmlspecialchars($data['tindakan'] ?? '-') ?></td>
+                                                    <td><?= htmlspecialchars($data['status'] ?? '-') ?></td>
                                                 </tr>
 
                                             <?php } ?>
-
-                                            <tr class="table-light fw-bold">
-                                                <th colspan="3" class="text-end">
-                                                    TOTAL POIN
-                                                </th>
-
-                                                <th>
-                                                    <?= $total_poin; ?>
-                                                </th>
-
-                                                <th></th>
-                                            </tr>
 
                                         </tbody>
 
@@ -556,43 +425,18 @@ if ($siswa_id > 0) {
 
                                 </div>
 
-                            </div>
+                            <?php } else { ?>
 
-                            <div class="card-footer bg-white p-3">
-
-                                <a href="dashboard.php"
-                                   class="btn btn-outline-secondary btn-sm">
-                                    Kembali ke Dashboard
-                                </a>
-
-                            </div>
-
-                        </div>
-
-                    <?php } else { ?>
-
-                        <div class="card border-0 shadow-sm rounded-3">
-
-                            <div class="card-body p-4">
-
-                                <div class="alert alert-warning mb-0">
-                                    <h5 class="alert-heading">
-                                        Belum Ada Riwayat Pelanggaran
-                                    </h5>
-
-                                    Belum ada riwayat pelanggaran untuk siswa ini.
+                                <div class="alert alert-info mb-0">
+                                    Belum ada riwayat pelanggaran untuk siswa yang dipilih.
                                 </div>
 
-                                <a href="dashboard.php"
-                                   class="btn btn-outline-secondary btn-sm mt-3">
-                                    Kembali ke Dashboard
-                                </a>
-
-                            </div>
+                            <?php } ?>
 
                         </div>
 
-                    <?php } ?>
+                    </div>
+                    
 
                 <?php } ?>
 
@@ -607,8 +451,6 @@ if ($siswa_id > 0) {
 
     </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>

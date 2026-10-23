@@ -1,6 +1,6 @@
-
 <?php
 include "middleware/auth.php";
+include "config/koneksi.php";
 
 $role = $_SESSION['role'];
 $nama = $_SESSION['nama'];
@@ -39,25 +39,48 @@ if ($role == 'admin') {
     die("Anda tidak memiliki akses.");
 }
 
+// MENGHITUNG JUMLAH DATA DARI DATABASE
+function jumlahData($koneksi, $tabel)
+{
+    $hasil = mysqli_query($koneksi, "SELECT COUNT(*) AS total FROM `$tabel`");
+
+    if ($hasil) {
+        $data = mysqli_fetch_assoc($hasil);
+        return (int) $data['total'];
+    }
+
+    return 0;
+}
+
+$totalSiswa = jumlahData($koneksi, 't_siswa');
+$totalGuru = jumlahData($koneksi, 't_guru');
+$totalKelas = jumlahData($koneksi, 't_kelas');
+$totalTahunAjaran = jumlahData($koneksi, 't_tahun_ajaran');
+$totalPenempatan = jumlahData($koneksi, 't_kelas_siswa');
+$totalWaliKelas = jumlahData($koneksi, 't_wali_kelas');
+$totalKategori = jumlahData($koneksi, 't_pelanggaran_kategori');
+$totalJenisPelanggaran = jumlahData($koneksi, 't_pelanggaran');
+$totalLaporan = jumlahData($koneksi, 't_pelanggaran_siswa');
+
 // Kartu admin
 $kartuAdmin = [
-    ["Data Siswa", "Mengelola informasi data siswa.", "data_siswa.php"],
-    ["Data Guru", "Mengelola informasi data guru.", "data_guru.php"],
-    ["Data Kelas", "Mengelola data kelas siswa.", "data_kelas.php"],
-    ["Tahun Ajaran", "Mengelola periode tahun ajaran.", "data_tahun_ajaran.php"],
-    ["Penempatan Siswa", "Mengelola penempatan siswa ke kelas.", "data_penempatan_siswa.php"],
-    ["Wali Kelas", "Mengelola informasi wali kelas.", "data_wali_kelas.php"],
-    ["Kategori Pelanggaran", "Mengelola kategori pelanggaran siswa.", "data_kategori_pelanggaran.php"],
-    ["Jenis Pelanggaran", "Mengelola jenis pelanggaran siswa.", "data_jenis_pelanggaran.php"],
-    ["Laporan", "Melihat laporan pelanggaran.", "data_laporan.php"]
+    ["Data Siswa", "Mengelola informasi data siswa.", "data_siswa.php", $totalSiswa],
+    ["Data Guru", "Mengelola informasi data guru.", "data_guru.php", $totalGuru],
+    ["Data Kelas", "Mengelola data kelas siswa.", "data_kelas.php", $totalKelas],
+    ["Tahun Ajaran", "Mengelola periode tahun ajaran.", "data_tahun_ajaran.php", $totalTahunAjaran],
+    ["Penempatan Siswa", "Mengelola penempatan siswa ke kelas.", "data_penempatan_siswa.php", $totalPenempatan],
+    ["Wali Kelas", "Mengelola informasi wali kelas.", "data_wali_kelas.php", $totalWaliKelas],
+    ["Kategori Pelanggaran", "Mengelola kategori pelanggaran siswa.", "data_kategori_pelanggaran.php", $totalKategori],
+    ["Jenis Pelanggaran", "Mengelola jenis pelanggaran siswa.", "data_jenis_pelanggaran.php", $totalJenisPelanggaran],
+    ["Laporan", "Melihat laporan pelanggaran.", "data_laporan.php", $totalLaporan]
 ];
 
 // Kartu guru
 $kartuGuru = [
-    ["Catatan Pelanggaran", "Mencatat pelanggaran siswa.", "data_pelanggaran.php"],
-    ["Tindakan", "Mengelola tindakan atas pelanggaran.", "data_tindakan.php"],
-    ["Riwayat", "Melihat riwayat pelanggaran siswa.", "data_riwayat.php"],
-    ["Rekap Poin", "Melihat rekap poin pelanggaran siswa.", "data_rekap_poin.php"]
+    ["Catatan Pelanggaran", "Mencatat pelanggaran siswa.", "data_catatan_pelanggaran.php", $totalLaporan],
+    ["Tindakan", "Mengelola tindakan atas pelanggaran.", "data_tindakan.php", $totalLaporan],
+    ["Riwayat", "Melihat riwayat pelanggaran siswa.", "data_riwayat.php", $totalLaporan],
+    ["Rekap Poin", "Melihat rekap poin pelanggaran siswa.", "data_rekap_poin.php", $totalLaporan]
 ];
 
 if ($role == 'admin') {
@@ -137,7 +160,7 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
                            d-flex justify-content-between align-items-center">
 
                 <div>
-                    <h5 class="fw-bold text-dark mb-1">Dashboard</h5>
+                    <h4 class="fw-bold text-dark mb-1">Dashboard</h4>
 
                     <small class="text-secondary">
                         Sistem Informasi Pelanggaran Siswa
@@ -234,7 +257,7 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
                                         <?= htmlspecialchars($item[0]) ?>
                                     </h5>
 
-                                    <p class="card-text text-secondary small mb-4">
+                                    <p class="card-text text-secondary small mb-2">
                                         <?= htmlspecialchars($item[1]) ?>
                                     </p>
 

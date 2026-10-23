@@ -125,9 +125,9 @@ if (!$result) {
                            d-flex justify-content-between align-items-center">
 
                 <div>
-                    <h5 class="fw-bold text-dark mb-1">
+                    <h4 class="fw-bold text-dark mb-1">
                         Catatan Pelanggaran
-                    </h5>
+                    </h4>
 
                     <small class="text-secondary">
                         Sistem Informasi Pelanggaran Siswa
@@ -160,14 +160,7 @@ if (!$result) {
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                <h3 class="fw-bold text-dark mb-2">
-                    Catatan Pelanggaran Siswa
-                </h3>
-
-                <p class="text-secondary mb-4">
-                    Kelola dan lihat catatan pelanggaran siswa.
-                </p>
-
+                
                 <!-- KARTU TABEL -->
                 <div class="card border-0 shadow-sm rounded-3">
 
