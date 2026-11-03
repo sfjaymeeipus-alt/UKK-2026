@@ -1,5 +1,6 @@
 
 <?php
+
 include "middleware/auth.php";
 include "config/koneksi.php";
 
@@ -12,75 +13,50 @@ $id = isset($_POST['id'])
     : (int) ($_GET['id'] ?? 0);
 
 if ($id <= 0) {
-    exit("ID penempatan siswa tidak valid.");
+    header("Location: data_penempatan_siswa.php");
+    exit;
 }
 
-$pesan = "";
-
-// Ambil informasi penempatan siswa
+// Proses penghapusan data
 $stmt = mysqli_prepare(
     $koneksi,
-    "SELECT
-        ks.id,
-        s.nis,
-        s.nama AS nama_siswa,
-        k.nama AS nama_kelas,
-        ta.nama AS tahun_ajaran,
-        ks.tanggal_mulai,
-        ks.tanggal_selesai
-     FROM t_kelas_siswa ks
-     INNER JOIN t_siswa s ON ks.siswa_id = s.id
-     INNER JOIN t_kelas k ON ks.kelas_id = k.id
-     INNER JOIN t_tahun_ajaran ta ON ks.tahun_ajaran_id = ta.id
-     WHERE ks.id = ?"
+    "DELETE FROM t_kelas_siswa WHERE id = ?"
 );
 
 if (!$stmt) {
-    exit("Terjadi kesalahan saat mengambil data.");
+    exit("Gagal menyiapkan query penghapusan.");
 }
 
 mysqli_stmt_bind_param($stmt, "i", $id);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-$data = mysqli_fetch_assoc($result);
-mysqli_stmt_close($stmt);
 
-if (!$data) {
-    exit("Data penempatan siswa tidak ditemukan.");
-}
+if (mysqli_stmt_execute($stmt)) {
 
-// Proses penghapusan setelah tombol konfirmasi ditekan
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['konfirmasi_hapus'])) {
-    $stmt = mysqli_prepare(
-        $koneksi,
-        "DELETE FROM t_kelas_siswa WHERE id = ?"
-    );
-
-    if (!$stmt) {
-        $pesan = "Gagal menyiapkan query penghapusan.";
-    } else {
-        mysqli_stmt_bind_param($stmt, "i", $id);
-
-        if (mysqli_stmt_execute($stmt)) {
-            if (mysqli_stmt_affected_rows($stmt) > 0) {
-                mysqli_stmt_close($stmt);
-                header("Location: data_penempatan_siswa.php");
-                exit;
-            } else {
-                $pesan = "Data tidak ditemukan atau sudah dihapus.";
-            }
-        } else {
-            if (mysqli_errno($koneksi) == 1451) {
-                $pesan = "Penempatan siswa tidak dapat dihapus karena masih digunakan oleh data lain, misalnya riwayat pelanggaran siswa.";
-            } else {
-                $pesan = "Gagal menghapus data penempatan siswa.";
-            }
-        }
-
+    if (mysqli_stmt_affected_rows($stmt) > 0) {
         mysqli_stmt_close($stmt);
+
+        header("Location: data_penempatan_siswa.php");
+        exit;
+    } else {
+        mysqli_stmt_close($stmt);
+
+        exit("Data penempatan siswa tidak ditemukan atau sudah dihapus.");
+    }
+
+} else {
+
+    if (mysqli_errno($koneksi) == 1451) {
+        mysqli_stmt_close($stmt);
+
+        exit("Penempatan siswa tidak dapat dihapus karena masih digunakan oleh data lain, misalnya riwayat pelanggaran siswa.");
+    } else {
+        mysqli_stmt_close($stmt);
+
+        exit("Gagal menghapus data penempatan siswa.");
     }
 }
+
 ?>
+
 
 <!DOCTYPE html>
 <html lang="id">

@@ -1,3 +1,4 @@
+
 <?php
 
 include "middleware/auth.php";
@@ -9,6 +10,10 @@ if ($_SESSION['role'] != 'admin') {
 }
 
 $nama = $_SESSION['nama'];
+
+// NOTIFIKASI HAPUS
+$notifikasi_hapus = $_SESSION['notifikasi_hapus'] ?? null;
+unset($_SESSION['notifikasi_hapus']);
 
 $query = "
     SELECT
@@ -65,7 +70,7 @@ if (!$result) {
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
             <p class="text-secondary small mb-4">
-                 SMK Muhammadiyah Kota Tasikmalaya
+                SMK Muhammadiyah Kota Tasikmalaya
             </p>
 
             <p class="text-secondary small fw-bold mb-2">
@@ -181,7 +186,23 @@ if (!$result) {
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                
+                <!-- NOTIFIKASI HAPUS -->
+                <?php if ($notifikasi_hapus) { ?>
+
+                    <div class="alert alert-<?= htmlspecialchars($notifikasi_hapus['tipe']); ?> alert-dismissible fade show"
+                         role="alert">
+
+                        <?= htmlspecialchars($notifikasi_hapus['pesan']); ?>
+
+                        <button type="button"
+                                class="btn-close"
+                                data-bs-dismiss="alert"
+                                aria-label="Close">
+                        </button>
+
+                    </div>
+
+                <?php } ?>
 
                 <!-- KARTU DATA -->
                 <div class="card border-0 shadow-sm rounded-3">
@@ -341,6 +362,9 @@ if (!$result) {
 <!-- DataTables -->
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- Bootstrap JS untuk notifikasi -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- Konfigurasi DataTables -->
 <script>

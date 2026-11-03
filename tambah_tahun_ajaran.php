@@ -13,26 +13,44 @@ $pesan = "";
 
 if (isset($_POST['simpan'])) {
 
-    $nama_tahun = mysqli_real_escape_string($koneksi, $_POST['nama']);
-    $tanggal_mulai = mysqli_real_escape_string($koneksi, $_POST['tanggal_mulai']);
-    $tanggal_selesai = mysqli_real_escape_string($koneksi, $_POST['tanggal_selesai']);
-    $status_aktif = (int) $_POST['status_aktif'];
+    $nama = mysqli_real_escape_string($koneksi, $_POST['nama']);
+    $tanggal_mulai = $_POST['tanggal_mulai'];
+    $tanggal_selesai = $_POST['tanggal_selesai'];
+    $status_aktif = isset($_POST['status_aktif']) ? 1 : 0;
 
-    $query = "
-        INSERT INTO t_tahun_ajaran
-        (nama, tanggal_mulai, tanggal_selesai, status_aktif)
-        VALUES
-        ('$nama_tahun', '$tanggal_mulai', '$tanggal_selesai', '$status_aktif')
-    ";
+    mysqli_begin_transaction($koneksi);
 
-    if (mysqli_query($koneksi, $query)) {
+    try {
+
+        // Jika tahun ajaran baru aktif,
+        // nonaktifkan tahun ajaran sebelumnya
+        if ($status_aktif == 1) {
+            mysqli_query(
+                $koneksi,
+                "UPDATE t_tahun_ajaran SET status_aktif = 0"
+            );
+        }
+
+        $query = mysqli_query($koneksi, "
+            INSERT INTO t_tahun_ajaran
+            (nama, tanggal_mulai, tanggal_selesai, status_aktif)
+            VALUES
+            ('$nama', '$tanggal_mulai', '$tanggal_selesai', '$status_aktif')
+        ");
+
+        if (!$query) {
+            throw new Exception(mysqli_error($koneksi));
+        }
+
+        mysqli_commit($koneksi);
 
         header("Location: data_tahun_ajaran.php");
         exit;
 
-    } else {
+    } catch (Exception $e) {
 
-        $pesan = "Gagal menyimpan data: " . mysqli_error($koneksi);
+        mysqli_rollback($koneksi);
+        echo "Gagal menyimpan data: " . $e->getMessage();
 
     }
 }

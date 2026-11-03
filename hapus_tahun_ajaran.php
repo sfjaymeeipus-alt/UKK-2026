@@ -1,164 +1,68 @@
-
 <?php
-include "middleware/auth.php";
-include "config/koneksi.php";
+include 'middleware/auth.php';
+include 'config/koneksi.php';
+
+if (!isset($_SESSION['login'])) {
+    header("Location: login.php");
+    exit;
+}
 
 if ($_SESSION['role'] != 'admin') {
-    exit("Anda tidak memiliki akses");
+    echo "Anda tidak memiliki akses";
+    exit;
 }
 
-$id = 0;
-$pesan = "";
-$berhasil = false;
-
-// Ambil ID dari URL atau form konfirmasi
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
-} else {
-    $id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
+    header("Location: data_tahun_ajaran.php");
+    exit;
 }
 
-if ($id <= 0) {
-    exit("ID tahun ajaran tidak valid.");
-}
+$id = (int) $_GET['id'];
 
-// Proses hapus setelah konfirmasi
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['konfirmasi_hapus'])) {
-    $stmt = mysqli_prepare(
-        $koneksi,
-        "DELETE FROM t_tahun_ajaran WHERE id = ?"
-    );
+mysqli_begin_transaction($koneksi);
 
-    if (!$stmt) {
-        $pesan = "Terjadi kesalahan saat menyiapkan query hapus.";
-    } else {
-        mysqli_stmt_bind_param($stmt, "i", $id);
+// 1. Hapus data pelanggaran siswa
+$hapus_pelanggaran = mysqli_query($koneksi, "
+    DELETE FROM t_pelanggaran_siswa
+    WHERE tahun_ajaran_id = $id
+");
 
-        if (mysqli_stmt_execute($stmt)) {
-            if (mysqli_stmt_affected_rows($stmt) > 0) {
-                mysqli_stmt_close($stmt);
+if ($hapus_pelanggaran) {
+
+    // 2. Hapus penempatan kelas siswa
+    $hapus_kelas_siswa = mysqli_query($koneksi, "
+        DELETE FROM t_kelas_siswa
+        WHERE tahun_ajaran_id = $id
+    ");
+
+    if ($hapus_kelas_siswa) {
+
+        // 3. Hapus data wali kelas
+        $hapus_wali = mysqli_query($koneksi, "
+            DELETE FROM t_wali_kelas
+            WHERE tahun_ajaran_id = $id
+        ");
+
+        if ($hapus_wali) {
+
+            // 4. Hapus tahun ajaran
+            $hapus_tahun = mysqli_query($koneksi, "
+                DELETE FROM t_tahun_ajaran
+                WHERE id = $id
+            ");
+
+            if ($hapus_tahun) {
+                mysqli_commit($koneksi);
                 header("Location: data_tahun_ajaran.php");
                 exit;
-            } else {
-                $pesan = "Data tidak ditemukan atau sudah dihapus.";
             }
-        } else {
-            $pesan = "Data gagal dihapus. Tahun ajaran mungkin masih digunakan oleh data lain.";
         }
-
-        mysqli_stmt_close($stmt);
     }
 }
 
-// Periksa apakah data tersedia
-$stmt = mysqli_prepare(
-    $koneksi,
-    "SELECT nama, tanggal_mulai, tanggal_selesai
-     FROM t_tahun_ajaran
-     WHERE id = ?"
-);
+// Batalkan jika masih ada kendala
+mysqli_rollback($koneksi);
 
-if (!$stmt) {
-    exit("Terjadi kesalahan saat mengambil data.");
-}
-
-mysqli_stmt_bind_param($stmt, "i", $id);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
-$data = mysqli_fetch_assoc($result);
-mysqli_stmt_close($stmt);
-
-if (!$data && $pesan === "") {
-    exit("Data tahun ajaran tidak ditemukan.");
-}
+echo "Tahun ajaran gagal dihapus karena masih terhubung dengan data lain.";
+echo "<br><a href='data_tahun_ajaran.php'>Kembali</a>";
 ?>
-
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hapus Tahun Ajaran</title>
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet">
-</head>
-
-<body class="bg-light">
-
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-7 col-lg-6">
-
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-danger text-white p-3">
-                    <h5 class="mb-0">Konfirmasi Hapus Tahun Ajaran</h5>
-                </div>
-
-                <div class="card-body p-4">
-
-                    <?php if ($pesan !== "") { ?>
-                        <div class="alert alert-danger">
-                            <?= htmlspecialchars($pesan); ?>
-                        </div>
-                    <?php } ?>
-
-                    <?php if ($data) { ?>
-
-                        <p>
-                            Apakah kamu yakin ingin menghapus data tahun ajaran berikut?
-                        </p>
-
-                        <div class="bg-light rounded p-3 mb-4">
-                            <p class="mb-2">
-                                <strong>Nama:</strong>
-                                <?= htmlspecialchars($data['nama']); ?>
-                            </p>
-
-                            <p class="mb-2">
-                                <strong>Tanggal Mulai:</strong>
-                                <?= htmlspecialchars($data['tanggal_mulai']); ?>
-                            </p>
-
-                            <p class="mb-0">
-                                <strong>Tanggal Selesai:</strong>
-                                <?= htmlspecialchars($data['tanggal_selesai']); ?>
-                            </p>
-                        </div>
-
-                        <form method="POST"
-                              action="hapus_tahun_ajaran.php?id=<?= $id; ?>"
-                              onsubmit="return confirm('Apakah kamu benar-benar yakin ingin menghapus data ini?')">
-
-                            <input type="hidden" name="id" value="<?= $id; ?>">
-
-                            <button type="submit"
-                                    name="konfirmasi_hapus"
-                                    class="btn btn-danger">
-                                Ya, Hapus
-                            </button>
-
-                            <a href="data_tahun_ajaran.php"
-                               class="btn btn-outline-secondary">
-                                Batal
-                            </a>
-                        </form>
-
-                    <?php } else { ?>
-
-                        <a href="data_tahun_ajaran.php"
-                           class="btn btn-primary">
-                            Kembali ke Data Tahun Ajaran
-                        </a>
-
-                    <?php } ?>
-
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
-
-</body>
-</html>

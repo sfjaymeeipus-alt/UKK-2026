@@ -1,15 +1,30 @@
+
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
 
-if ($_SESSION['role'] != 'admin') {
+if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     echo "Anda tidak memiliki akses";
     exit;
 }
 
 $nama = $_SESSION['nama'];
 
-$query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC");
+// Menghitung jumlah tahun ajaran aktif
+$cekAktif = mysqli_query(
+    $koneksi,
+    "SELECT COUNT(*) AS total FROM t_tahun_ajaran WHERE status_aktif = 1"
+);
+
+$dataAktif = mysqli_fetch_assoc($cekAktif);
+$totalAktif = (int) $dataAktif['total'];
+
+// Mengambil seluruh data tahun ajaran
+$query = mysqli_query(
+    $koneksi,
+    "SELECT * FROM t_tahun_ajaran ORDER BY id DESC"
+);
+
 ?>
 
 <!DOCTYPE html>
@@ -25,7 +40,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet">
 
-    <!-- DataTables Bootstrap 5 CSS -->
+    <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
           rel="stylesheet">
 </head>
@@ -42,7 +57,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
             <p class="text-secondary small mb-4">
-               SMK Muhammadiyah Kota Tasikmalaya
+                SMK Muhammadiyah Kota Tasikmalaya
             </p>
 
             <p class="text-secondary small fw-bold mb-2">
@@ -137,7 +152,9 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
                                 d-flex justify-content-center align-items-center
                                 fw-bold flex-shrink-0"
                          style="width: 42px; height: 42px;">
+
                         <?= strtoupper(substr($nama, 0, 1)); ?>
+
                     </div>
 
                 </div>
@@ -147,7 +164,58 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                
+                <!-- NOTIFIKASI HAPUS -->
+                <?php if (isset($_SESSION['pesan_hapus'])) { ?>
+
+                    <div class="alert alert-<?= htmlspecialchars($_SESSION['jenis_pesan'] ?? 'info'); ?>
+                                d-flex align-items-center justify-content-between
+                                py-2 small mb-3"
+                         role="alert">
+
+                        <span>
+                            <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
+                        </span>
+
+                        <button type="button"
+                                class="btn-close position-static flex-shrink-0 ms-3"
+                                data-bs-dismiss="alert">
+                        </button>
+
+                    </div>
+
+                    <?php
+                    unset($_SESSION['pesan_hapus']);
+                    unset($_SESSION['jenis_pesan']);
+                    ?>
+
+                <?php } ?>
+
+                <!-- INFORMASI STATUS TAHUN AJARAN -->
+                <?php if ($totalAktif > 1) { ?>
+
+                    <div class="alert alert-danger small mb-3">
+                        <strong>Perhatian!</strong>
+                        Terdapat <?= $totalAktif; ?> tahun ajaran yang aktif.
+                        Seharusnya hanya boleh ada satu tahun ajaran aktif.
+                        Silakan perbaiki status tahun ajaran.
+                    </div>
+
+                <?php } elseif ($totalAktif == 0) { ?>
+
+                    <div class="alert alert-warning small mb-3">
+                        <strong>Perhatian!</strong>
+                        Belum ada tahun ajaran yang aktif.
+                        Silakan aktifkan salah satu tahun ajaran.
+                    </div>
+
+                <?php } else { ?>
+
+                    <div class="alert alert-success small mb-3">
+                        <strong>Informasi:</strong>
+                        Terdapat satu tahun ajaran yang sedang aktif.
+                    </div>
+
+                <?php } ?>
 
                 <!-- KARTU DATA -->
                 <div class="card border-0 shadow-sm rounded-3">
@@ -162,7 +230,8 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
                             </h5>
 
                             <small class="text-secondary">
-                                Informasi nama, tanggal mulai, tanggal selesai, dan status.
+                                Informasi nama, tanggal mulai, tanggal selesai,
+                                dan status tahun ajaran.
                             </small>
                         </div>
 
@@ -173,14 +242,13 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
 
                     </div>
 
-                    <!-- TABEL TAHUN AJARAN -->
+                    <!-- TABEL -->
                     <div class="card-body">
 
                         <div class="table-responsive">
 
                             <table id="tabelTahunAjaran"
-                                   class="table table-bordered table-hover
-                                          align-middle mb-0">
+                                   class="table table-bordered table-hover align-middle mb-0">
 
                                 <thead class="table-dark">
                                     <tr>
@@ -199,10 +267,12 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
                                 $no = 1;
 
                                 if ($query && mysqli_num_rows($query) > 0) {
+
                                     while ($data = mysqli_fetch_assoc($query)) {
                                 ?>
 
                                     <tr>
+
                                         <td><?= $no++; ?></td>
 
                                         <td>
@@ -218,6 +288,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
                                         </td>
 
                                         <td>
+
                                             <?php if (($data['status_aktif'] ?? 0) == 1) { ?>
 
                                                 <span class="badge bg-success">
@@ -231,6 +302,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
                                                 </span>
 
                                             <?php } ?>
+
                                         </td>
 
                                         <td class="text-nowrap">
@@ -242,15 +314,17 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
 
                                             <a href="hapus_tahun_ajaran.php?id=<?= urlencode($data['id']); ?>"
                                                class="btn btn-danger btn-sm"
-                                               onclick="return confirm('Yakin ingin menghapus data tahun ajaran ini?')">
+                                               onclick="return confirm('Apakah Anda yakin ingin menghapus tahun ajaran ini?')">
                                                 Hapus
                                             </a>
 
                                         </td>
+
                                     </tr>
 
                                 <?php
                                     }
+
                                 }
                                 ?>
 
@@ -262,7 +336,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
 
                     </div>
 
-                    <!-- BAGIAN BAWAH -->
+                    <!-- FOOTER KARTU -->
                     <div class="card-footer bg-white p-3">
 
                         <a href="dashboard.php"
@@ -274,7 +348,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
 
                 </div>
 
-                <!-- FOOTER -->
+                <!-- FOOTER HALAMAN -->
                 <footer class="text-center text-secondary small mt-4">
                     Sistem Informasi Pelanggaran Siswa &copy; 2026
                 </footer>
@@ -289,51 +363,68 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_tahun_ajaran ORDER BY id DESC")
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-<!-- DataTables JavaScript -->
+<!-- DataTables -->
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
 
-<!-- DataTables Bootstrap 5 JavaScript -->
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
 
-<!-- Inisialisasi DataTables -->
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- INISIALISASI DATATABLES -->
 <script>
-    $(document).ready(function () {
+$(document).ready(function () {
 
-        $('#tabelTahunAjaran').DataTable({
-            pageLength: 10,
-            lengthMenu: [5, 10, 25, 50, 100],
-            ordering: true,
-            searching: true,
-            paging: true,
-            info: true,
+    $('#tabelTahunAjaran').DataTable({
 
-            columnDefs: [
-                {
-                    targets: 5,
-                    orderable: false,
-                    searchable: false
-                }
-            ],
+        pageLength: 10,
 
-            language: {
-                search: "Cari data:",
-                lengthMenu: "Tampilkan _MENU_ data",
-                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
-                infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
-                infoFiltered: "(difilter dari _MAX_ total data)",
-                zeroRecords: "Data tahun ajaran tidak ditemukan",
-                emptyTable: "Belum ada data tahun ajaran",
+        lengthMenu: [5, 10, 25, 50, 100],
 
-                paginate: {
-                    first: "Pertama",
-                    last: "Terakhir",
-                    next: "Berikutnya",
-                    previous: "Sebelumnya"
-                }
+        ordering: true,
+
+        searching: true,
+
+        paging: true,
+
+        info: true,
+
+        columnDefs: [
+            {
+                targets: 5,
+                orderable: false,
+                searchable: false
             }
-        });
+        ],
+
+        language: {
+
+            search: "Cari data:",
+
+            lengthMenu: "Tampilkan _MENU_ data",
+
+            info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+
+            infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+
+            infoFiltered: "(difilter dari _MAX_ total data)",
+
+            zeroRecords: "Data tahun ajaran tidak ditemukan",
+
+            emptyTable: "Belum ada data tahun ajaran",
+
+            paginate: {
+                first: "Pertama",
+                last: "Terakhir",
+                next: "Berikutnya",
+                previous: "Sebelumnya"
+            }
+
+        }
 
     });
+
+});
 </script>
 
 </body>

@@ -1,3 +1,4 @@
+
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -28,6 +29,9 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
     <!-- DataTables Bootstrap 5 CSS -->
     <link href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
           rel="stylesheet">
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body class="bg-light">
@@ -146,8 +150,52 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
 
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
+               <!-- NOTIFIKASI -->
+<?php if (isset($_SESSION['pesan_hapus'])) { ?>
 
-                
+    <div class="alert alert-<?= htmlspecialchars($_SESSION['jenis_pesan']); ?> d-flex align-items-center justify-content-between py-2 small mb-3"
+         role="alert">
+
+        <span>
+            <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
+        </span>
+
+        <button type="button"
+                class="btn-close position-static flex-shrink-0 ms-3"
+                data-bs-dismiss="alert"
+                aria-label="Close"></button>
+
+    </div>
+
+    <?php
+    unset($_SESSION['pesan_hapus']);
+    unset($_SESSION['jenis_pesan']);
+    ?>
+
+<?php } ?>
+                <!-- NOTIFIKASI HAPUS -->
+                <?php if (isset($_SESSION['pesan_hapus'])) { ?>
+
+                    <div class="alert alert-<?= $_SESSION['jenis_pesan']; ?> d-flex align-items-center justify-content-between py-2 small mb-3"
+                         role="alert">
+
+                        <span>
+                            <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
+                        </span>
+
+                        <button type="button"
+                                class="btn-close position-static flex-shrink-0 ms-3"
+                                data-bs-dismiss="alert"
+                                aria-label="Close"></button>
+
+                    </div>
+
+                    <?php
+                    unset($_SESSION['pesan_hapus']);
+                    unset($_SESSION['jenis_pesan']);
+                    ?>
+
+                <?php } ?>
 
                 <!-- KARTU DATA GURU -->
                 <div class="card border-0 shadow-sm rounded-3">
@@ -240,8 +288,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
                                             </a>
 
                                             <a href="hapus_guru.php?id=<?= urlencode($data['id']); ?>"
-                                               class="btn btn-danger btn-sm"
-                                               onclick="return confirm('Yakin ingin menghapus data guru ini?')">
+                                               class="btn btn-danger btn-sm">
                                                 Hapus
                                             </a>
 
@@ -294,6 +341,9 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
 <!-- DataTables Bootstrap 5 JavaScript -->
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
 
+<!-- Bootstrap JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <!-- Inisialisasi DataTables -->
 <script>
     $(document).ready(function () {
@@ -334,6 +384,27 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
 
     });
 </script>
+
+<!-- NOTIFIKASI BERHASIL EDIT -->
+<?php if (isset($_GET['pesan']) && $_GET['pesan'] == 'berhasil_edit') { ?>
+
+    <div class="alert bg-dark text-white border border-secondary rounded-3
+                d-flex align-items-center justify-content-between py-2 mb-3"
+         role="alert">
+
+        <strong class="small">
+            <span class="text-success me-2">✓</span>
+            Data guru berhasil diperbarui.
+        </strong>
+
+        <button type="button"
+                class="btn-close btn-close-white"
+                data-bs-dismiss="alert">
+        </button>
+
+    </div>
+
+<?php } ?>
 
 </body>
 </html>

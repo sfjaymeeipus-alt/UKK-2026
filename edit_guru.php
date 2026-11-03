@@ -1,3 +1,4 @@
+
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -49,12 +50,17 @@ if (isset($_POST['simpan'])) {
         $id
     );
 
-    if (mysqli_stmt_execute($update)) {
-        header("Location: data_guru.php?pesan=berhasil_edit");
-        exit;
-    } else {
-        $pesan_error = "Gagal mengubah data guru.";
-    }
+   if (mysqli_stmt_execute($update)) {
+
+    $_SESSION['pesan_hapus'] = "Data guru berhasil diperbarui.";
+    $_SESSION['jenis_pesan'] = "success";
+
+    header("Location: data_guru.php");
+    exit;
+
+} else {
+    $pesan_error = "Gagal mengubah data guru.";
+}
 
     $data['nip'] = $nip;
     $data['nama'] = $nama_guru;
@@ -223,7 +229,7 @@ if (isset($_POST['simpan'])) {
                             </div>
                         <?php } ?>
 
-                        <form method="POST">
+                        <form method="POST" id="formEditGuru">
 
                             <div class="mb-3">
                                 <label for="nip" class="form-label fw-semibold">

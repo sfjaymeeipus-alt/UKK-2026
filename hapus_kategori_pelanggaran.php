@@ -1,4 +1,3 @@
-
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -7,19 +6,22 @@ if ($_SESSION['role'] != 'admin') {
     exit("Anda tidak memiliki akses");
 }
 
-// Validasi ID dari URL
+// Validasi ID
 if (
     !isset($_GET['id']) ||
     !ctype_digit($_GET['id']) ||
     (int) $_GET['id'] <= 0
 ) {
+    $_SESSION['pesan_hapus'] = "ID kategori tidak valid.";
+    $_SESSION['jenis_pesan'] = "danger";
+
     header("Location: data_kategori_pelanggaran.php");
     exit;
 }
 
 $id = (int) $_GET['id'];
 
-// Periksa apakah kategori tersedia
+// Cek apakah data tersedia
 $stmt = mysqli_prepare(
     $koneksi,
     "SELECT id FROM t_pelanggaran_kategori WHERE id = ?"
@@ -34,11 +36,14 @@ $data = mysqli_fetch_assoc($result);
 mysqli_stmt_close($stmt);
 
 if (!$data) {
+    $_SESSION['pesan_hapus'] = "Data kategori tidak ditemukan.";
+    $_SESSION['jenis_pesan'] = "danger";
+
     header("Location: data_kategori_pelanggaran.php");
     exit;
 }
 
-// Proses penghapusan
+// Hapus kategori
 $stmt = mysqli_prepare(
     $koneksi,
     "DELETE FROM t_pelanggaran_kategori WHERE id = ?"
@@ -47,16 +52,26 @@ $stmt = mysqli_prepare(
 mysqli_stmt_bind_param($stmt, "i", $id);
 
 if (mysqli_stmt_execute($stmt)) {
-    mysqli_stmt_close($stmt);
 
-    header("Location: data_kategori_pelanggaran.php");
-    exit;
+    $_SESSION['pesan_hapus'] = "Data kategori berhasil dihapus.";
+    $_SESSION['jenis_pesan'] = "success";
+
+} else {
+
+    $error = mysqli_stmt_error($stmt);
+
+    $_SESSION['pesan_hapus'] =
+        "Kategori gagal dihapus. Penyebab: " . $error;
+
+    $_SESSION['jenis_pesan'] = "danger";
 }
 
-$error = "Kategori gagal dihapus. Kategori mungkin masih digunakan oleh data jenis pelanggaran.";
-
 mysqli_stmt_close($stmt);
+
+header("Location: data_kategori_pelanggaran.php");
+exit;
 ?>
+
 
 <!DOCTYPE html>
 <html lang="id">

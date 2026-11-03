@@ -1,3 +1,4 @@
+
 <?php
 
 include "middleware/auth.php";
@@ -178,7 +179,29 @@ if (!$result) {
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                
+                <!-- NOTIFIKASI HAPUS -->
+                <?php if (isset($_SESSION['pesan_hapus'])) { ?>
+
+                    <div class="alert alert-<?= $_SESSION['jenis_pesan']; ?> d-flex align-items-center justify-content-between py-2 small mb-3"
+                         role="alert">
+
+                        <span>
+                            <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
+                        </span>
+
+                        <button type="button"
+                                class="btn-close position-static flex-shrink-0 ms-3"
+                                data-bs-dismiss="alert"
+                                aria-label="Close"></button>
+
+                    </div>
+
+                    <?php
+                    unset($_SESSION['pesan_hapus']);
+                    unset($_SESSION['jenis_pesan']);
+                    ?>
+
+                <?php } ?>
 
                 <!-- KARTU TABEL -->
                 <div class="card border-0 shadow-sm rounded-3">
@@ -322,6 +345,9 @@ if (!$result) {
 <!-- DataTables -->
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
+
+<!-- Bootstrap JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- Konfigurasi DataTables -->
 <script>

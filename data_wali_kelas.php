@@ -1,15 +1,38 @@
+
 <?php
 
 include "middleware/auth.php";
 include "config/koneksi.php";
 
-if ($_SESSION['role'] != 'admin') {
+if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     echo "Anda tidak memiliki akses";
     exit;
 }
 
 $nama = $_SESSION['nama'];
 
+// Menghitung jumlah kelas yang memiliki wali kelas aktif
+$queryKelasAktif = mysqli_query($koneksi, "
+    SELECT COUNT(DISTINCT kelas_id) AS total
+    FROM t_wali_kelas
+    WHERE status_aktif = 1
+");
+
+$dataKelasAktif = mysqli_fetch_assoc($queryKelasAktif);
+$totalKelasAktif = (int) $dataKelasAktif['total'];
+
+// Mengecek wali kelas aktif yang ganda
+$queryGanda = mysqli_query($koneksi, "
+    SELECT kelas_id, COUNT(*) AS total
+    FROM t_wali_kelas
+    WHERE status_aktif = 1
+    GROUP BY kelas_id
+    HAVING COUNT(*) > 1
+");
+
+$totalGanda = mysqli_num_rows($queryGanda);
+
+// Mengambil data wali kelas
 $query = "
     SELECT
         wk.id,
@@ -44,17 +67,15 @@ if (!$result) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Data Wali Kelas</title>
+    <title>Data Wali Kelas - Sistem Informasi Pelanggaran Siswa</title>
 
-    <!-- Bootstrap 5.3.3 -->
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet">
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+          rel="stylesheet">
 
-    <!-- DataTables Bootstrap 5 -->
-    <link
-        href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
-        rel="stylesheet">
+    <!-- DataTables -->
+    <link href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
+          rel="stylesheet">
 </head>
 
 <body class="bg-light">
@@ -69,7 +90,7 @@ if (!$result) {
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
             <p class="text-secondary small mb-4">
-               SMK Muhammadiyah Kota Tasikmalaya
+                SMK Muhammadiyah Kota Tasikmalaya
             </p>
 
             <p class="text-secondary small fw-bold mb-2">
@@ -78,33 +99,27 @@ if (!$result) {
 
             <nav class="nav flex-column gap-1">
 
-                <a href="dashboard.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="dashboard.php" class="nav-link text-white rounded py-2">
                     Dashboard
                 </a>
 
-                <a href="data_siswa.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_siswa.php" class="nav-link text-white rounded py-2">
                     Data Siswa
                 </a>
 
-                <a href="data_guru.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_guru.php" class="nav-link text-white rounded py-2">
                     Data Guru
                 </a>
 
-                <a href="data_kelas.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_kelas.php" class="nav-link text-white rounded py-2">
                     Kelas
                 </a>
 
-                <a href="data_tahun_ajaran.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_tahun_ajaran.php" class="nav-link text-white rounded py-2">
                     Tahun Ajaran
                 </a>
 
-                <a href="data_penempatan_siswa.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">
                     Penempatan Siswa
                 </a>
 
@@ -113,30 +128,25 @@ if (!$result) {
                     Wali Kelas
                 </a>
 
-                <a href="data_kategori_pelanggaran.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">
                     Kategori Pelanggaran
                 </a>
 
-                <a href="data_jenis_pelanggaran.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">
                     Jenis Pelanggaran
                 </a>
 
-                <a href="data_laporan.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_laporan.php" class="nav-link text-white rounded py-2">
                     Laporan
                 </a>
 
-                <a href="about_me.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="about_me.php" class="nav-link text-white rounded py-2">
                     About Me
                 </a>
 
                 <hr class="border-secondary my-2">
 
-                <a href="logout.php"
-                   class="nav-link text-danger rounded py-2">
+                <a href="logout.php" class="nav-link text-danger rounded py-2">
                     Logout
                 </a>
 
@@ -175,7 +185,9 @@ if (!$result) {
                                 d-flex justify-content-center align-items-center
                                 fw-bold flex-shrink-0"
                          style="width: 42px; height: 42px;">
+
                         <?= strtoupper(substr($nama, 0, 1)); ?>
+
                     </div>
 
                 </div>
@@ -185,12 +197,29 @@ if (!$result) {
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-               
+                <!-- INFORMASI WALI KELAS -->
+                <?php if ($totalGanda > 0) { ?>
+
+                    <div class="alert alert-danger small">
+                        <strong>Perhatian!</strong>
+                        Terdapat kelas yang memiliki lebih dari satu wali kelas aktif.
+                        Silakan periksa kembali data wali kelas.
+                    </div>
+
+                <?php } else { ?>
+
+                    <div class="alert alert-success small">
+                        <strong>Informasi:</strong>
+                        Setiap kelas hanya boleh memiliki satu wali kelas aktif.
+                        Saat ini terdapat <?= $totalKelasAktif; ?> kelas
+                        yang memiliki wali kelas aktif.
+                    </div>
+
+                <?php } ?>
 
                 <!-- KARTU TABEL -->
                 <div class="card border-0 shadow-sm rounded-3">
 
-                    <!-- HEADER KARTU -->
                     <div class="card-header bg-white p-3 p-md-4
                                 d-flex justify-content-between align-items-center
                                 flex-wrap gap-3">
@@ -201,7 +230,7 @@ if (!$result) {
                             </h5>
 
                             <small class="text-secondary">
-                                Data wali kelas yang tersimpan di sistem.
+                                Data guru yang bertugas sebagai wali kelas.
                             </small>
                         </div>
 
@@ -212,7 +241,7 @@ if (!$result) {
 
                     </div>
 
-                    <!-- TABEL DATA -->
+                    <!-- TABEL -->
                     <div class="card-body">
 
                         <div class="table-responsive">
@@ -245,6 +274,7 @@ if (!$result) {
                                 ?>
 
                                     <tr>
+
                                         <td class="text-center">
                                             <?= $no++; ?>
                                         </td>
@@ -266,43 +296,48 @@ if (!$result) {
                                         </td>
 
                                         <td>
-                                            <?php
-                                            if (!empty($data['tanggal_selesai'])) {
-                                                echo htmlspecialchars($data['tanggal_selesai']);
-                                            } else {
-                                                echo "-";
-                                            }
-                                            ?>
+                                            <?= !empty($data['tanggal_selesai'])
+                                                ? htmlspecialchars($data['tanggal_selesai'])
+                                                : '-'; ?>
                                         </td>
 
                                         <td class="text-center">
-                                            <?php
-                                            if ($data['status_aktif'] == 1) {
-                                                echo '<span class="badge bg-success">Aktif</span>';
-                                            } else {
-                                                echo '<span class="badge bg-danger">Tidak Aktif</span>';
-                                            }
-                                            ?>
+
+                                            <?php if ($data['status_aktif'] == 1) { ?>
+
+                                                <span class="badge bg-success">
+                                                    Aktif
+                                                </span>
+
+                                            <?php } else { ?>
+
+                                                <span class="badge bg-danger">
+                                                    Tidak Aktif
+                                                </span>
+
+                                            <?php } ?>
+
                                         </td>
 
                                         <td class="text-center">
+
                                             <div class="d-flex justify-content-center gap-1">
 
-                                                <a
-                                                    href="edit_wali_kelas.php?id=<?= urlencode($data['id']); ?>"
-                                                    class="btn btn-warning btn-sm">
+                                                <a href="edit_wali_kelas.php?id=<?= urlencode($data['id']); ?>"
+                                                   class="btn btn-warning btn-sm">
                                                     Edit
                                                 </a>
 
-                                                <a
-                                                    href="hapus_wali_kelas.php?id=<?= urlencode($data['id']); ?>"
-                                                    class="btn btn-danger btn-sm"
-                                                    onclick="return confirm('Yakin ingin menghapus data wali kelas ini?');">
+                                                <a href="hapus_wali_kelas.php?id=<?= urlencode($data['id']); ?>"
+                                                   class="btn btn-danger btn-sm"
+                                                   onclick="return confirm('Yakin ingin menghapus data wali kelas ini?');">
                                                     Hapus
                                                 </a>
 
                                             </div>
+
                                         </td>
+
                                     </tr>
 
                                 <?php
@@ -320,8 +355,7 @@ if (!$result) {
                     </div>
 
                     <!-- FOOTER KARTU -->
-                    <div class="card-footer bg-white p-3
-                                d-flex justify-content-start align-items-center">
+                    <div class="card-footer bg-white p-3">
 
                         <a href="dashboard.php"
                            class="btn btn-outline-secondary btn-sm">
@@ -332,7 +366,7 @@ if (!$result) {
 
                 </div>
 
-                <!-- FOOTER HALAMAN -->
+                <!-- FOOTER -->
                 <footer class="text-center text-secondary small mt-4">
                     Sistem Informasi Pelanggaran Siswa &copy; 2026
                 </footer>
@@ -351,11 +385,14 @@ if (!$result) {
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
 
-<!-- Konfigurasi DataTables -->
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
 $(document).ready(function () {
 
     $('#tabelWaliKelas').DataTable({
+
         pageLength: 10,
         lengthMenu: [5, 10, 25, 50, 100],
         ordering: true,
@@ -387,6 +424,7 @@ $(document).ready(function () {
                 previous: "Sebelumnya"
             }
         }
+
     });
 
 });
