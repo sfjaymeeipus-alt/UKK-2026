@@ -57,7 +57,7 @@ if (!$result) {
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
+         <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
@@ -155,7 +155,6 @@ if (!$result) {
 
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
-
 
                 <!-- KARTU TABEL -->
                 <div class="card border-0 shadow-sm rounded-3">
@@ -293,7 +292,9 @@ if (!$result) {
 
 <script>
 $(document).ready(function () {
+
     $('#tabelRiwayat').DataTable({
+
         pageLength: 10,
         lengthMenu: [5, 10, 25, 50, 100],
         ordering: true,
@@ -317,7 +318,9 @@ $(document).ready(function () {
                 previous: "Sebelumnya"
             }
         }
+
     });
+
 });
 </script>
 

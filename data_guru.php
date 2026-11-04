@@ -1,5 +1,6 @@
 
 <?php
+
 include "middleware/auth.php";
 include "config/koneksi.php";
 
@@ -10,13 +11,80 @@ if ($_SESSION['role'] != 'admin') {
 
 $nama = $_SESSION['nama'];
 
-$query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
+// PROSES EDIT DATA GURU
+if (isset($_POST['simpan_edit'])) {
+
+    $id = (int) $_POST['id'];
+    $nip = trim($_POST['nip']);
+    $nama_guru = trim($_POST['nama']);
+    $email = trim($_POST['email']);
+    $status_aktif = (int) $_POST['status_aktif'];
+
+    // Cek email yang digunakan guru lain
+    $cek = mysqli_prepare(
+        $koneksi,
+        "SELECT id FROM t_guru WHERE email = ? AND id != ?"
+    );
+
+    mysqli_stmt_bind_param($cek, "si", $email, $id);
+    mysqli_stmt_execute($cek);
+    mysqli_stmt_store_result($cek);
+
+    if (mysqli_stmt_num_rows($cek) > 0) {
+
+        $_SESSION['pesan_hapus'] = "Email sudah digunakan oleh guru lain.";
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } else {
+
+        $update = mysqli_prepare(
+            $koneksi,
+            "UPDATE t_guru
+             SET nip = ?, nama = ?, email = ?, status_aktif = ?
+             WHERE id = ?"
+        );
+
+        mysqli_stmt_bind_param(
+            $update,
+            "sssii",
+            $nip,
+            $nama_guru,
+            $email,
+            $status_aktif,
+            $id
+        );
+
+        if (mysqli_stmt_execute($update)) {
+
+            $_SESSION['pesan_hapus'] = "Data guru berhasil diperbarui.";
+            $_SESSION['jenis_pesan'] = "success";
+
+        } else {
+
+            $_SESSION['pesan_hapus'] = "Gagal mengubah data guru.";
+            $_SESSION['jenis_pesan'] = "danger";
+
+        }
+
+        mysqli_stmt_close($update);
+    }
+
+    mysqli_stmt_close($cek);
+
+    header("Location: data_guru.php");
+    exit;
+}
+
+// MENGAMBIL DATA GURU
+$query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id ASC");
+
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
 
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -32,6 +100,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 </head>
 
 <body class="bg-light">
@@ -40,13 +109,13 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 position-sticky top-0 vh-100 overflow-auto">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
             <p class="text-secondary small mb-4">
-                 SMK Muhammadiyah Kota Tasikmalaya
+                SMK Muhammadiyah Kota Tasikmalaya
             </p>
 
             <p class="text-secondary small fw-bold mb-2">
@@ -118,6 +187,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
                            d-flex justify-content-between align-items-center">
 
                 <div>
+
                     <h4 class="fw-bold text-dark mb-1">
                         Data Guru
                     </h4>
@@ -125,23 +195,28 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
                     <small class="text-secondary">
                         Sistem Informasi Pelanggaran Siswa
                     </small>
+
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
 
                     <div class="text-end">
+
                         <div class="fw-bold">
                             <?= htmlspecialchars($nama); ?>
                         </div>
 
                         <small class="text-secondary">Admin</small>
+
                     </div>
 
                     <div class="bg-primary-subtle text-primary rounded-circle
                                 d-flex justify-content-center align-items-center
                                 fw-bold flex-shrink-0"
                          style="width: 42px; height: 42px;">
+
                         <?= strtoupper(substr($nama, 0, 1)); ?>
+
                     </div>
 
                 </div>
@@ -150,52 +225,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
 
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
-               <!-- NOTIFIKASI -->
-<?php if (isset($_SESSION['pesan_hapus'])) { ?>
-
-    <div class="alert alert-<?= htmlspecialchars($_SESSION['jenis_pesan']); ?> d-flex align-items-center justify-content-between py-2 small mb-3"
-         role="alert">
-
-        <span>
-            <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
-        </span>
-
-        <button type="button"
-                class="btn-close position-static flex-shrink-0 ms-3"
-                data-bs-dismiss="alert"
-                aria-label="Close"></button>
-
-    </div>
-
-    <?php
-    unset($_SESSION['pesan_hapus']);
-    unset($_SESSION['jenis_pesan']);
-    ?>
-
-<?php } ?>
-                <!-- NOTIFIKASI HAPUS -->
-                <?php if (isset($_SESSION['pesan_hapus'])) { ?>
-
-                    <div class="alert alert-<?= $_SESSION['jenis_pesan']; ?> d-flex align-items-center justify-content-between py-2 small mb-3"
-                         role="alert">
-
-                        <span>
-                            <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
-                        </span>
-
-                        <button type="button"
-                                class="btn-close position-static flex-shrink-0 ms-3"
-                                data-bs-dismiss="alert"
-                                aria-label="Close"></button>
-
-                    </div>
-
-                    <?php
-                    unset($_SESSION['pesan_hapus']);
-                    unset($_SESSION['jenis_pesan']);
-                    ?>
-
-                <?php } ?>
 
                 <!-- KARTU DATA GURU -->
                 <div class="card border-0 shadow-sm rounded-3">
@@ -205,6 +234,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
                                 flex-wrap gap-3">
 
                         <div>
+
                             <h5 class="fw-bold mb-1">
                                 Daftar Guru
                             </h5>
@@ -212,6 +242,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
                             <small class="text-secondary">
                                 Informasi identitas dan status guru.
                             </small>
+
                         </div>
 
                         <a href="tambah_guru.php" class="btn btn-primary">
@@ -230,6 +261,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
                                           align-middle mb-0">
 
                                 <thead class="table-dark">
+
                                     <tr>
                                         <th>No</th>
                                         <th>NIP</th>
@@ -238,18 +270,23 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
                                         <th>Status</th>
                                         <th>Aksi</th>
                                     </tr>
+
                                 </thead>
 
                                 <tbody>
 
                                 <?php
+
                                 $no = 1;
 
                                 if ($query && mysqli_num_rows($query) > 0) {
+
                                     while ($data = mysqli_fetch_assoc($query)) {
+
                                 ?>
 
                                     <tr>
+
                                         <td><?= $no++; ?></td>
 
                                         <td>
@@ -265,6 +302,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
                                         </td>
 
                                         <td>
+
                                             <?php if (($data['status_aktif'] ?? 0) == 1) { ?>
 
                                                 <span class="badge bg-success">
@@ -278,26 +316,48 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
                                                 </span>
 
                                             <?php } ?>
+
                                         </td>
 
                                         <td class="text-nowrap">
 
-                                            <a href="edit_guru.php?id=<?= urlencode($data['id']); ?>"
-                                               class="btn btn-warning btn-sm">
+                                            <!-- TOMBOL EDIT MODAL -->
+                                            <button type="button"
+                                                    class="btn btn-warning btn-sm tombolEdit"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#modalEditGuru"
+
+                                                    data-id="<?= htmlspecialchars($data['id'], ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-nip="<?= htmlspecialchars($data['nip'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-nama="<?= htmlspecialchars($data['nama'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-email="<?= htmlspecialchars($data['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-status="<?= htmlspecialchars($data['status_aktif'] ?? '0', ENT_QUOTES, 'UTF-8'); ?>">
+
                                                 Edit
-                                            </a>
+
+                                            </button>
 
                                             <a href="hapus_guru.php?id=<?= urlencode($data['id']); ?>"
                                                class="btn btn-danger btn-sm">
+
                                                 Hapus
+
                                             </a>
 
                                         </td>
+
                                     </tr>
 
                                 <?php
+
                                     }
+
                                 }
+
                                 ?>
 
                                 </tbody>
@@ -313,7 +373,9 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
 
                         <a href="dashboard.php"
                            class="btn btn-outline-secondary btn-sm">
+
                             Kembali ke Dashboard
+
                         </a>
 
                     </div>
@@ -322,7 +384,9 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
 
                 <!-- FOOTER -->
                 <footer class="text-center text-secondary small mt-4">
+
                     Sistem Informasi Pelanggaran Siswa &copy; 2026
+
                 </footer>
 
             </section>
@@ -331,6 +395,143 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
 
     </div>
 </div>
+
+
+<!-- MODAL EDIT GURU -->
+<div class="modal fade"
+     id="modalEditGuru"
+     tabindex="-1"
+     aria-labelledby="judulModalEdit"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content border-0 shadow rounded-3">
+
+            <!-- HEADER MODAL -->
+            <div class="modal-header bg-white">
+
+                <div>
+
+                    <h5 class="modal-title fw-bold" id="judulModalEdit">
+                        Edit Data Guru
+                    </h5>
+
+                    <small class="text-secondary">
+                        Perbarui informasi guru yang terdaftar.
+                    </small>
+
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+            <!-- FORM EDIT -->
+            <form method="POST" action="data_guru.php">
+
+                <div class="modal-body">
+
+                    <input type="hidden"
+                           name="id"
+                           id="edit_id">
+
+                    <div class="mb-3">
+
+                        <label for="edit_nip" class="form-label fw-semibold">
+                            NIP
+                        </label>
+
+                        <input type="text"
+                               name="nip"
+                               id="edit_nip"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="edit_nama" class="form-label fw-semibold">
+                            Nama Guru
+                        </label>
+
+                        <input type="text"
+                               name="nama"
+                               id="edit_nama"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="edit_email" class="form-label fw-semibold">
+                            Email
+                        </label>
+
+                        <input type="email"
+                               name="email"
+                               id="edit_email"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="edit_status" class="form-label fw-semibold">
+                            Status Guru
+                        </label>
+
+                        <select name="status_aktif"
+                                id="edit_status"
+                                class="form-select"
+                                required>
+
+                            <option value="1">Aktif</option>
+
+                            <option value="0">Tidak Aktif</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <!-- FOOTER MODAL -->
+                <div class="modal-footer">
+
+                    <button type="submit"
+                            name="simpan_edit"
+                            class="btn btn-primary">
+
+                        Simpan Perubahan
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
 
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -344,16 +545,24 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
 <!-- Bootstrap JavaScript -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Inisialisasi DataTables -->
+
+<!-- INISIALISASI DATATABLES -->
 <script>
+
     $(document).ready(function () {
 
         $('#tabelGuru').DataTable({
+
             pageLength: 10,
+
             lengthMenu: [5, 10, 25, 50, 100],
+
             ordering: true,
+
             searching: true,
+
             paging: true,
+
             info: true,
 
             columnDefs: [
@@ -365,46 +574,132 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id DESC");
             ],
 
             language: {
+
                 search: "Cari data:",
+
                 lengthMenu: "Tampilkan _MENU_ data",
+
                 info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+
                 infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+
                 infoFiltered: "(difilter dari _MAX_ total data)",
+
                 zeroRecords: "Data guru tidak ditemukan",
+
                 emptyTable: "Belum ada data guru",
 
                 paginate: {
+
                     first: "Pertama",
+
                     last: "Terakhir",
+
                     next: "Berikutnya",
+
                     previous: "Sebelumnya"
+
                 }
+
             }
+
         });
 
     });
+
 </script>
 
-<!-- NOTIFIKASI BERHASIL EDIT -->
-<?php if (isset($_GET['pesan']) && $_GET['pesan'] == 'berhasil_edit') { ?>
 
-    <div class="alert bg-dark text-white border border-secondary rounded-3
-                d-flex align-items-center justify-content-between py-2 mb-3"
-         role="alert">
+<!-- MENGISI DATA KE MODAL EDIT -->
+<script>
 
-        <strong class="small">
-            <span class="text-success me-2">✓</span>
-            Data guru berhasil diperbarui.
-        </strong>
+    document.querySelectorAll('.tombolEdit').forEach(function (tombol) {
 
-        <button type="button"
-                class="btn-close btn-close-white"
-                data-bs-dismiss="alert">
-        </button>
+        tombol.addEventListener('click', function () {
+
+            document.getElementById('edit_id').value =
+                this.getAttribute('data-id');
+
+            document.getElementById('edit_nip').value =
+                this.getAttribute('data-nip');
+
+            document.getElementById('edit_nama').value =
+                this.getAttribute('data-nama');
+
+            document.getElementById('edit_email').value =
+                this.getAttribute('data-email');
+
+            document.getElementById('edit_status').value =
+                this.getAttribute('data-status');
+
+        });
+
+    });
+
+</script>
+
+
+<!-- NOTIFIKASI MELAYANG -->
+<?php if (isset($_SESSION['pesan_hapus'])) { ?>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3"
+         style="z-index: 9999;">
+
+        <div id="notifikasiToast"
+             class="toast align-items-center text-bg-<?= htmlspecialchars($_SESSION['jenis_pesan'] ?? 'success'); ?> border-0"
+             role="alert"
+             aria-live="assertive"
+             aria-atomic="true">
+
+            <div class="d-flex">
+
+                <div class="toast-body">
+
+                    <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
+
+                </div>
+
+                <button type="button"
+                        class="btn-close btn-close-white me-2 m-auto"
+                        data-bs-dismiss="toast">
+                </button>
+
+            </div>
+
+        </div>
 
     </div>
 
+    <?php
+
+    unset($_SESSION['pesan_hapus']);
+    unset($_SESSION['jenis_pesan']);
+
+    ?>
+
 <?php } ?>
+
+
+<!-- MENAMPILKAN TOAST -->
+<script>
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        var toastElement = document.getElementById("notifikasiToast");
+
+        if (toastElement) {
+
+            var toast = new bootstrap.Toast(toastElement, {
+                delay: 3000
+            });
+
+            toast.show();
+
+        }
+
+    });
+
+</script>
 
 </body>
 </html>

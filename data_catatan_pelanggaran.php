@@ -14,6 +14,83 @@ if (
 $role = $_SESSION['role'];
 $nama = $_SESSION['nama'] ?? 'Pengguna';
 
+// PROSES EDIT DATA PELANGGARAN
+if (isset($_POST['simpan_edit'])) {
+
+    $id = (int) $_POST['id'];
+    $nama_siswa = trim($_POST['nama_siswa']);
+    $nama_kelas = trim($_POST['nama_kelas']);
+    $nama_pelanggaran = trim($_POST['nama_pelanggaran']);
+    $nama_guru = trim($_POST['nama_guru']);
+    $tanggal = trim($_POST['tanggal']);
+    $keterangan = trim($_POST['keterangan']);
+    $poin = (int) $_POST['poin'];
+    $tindakan = trim($_POST['tindakan']);
+    $status = trim($_POST['status']);
+
+    if (
+        $id <= 0 ||
+        $nama_siswa == "" ||
+        $nama_kelas == "" ||
+        $nama_pelanggaran == "" ||
+        $nama_guru == "" ||
+        $tanggal == ""
+    ) {
+
+        $_SESSION['pesan_hapus'] = "Semua data wajib diisi.";
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } else {
+
+        $update = mysqli_prepare(
+            $koneksi,
+            "UPDATE t_pelanggaran_siswa SET
+                nama_siswa = ?,
+                nama_kelas = ?,
+                nama_pelanggaran = ?,
+                nama_guru = ?,
+                tanggal = ?,
+                keterangan = ?,
+                poin = ?,
+                tindakan = ?,
+                status = ?
+            WHERE id = ?"
+        );
+
+        mysqli_stmt_bind_param(
+            $update,
+            "ssssssissi",
+            $nama_siswa,
+            $nama_kelas,
+            $nama_pelanggaran,
+            $nama_guru,
+            $tanggal,
+            $keterangan,
+            $poin,
+            $tindakan,
+            $status,
+            $id
+        );
+
+        if (mysqli_stmt_execute($update)) {
+
+            $_SESSION['pesan_hapus'] = "Catatan pelanggaran berhasil diperbarui.";
+            $_SESSION['jenis_pesan'] = "success";
+
+        } else {
+
+            $_SESSION['pesan_hapus'] = "Gagal mengubah catatan pelanggaran.";
+            $_SESSION['jenis_pesan'] = "danger";
+        }
+
+        mysqli_stmt_close($update);
+    }
+
+    header("Location: data_catatan_pelanggaran.php");
+    exit;
+}
+
+// MENGAMBIL DATA PELANGGARAN
 $query = "
     SELECT
         id,
@@ -61,7 +138,7 @@ if (!$result) {
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
@@ -160,7 +237,6 @@ if (!$result) {
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                
                 <!-- KARTU TABEL -->
                 <div class="card border-0 shadow-sm rounded-3">
 
@@ -217,6 +293,7 @@ if (!$result) {
                                     if (mysqli_num_rows($result) > 0) {
                                         while ($data = mysqli_fetch_assoc($result)) {
                                     ?>
+
                                         <tr>
                                             <td><?= $no++; ?></td>
 
@@ -272,18 +349,49 @@ if (!$result) {
                                             </td>
 
                                             <td class="text-nowrap">
-                                                <a href="edit_pelanggaran_siswa.php?id=<?= urlencode($data['id']); ?>"
-                                                   class="btn btn-warning btn-sm">
+
+                                                <!-- TOMBOL EDIT MODAL -->
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-warning btn-sm tombolEdit"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#modalEditPelanggaran"
+
+                                                    data-id="<?= htmlspecialchars($data['id'], ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-siswa="<?= htmlspecialchars($data['nama_siswa'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-kelas="<?= htmlspecialchars($data['nama_kelas'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-pelanggaran="<?= htmlspecialchars($data['nama_pelanggaran'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-guru="<?= htmlspecialchars($data['nama_guru'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-tanggal="<?= htmlspecialchars($data['tanggal'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-poin="<?= htmlspecialchars($data['poin'] ?? '0', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-keterangan="<?= htmlspecialchars($data['keterangan'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-tindakan="<?= htmlspecialchars($data['tindakan'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                    data-status="<?= htmlspecialchars($data['status'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+
                                                     Edit
-                                                </a>
+
+                                                </button>
 
                                                 <a href="hapus_pelanggaran_siswa.php?id=<?= urlencode($data['id']); ?>"
                                                    class="btn btn-danger btn-sm"
                                                    onclick="return confirm('Yakin ingin menghapus catatan pelanggaran ini?')">
+
                                                     Hapus
+
                                                 </a>
+
                                             </td>
                                         </tr>
+
                                     <?php
                                         }
                                     }
@@ -298,10 +406,12 @@ if (!$result) {
 
                     <!-- BAGIAN BAWAH -->
                     <div class="card-footer bg-white p-3">
+
                         <a href="dashboard.php"
                            class="btn btn-outline-secondary btn-sm">
                             Kembali ke Dashboard
                         </a>
+
                     </div>
 
                 </div>
@@ -318,21 +428,240 @@ if (!$result) {
     </div>
 </div>
 
+
+<!-- MODAL EDIT PELANGGARAN -->
+<div class="modal fade"
+     id="modalEditPelanggaran"
+     tabindex="-1"
+     aria-labelledby="judulModalEdit"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+
+        <div class="modal-content border-0 shadow rounded-3">
+
+            <!-- HEADER MODAL -->
+            <div class="modal-header bg-white">
+
+                <div>
+                    <h5 class="modal-title fw-bold" id="judulModalEdit">
+                        Edit Catatan Pelanggaran
+                    </h5>
+
+                    <small class="text-secondary">
+                        Perbarui informasi catatan pelanggaran siswa.
+                    </small>
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+            <!-- FORM EDIT -->
+            <form method="POST" action="data_catatan_pelanggaran.php">
+
+                <div class="modal-body">
+
+                    <input type="hidden"
+                           name="id"
+                           id="edit_id">
+
+                    <div class="mb-3">
+
+                        <label for="edit_siswa" class="form-label fw-semibold">
+                            Nama Siswa
+                        </label>
+
+                        <input type="text"
+                               name="nama_siswa"
+                               id="edit_siswa"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="edit_kelas" class="form-label fw-semibold">
+                            Kelas
+                        </label>
+
+                        <input type="text"
+                               name="nama_kelas"
+                               id="edit_kelas"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="edit_pelanggaran" class="form-label fw-semibold">
+                            Jenis Pelanggaran
+                        </label>
+
+                        <input type="text"
+                               name="nama_pelanggaran"
+                               id="edit_pelanggaran"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="edit_guru" class="form-label fw-semibold">
+                            Nama Guru
+                        </label>
+
+                        <input type="text"
+                               name="nama_guru"
+                               id="edit_guru"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="edit_tanggal" class="form-label fw-semibold">
+                            Tanggal
+                        </label>
+
+                        <input type="date"
+                               name="tanggal"
+                               id="edit_tanggal"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="edit_poin" class="form-label fw-semibold">
+                            Poin
+                        </label>
+
+                        <input type="number"
+                               name="poin"
+                               id="edit_poin"
+                               class="form-control"
+                               min="0"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="edit_keterangan" class="form-label fw-semibold">
+                            Keterangan
+                        </label>
+
+                        <textarea name="keterangan"
+                                  id="edit_keterangan"
+                                  class="form-control"
+                                  rows="3"></textarea>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="edit_tindakan" class="form-label fw-semibold">
+                            Tindakan
+                        </label>
+
+                        <textarea name="tindakan"
+                                  id="edit_tindakan"
+                                  class="form-control"
+                                  rows="3"></textarea>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="edit_status" class="form-label fw-semibold">
+                            Status
+                        </label>
+
+                        <select name="status"
+                                id="edit_status"
+                                class="form-select"
+                                required>
+
+                            <option value="">Pilih Status</option>
+                            <option value="Diproses">Diproses</option>
+                            <option value="Ditindaklanjuti">Ditindaklanjuti</option>
+                            <option value="Selesai">Selesai</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <!-- FOOTER MODAL -->
+                <div class="modal-footer">
+
+                    <button type="submit"
+                            name="simpan_edit"
+                            class="btn btn-primary">
+
+                        Simpan Perubahan
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
 <!-- DataTables -->
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
+
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
 
+<!-- Bootstrap JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<!-- INISIALISASI DATATABLES -->
 <script>
+
 $(document).ready(function () {
+
     $('#tabelPelanggaran').DataTable({
+
         pageLength: 10,
+
         lengthMenu: [5, 10, 25, 50, 100],
+
         ordering: true,
+
         searching: true,
+
         paging: true,
+
         info: true,
 
         columnDefs: [
@@ -344,23 +673,154 @@ $(document).ready(function () {
         ],
 
         language: {
+
             search: "Cari data:",
+
             lengthMenu: "Tampilkan _MENU_ data",
+
             info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+
             infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+
             infoFiltered: "(difilter dari _MAX_ total data)",
+
             zeroRecords: "Data pelanggaran tidak ditemukan",
+
             emptyTable: "Belum ada catatan pelanggaran",
 
             paginate: {
+
                 first: "Pertama",
+
                 last: "Terakhir",
+
                 next: "Berikutnya",
+
                 previous: "Sebelumnya"
+
             }
+
         }
+
     });
+
 });
+
+</script>
+
+
+<!-- MENGISI DATA KE MODAL EDIT -->
+<script>
+
+document.querySelectorAll('.tombolEdit').forEach(function (tombol) {
+
+    tombol.addEventListener('click', function () {
+
+        document.getElementById('edit_id').value =
+            this.getAttribute('data-id');
+
+        document.getElementById('edit_siswa').value =
+            this.getAttribute('data-siswa');
+
+        document.getElementById('edit_kelas').value =
+            this.getAttribute('data-kelas');
+
+        document.getElementById('edit_pelanggaran').value =
+            this.getAttribute('data-pelanggaran');
+
+        document.getElementById('edit_guru').value =
+            this.getAttribute('data-guru');
+
+        document.getElementById('edit_tanggal').value =
+            this.getAttribute('data-tanggal');
+
+        document.getElementById('edit_poin').value =
+            this.getAttribute('data-poin');
+
+        document.getElementById('edit_keterangan').value =
+            this.getAttribute('data-keterangan');
+
+        document.getElementById('edit_tindakan').value =
+            this.getAttribute('data-tindakan');
+
+        document.getElementById('edit_status').value =
+            this.getAttribute('data-status');
+
+    });
+
+});
+
+</script>
+
+
+<!-- NOTIFIKASI MELAYANG -->
+<?php if (isset($_SESSION['pesan_hapus'])) { ?>
+
+    <?php
+    $jenis_pesan = $_SESSION['jenis_pesan'] ?? 'success';
+
+    $jenis_pesan = in_array(
+        $jenis_pesan,
+        ['success', 'danger', 'warning', 'info', 'primary', 'secondary', 'dark']
+    ) ? $jenis_pesan : 'success';
+    ?>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3"
+         style="z-index: 9999;">
+
+        <div id="notifikasiToast"
+             class="toast align-items-center text-bg-<?= htmlspecialchars($jenis_pesan); ?> border-0"
+             role="alert"
+             aria-live="assertive"
+             aria-atomic="true">
+
+            <div class="d-flex">
+
+                <div class="toast-body">
+
+                    <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
+
+                </div>
+
+                <button type="button"
+                        class="btn-close btn-close-white me-2 m-auto"
+                        data-bs-dismiss="toast"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <?php
+    unset($_SESSION['pesan_hapus']);
+    unset($_SESSION['jenis_pesan']);
+    ?>
+
+<?php } ?>
+
+
+<!-- MENAMPILKAN TOAST -->
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    var toastElement = document.getElementById("notifikasiToast");
+
+    if (toastElement) {
+
+        var toast = new bootstrap.Toast(toastElement, {
+            delay: 3000
+        });
+
+        toast.show();
+
+    }
+
+});
+
 </script>
 
 </body>

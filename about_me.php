@@ -1,3 +1,4 @@
+
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -30,7 +31,8 @@ $role = $_SESSION['role'];
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 position-sticky top-0 align-self-start"
+               style="height: 100vh; overflow-y: auto;">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
@@ -143,13 +145,11 @@ $role = $_SESSION['role'];
             <!-- HEADER -->
             <header class="bg-white border-bottomp-3 p-md-4
                            d-flex justify-content-between align-items-center">
-                           
+
                 <div>
                     <h4 class="fw-bold mb-1">About Me</h4>
                     <small class="text-secondary">
-                        
                         Kenali profil pengembang dan proyek yang saya buat.
-                   
                     </small>
                 </div>
 
@@ -175,16 +175,16 @@ $role = $_SESSION['role'];
 
             <div class="p-3 p-md-4">
 
-
                 <!-- KARTU PROFIL -->
                 <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
 
-<div class="bg-primary-subtle p-4 text-primary-emphasis">
-    <h5 class="fw-bold mb-1">Profil Pengembang</h5>
-    <p class="mb-0 small">
-        Informasi singkat mengenai diri saya.
-    </p>
-</div>
+                    <div class="bg-primary-subtle p-4 text-primary-emphasis">
+                        <h5 class="fw-bold mb-1">Profil Pengembang</h5>
+                        <p class="mb-0 small">
+                            Informasi singkat mengenai diri saya.
+                        </p>
+                    </div>
+
                     <div class="card-body p-4 p-md-5">
 
                         <div class="row align-items-center g-4">
@@ -229,6 +229,7 @@ $role = $_SESSION['role'];
                                 </p>
 
                                 <div class="d-flex flex-wrap gap-2 mt-4">
+
                                     <span class="badge border text-dark bg-light p-2">
                                         PHP Native
                                     </span>
@@ -248,6 +249,7 @@ $role = $_SESSION['role'];
                                     <span class="badge border text-dark bg-light p-2">
                                         Bootstrap
                                     </span>
+
                                 </div>
 
                                 <a href="dashboard.php"
@@ -363,6 +365,7 @@ $role = $_SESSION['role'];
                             <div class="col-md-4">
 
                                 <div class="bg-light border rounded-4 p-4 text-center">
+
                                     <h2 class="fw-bold text-primary mb-2">
                                         RPL
                                     </h2>
@@ -374,6 +377,7 @@ $role = $_SESSION['role'];
                                     <small class="text-secondary">
                                         Belajar, berkarya, dan berkembang.
                                     </small>
+
                                 </div>
 
                             </div>

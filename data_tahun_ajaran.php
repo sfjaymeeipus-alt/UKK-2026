@@ -10,7 +10,70 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 
 $nama = $_SESSION['nama'];
 
-// Menghitung jumlah tahun ajaran aktif
+// PROSES EDIT DATA TAHUN AJARAN
+if (isset($_POST['simpan_edit'])) {
+
+    $id = (int) $_POST['id'];
+    $nama_tahun = trim($_POST['nama']);
+    $tanggal_mulai = trim($_POST['tanggal_mulai']);
+    $tanggal_selesai = trim($_POST['tanggal_selesai']);
+    $status_aktif = (int) $_POST['status_aktif'];
+
+    if (
+        $id <= 0 ||
+        $nama_tahun == "" ||
+        $tanggal_mulai == "" ||
+        $tanggal_selesai == ""
+    ) {
+
+        $_SESSION['pesan_hapus'] = "Semua data tahun ajaran wajib diisi.";
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } elseif ($tanggal_selesai < $tanggal_mulai) {
+
+        $_SESSION['pesan_hapus'] = "Tanggal selesai tidak boleh sebelum tanggal mulai.";
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } else {
+
+        $update = mysqli_prepare(
+            $koneksi,
+            "UPDATE t_tahun_ajaran
+             SET nama = ?, tanggal_mulai = ?,
+                 tanggal_selesai = ?, status_aktif = ?
+             WHERE id = ?"
+        );
+
+        mysqli_stmt_bind_param(
+            $update,
+            "sssii",
+            $nama_tahun,
+            $tanggal_mulai,
+            $tanggal_selesai,
+            $status_aktif,
+            $id
+        );
+
+        if (mysqli_stmt_execute($update)) {
+
+            $_SESSION['pesan_hapus'] = "Data tahun ajaran berhasil diperbarui.";
+            $_SESSION['jenis_pesan'] = "success";
+
+        } else {
+
+            $_SESSION['pesan_hapus'] = "Gagal mengubah data tahun ajaran.";
+            $_SESSION['jenis_pesan'] = "danger";
+
+        }
+
+        mysqli_stmt_close($update);
+    }
+
+    header("Location: data_tahun_ajaran.php");
+    exit;
+}
+
+// MENGHITUNG JUMLAH TAHUN AJARAN AKTIF
 $cekAktif = mysqli_query(
     $koneksi,
     "SELECT COUNT(*) AS total FROM t_tahun_ajaran WHERE status_aktif = 1"
@@ -19,7 +82,7 @@ $cekAktif = mysqli_query(
 $dataAktif = mysqli_fetch_assoc($cekAktif);
 $totalAktif = (int) $dataAktif['total'];
 
-// Mengambil seluruh data tahun ajaran
+// MENGAMBIL SELURUH DATA TAHUN AJARAN
 $query = mysqli_query(
     $koneksi,
     "SELECT * FROM t_tahun_ajaran ORDER BY id DESC"
@@ -31,6 +94,7 @@ $query = mysqli_query(
 <html lang="id">
 
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -43,6 +107,7 @@ $query = mysqli_query(
     <!-- DataTables CSS -->
     <link href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
           rel="stylesheet">
+
 </head>
 
 <body class="bg-light">
@@ -50,8 +115,9 @@ $query = mysqli_query(
 <div class="container-fluid">
     <div class="row">
 
-        <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
+        <!-- SIDEBAR TETAP SAAT SCROLL -->
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 align-self-start"
+               style="position: sticky; top: 0; height: 100vh; overflow-y: auto;">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
@@ -129,6 +195,7 @@ $query = mysqli_query(
                            d-flex justify-content-between align-items-center">
 
                 <div>
+
                     <h4 class="fw-bold text-dark mb-1">
                         Data Tahun Ajaran
                     </h4>
@@ -136,16 +203,19 @@ $query = mysqli_query(
                     <small class="text-secondary">
                         Sistem Informasi Pelanggaran Siswa
                     </small>
+
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
 
                     <div class="text-end">
+
                         <div class="fw-bold">
                             <?= htmlspecialchars($nama); ?>
                         </div>
 
                         <small class="text-secondary">Admin</small>
+
                     </div>
 
                     <div class="bg-primary-subtle text-primary rounded-circle
@@ -164,58 +234,42 @@ $query = mysqli_query(
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                <!-- NOTIFIKASI HAPUS -->
-                <?php if (isset($_SESSION['pesan_hapus'])) { ?>
-
-                    <div class="alert alert-<?= htmlspecialchars($_SESSION['jenis_pesan'] ?? 'info'); ?>
-                                d-flex align-items-center justify-content-between
-                                py-2 small mb-3"
-                         role="alert">
-
-                        <span>
-                            <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
-                        </span>
-
-                        <button type="button"
-                                class="btn-close position-static flex-shrink-0 ms-3"
-                                data-bs-dismiss="alert">
-                        </button>
-
-                    </div>
-
-                    <?php
-                    unset($_SESSION['pesan_hapus']);
-                    unset($_SESSION['jenis_pesan']);
-                    ?>
-
-                <?php } ?>
-
                 <!-- INFORMASI STATUS TAHUN AJARAN -->
                 <?php if ($totalAktif > 1) { ?>
 
                     <div class="alert alert-danger small mb-3">
+
                         <strong>Perhatian!</strong>
+
                         Terdapat <?= $totalAktif; ?> tahun ajaran yang aktif.
                         Seharusnya hanya boleh ada satu tahun ajaran aktif.
                         Silakan perbaiki status tahun ajaran.
+
                     </div>
 
                 <?php } elseif ($totalAktif == 0) { ?>
 
                     <div class="alert alert-warning small mb-3">
+
                         <strong>Perhatian!</strong>
+
                         Belum ada tahun ajaran yang aktif.
                         Silakan aktifkan salah satu tahun ajaran.
+
                     </div>
 
                 <?php } else { ?>
 
                     <div class="alert alert-success small mb-3">
+
                         <strong>Informasi:</strong>
+
                         Terdapat satu tahun ajaran yang sedang aktif.
+
                     </div>
 
                 <?php } ?>
+
 
                 <!-- KARTU DATA -->
                 <div class="card border-0 shadow-sm rounded-3">
@@ -225,6 +279,7 @@ $query = mysqli_query(
                                 flex-wrap gap-3">
 
                         <div>
+
                             <h5 class="fw-bold mb-1">
                                 Daftar Tahun Ajaran
                             </h5>
@@ -233,14 +288,18 @@ $query = mysqli_query(
                                 Informasi nama, tanggal mulai, tanggal selesai,
                                 dan status tahun ajaran.
                             </small>
+
                         </div>
 
                         <a href="tambah_tahun_ajaran.php"
                            class="btn btn-primary">
+
                             + Tambah Tahun Ajaran
+
                         </a>
 
                     </div>
+
 
                     <!-- TABEL -->
                     <div class="card-body">
@@ -251,6 +310,7 @@ $query = mysqli_query(
                                    class="table table-bordered table-hover align-middle mb-0">
 
                                 <thead class="table-dark">
+
                                     <tr>
                                         <th>No</th>
                                         <th>Nama</th>
@@ -259,6 +319,7 @@ $query = mysqli_query(
                                         <th>Status</th>
                                         <th>Aksi</th>
                                     </tr>
+
                                 </thead>
 
                                 <tbody>
@@ -307,15 +368,33 @@ $query = mysqli_query(
 
                                         <td class="text-nowrap">
 
-                                            <a href="edit_tahun_ajaran.php?id=<?= urlencode($data['id']); ?>"
-                                               class="btn btn-warning btn-sm">
+                                            <!-- TOMBOL EDIT MODAL -->
+                                            <button
+                                                type="button"
+                                                class="btn btn-warning btn-sm tombolEdit"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalEditTahunAjaran"
+
+                                                data-id="<?= htmlspecialchars($data['id'], ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                data-nama="<?= htmlspecialchars($data['nama'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                data-mulai="<?= htmlspecialchars($data['tanggal_mulai'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                data-selesai="<?= htmlspecialchars($data['tanggal_selesai'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                data-status="<?= htmlspecialchars($data['status_aktif'] ?? '0', ENT_QUOTES, 'UTF-8'); ?>">
+
                                                 Edit
-                                            </a>
+
+                                            </button>
 
                                             <a href="hapus_tahun_ajaran.php?id=<?= urlencode($data['id']); ?>"
                                                class="btn btn-danger btn-sm"
                                                onclick="return confirm('Apakah Anda yakin ingin menghapus tahun ajaran ini?')">
+
                                                 Hapus
+
                                             </a>
 
                                         </td>
@@ -336,21 +415,27 @@ $query = mysqli_query(
 
                     </div>
 
+
                     <!-- FOOTER KARTU -->
                     <div class="card-footer bg-white p-3">
 
                         <a href="dashboard.php"
                            class="btn btn-outline-secondary btn-sm">
+
                             Kembali ke Dashboard
+
                         </a>
 
                     </div>
 
                 </div>
 
+
                 <!-- FOOTER HALAMAN -->
                 <footer class="text-center text-secondary small mt-4">
+
                     Sistem Informasi Pelanggaran Siswa &copy; 2026
+
                 </footer>
 
             </section>
@@ -359,6 +444,158 @@ $query = mysqli_query(
 
     </div>
 </div>
+
+
+<!-- MODAL EDIT TAHUN AJARAN -->
+<div class="modal fade"
+     id="modalEditTahunAjaran"
+     tabindex="-1"
+     aria-labelledby="judulModalEdit"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content border-0 shadow rounded-3">
+
+            <!-- HEADER MODAL -->
+            <div class="modal-header bg-white">
+
+                <div>
+
+                    <h5 class="modal-title fw-bold" id="judulModalEdit">
+                        Edit Data Tahun Ajaran
+                    </h5>
+
+                    <small class="text-secondary">
+                        Perbarui informasi tahun ajaran yang terdaftar.
+                    </small>
+
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+
+            <!-- FORM EDIT -->
+            <form method="POST" action="data_tahun_ajaran.php">
+
+                <div class="modal-body">
+
+                    <input type="hidden"
+                           name="id"
+                           id="edit_id">
+
+
+                    <div class="mb-3">
+
+                        <label for="edit_nama" class="form-label fw-semibold">
+                            Nama Tahun Ajaran
+                        </label>
+
+                        <input type="text"
+                               name="nama"
+                               id="edit_nama"
+                               class="form-control"
+                               placeholder="Contoh: 2026/2027"
+                               required>
+
+                    </div>
+
+
+                    <div class="mb-3">
+
+                        <label for="edit_tanggal_mulai"
+                               class="form-label fw-semibold">
+
+                            Tanggal Mulai
+
+                        </label>
+
+                        <input type="date"
+                               name="tanggal_mulai"
+                               id="edit_tanggal_mulai"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+
+                    <div class="mb-3">
+
+                        <label for="edit_tanggal_selesai"
+                               class="form-label fw-semibold">
+
+                            Tanggal Selesai
+
+                        </label>
+
+                        <input type="date"
+                               name="tanggal_selesai"
+                               id="edit_tanggal_selesai"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+
+                    <div class="mb-3">
+
+                        <label for="edit_status"
+                               class="form-label fw-semibold">
+
+                            Status Tahun Ajaran
+
+                        </label>
+
+                        <select name="status_aktif"
+                                id="edit_status"
+                                class="form-select"
+                                required>
+
+                            <option value="1">Aktif</option>
+                            <option value="0">Tidak Aktif</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <!-- FOOTER MODAL -->
+                <div class="modal-footer">
+
+                    <button type="submit"
+                            name="simpan_edit"
+                            class="btn btn-primary">
+
+                        Simpan Perubahan
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
 
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -371,8 +608,10 @@ $query = mysqli_query(
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
+
 <!-- INISIALISASI DATATABLES -->
 <script>
+
 $(document).ready(function () {
 
     $('#tabelTahunAjaran').DataTable({
@@ -414,10 +653,15 @@ $(document).ready(function () {
             emptyTable: "Belum ada data tahun ajaran",
 
             paginate: {
+
                 first: "Pertama",
+
                 last: "Terakhir",
+
                 next: "Berikutnya",
+
                 previous: "Sebelumnya"
+
             }
 
         }
@@ -425,6 +669,107 @@ $(document).ready(function () {
     });
 
 });
+
+</script>
+
+
+<!-- MENGISI DATA KE MODAL EDIT -->
+<script>
+
+document.querySelectorAll('.tombolEdit').forEach(function (tombol) {
+
+    tombol.addEventListener('click', function () {
+
+        document.getElementById('edit_id').value =
+            this.getAttribute('data-id');
+
+        document.getElementById('edit_nama').value =
+            this.getAttribute('data-nama');
+
+        document.getElementById('edit_tanggal_mulai').value =
+            this.getAttribute('data-mulai');
+
+        document.getElementById('edit_tanggal_selesai').value =
+            this.getAttribute('data-selesai');
+
+        document.getElementById('edit_status').value =
+            this.getAttribute('data-status');
+
+    });
+
+});
+
+</script>
+
+
+<!-- NOTIFIKASI MELAYANG -->
+<?php if (isset($_SESSION['pesan_hapus'])) { ?>
+
+    <?php
+    $jenis_pesan = $_SESSION['jenis_pesan'] ?? 'success';
+
+    $jenis_pesan = in_array(
+        $jenis_pesan,
+        ['success', 'danger', 'warning', 'info', 'primary', 'secondary', 'dark']
+    ) ? $jenis_pesan : 'success';
+    ?>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3"
+         style="z-index: 9999;">
+
+        <div id="notifikasiToast"
+             class="toast align-items-center text-bg-<?= htmlspecialchars($jenis_pesan); ?> border-0"
+             role="alert"
+             aria-live="assertive"
+             aria-atomic="true">
+
+            <div class="d-flex">
+
+                <div class="toast-body">
+
+                    <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
+
+                </div>
+
+                <button type="button"
+                        class="btn-close btn-close-white me-2 m-auto"
+                        data-bs-dismiss="toast"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <?php
+    unset($_SESSION['pesan_hapus']);
+    unset($_SESSION['jenis_pesan']);
+    ?>
+
+<?php } ?>
+
+
+<!-- MENAMPILKAN TOAST -->
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    var toastElement = document.getElementById("notifikasiToast");
+
+    if (toastElement) {
+
+        var toast = new bootstrap.Toast(toastElement, {
+            delay: 3000
+        });
+
+        toast.show();
+
+    }
+
+});
+
 </script>
 
 </body>

@@ -10,48 +10,92 @@ if ($_SESSION['role'] != 'admin') {
 
 $nama = $_SESSION['nama'];
 $pesan = "";
+$jenis_pesan = "danger";
 
 if (isset($_POST['simpan'])) {
 
-    $nama = mysqli_real_escape_string($koneksi, $_POST['nama']);
+    $nama_tahun = mysqli_real_escape_string($koneksi, trim($_POST['nama']));
     $tanggal_mulai = $_POST['tanggal_mulai'];
     $tanggal_selesai = $_POST['tanggal_selesai'];
-    $status_aktif = isset($_POST['status_aktif']) ? 1 : 0;
+    $status_aktif = isset($_POST['status_aktif']) ? (int) $_POST['status_aktif'] : 0;
 
-    mysqli_begin_transaction($koneksi);
+    // Validasi tanggal
+    if ($tanggal_selesai <= $tanggal_mulai) {
 
-    try {
+        $pesan = "Tanggal selesai harus setelah tanggal mulai.";
 
-        // Jika tahun ajaran baru aktif,
-        // nonaktifkan tahun ajaran sebelumnya
-        if ($status_aktif == 1) {
-            mysqli_query(
-                $koneksi,
-                "UPDATE t_tahun_ajaran SET status_aktif = 0"
-            );
-        }
+    } else {
 
-        $query = mysqli_query($koneksi, "
-            INSERT INTO t_tahun_ajaran
-            (nama, tanggal_mulai, tanggal_selesai, status_aktif)
-            VALUES
-            ('$nama', '$tanggal_mulai', '$tanggal_selesai', '$status_aktif')
+        // Cek apakah nama tahun ajaran sudah ada
+        $cek = mysqli_query($koneksi, "
+            SELECT id FROM t_tahun_ajaran
+            WHERE LOWER(nama) = LOWER('$nama_tahun')
         ");
 
-        if (!$query) {
-            throw new Exception(mysqli_error($koneksi));
+        if (mysqli_num_rows($cek) > 0) {
+
+            $pesan = "Tahun ajaran ini sudah ada. Silakan masukkan tahun ajaran yang berbeda.";
+
+        } else {
+
+            // Cek apakah sudah ada tahun ajaran aktif
+            $cek_aktif = mysqli_query($koneksi, "
+                SELECT id FROM t_tahun_ajaran
+                WHERE status_aktif = 1
+            ");
+
+            $jumlah_aktif = mysqli_num_rows($cek_aktif);
+
+            // Jika memilih tidak aktif dan belum ada tahun aktif
+            if ($status_aktif == 0 && $jumlah_aktif == 0) {
+
+                $pesan = "Peringatan! Wajib ada minimal satu tahun ajaran yang aktif. Silakan aktifkan tahun ajaran ini.";
+
+            } else {
+
+                mysqli_begin_transaction($koneksi);
+
+                try {
+
+                    // Jika tahun ajaran baru aktif,
+                    // nonaktifkan tahun ajaran sebelumnya
+                    if ($status_aktif == 1) {
+
+                        $update = mysqli_query($koneksi, "
+                            UPDATE t_tahun_ajaran
+                            SET status_aktif = 0
+                        ");
+
+                        if (!$update) {
+                            throw new Exception(mysqli_error($koneksi));
+                        }
+                    }
+
+                    // Simpan tahun ajaran
+                    $query = mysqli_query($koneksi, "
+                        INSERT INTO t_tahun_ajaran
+                        (nama, tanggal_mulai, tanggal_selesai, status_aktif)
+                        VALUES
+                        ('$nama_tahun', '$tanggal_mulai', '$tanggal_selesai', '$status_aktif')
+                    ");
+
+                    if (!$query) {
+                        throw new Exception(mysqli_error($koneksi));
+                    }
+
+                    mysqli_commit($koneksi);
+
+                    header("Location: data_tahun_ajaran.php");
+                    exit;
+
+                } catch (Exception $e) {
+
+                    mysqli_rollback($koneksi);
+
+                    $pesan = "Gagal menyimpan data: " . $e->getMessage();
+                }
+            }
         }
-
-        mysqli_commit($koneksi);
-
-        header("Location: data_tahun_ajaran.php");
-        exit;
-
-    } catch (Exception $e) {
-
-        mysqli_rollback($koneksi);
-        echo "Gagal menyimpan data: " . $e->getMessage();
-
     }
 }
 
@@ -78,14 +122,14 @@ if (isset($_POST['simpan'])) {
 <div class="container-fluid">
     <div class="row">
 
-         <!-- SIDEBAR -->
+        <!-- SIDEBAR -->
         <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
             <p class="text-secondary small mb-4">
-               SMK Muhammadiyah Kota Tasikmalaya
+                SMK Muhammadiyah Kota Tasikmalaya
             </p>
 
             <p class="text-secondary small fw-bold mb-2">
@@ -163,8 +207,10 @@ if (isset($_POST['simpan'])) {
 
                     <?php if ($pesan != "") { ?>
 
-                        <div class="alert alert-danger">
+                        <div class="alert alert-<?php echo $jenis_pesan; ?> alert-dismissible fade show">
                             <?= htmlspecialchars($pesan); ?>
+
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
 
                     <?php } ?>
@@ -182,6 +228,7 @@ if (isset($_POST['simpan'])) {
                                 id="nama"
                                 class="form-control"
                                 placeholder="Contoh: 2026/2027"
+                                value="<?= isset($_POST['nama']) ? htmlspecialchars($_POST['nama']) : ''; ?>"
                                 required>
                         </div>
 
@@ -195,6 +242,7 @@ if (isset($_POST['simpan'])) {
                                 name="tanggal_mulai"
                                 id="tanggal_mulai"
                                 class="form-control"
+                                value="<?= htmlspecialchars($_POST['tanggal_mulai'] ?? ''); ?>"
                                 required>
                         </div>
 
@@ -208,6 +256,7 @@ if (isset($_POST['simpan'])) {
                                 name="tanggal_selesai"
                                 id="tanggal_selesai"
                                 class="form-control"
+                                value="<?= htmlspecialchars($_POST['tanggal_selesai'] ?? ''); ?>"
                                 required>
                         </div>
 
@@ -222,8 +271,15 @@ if (isset($_POST['simpan'])) {
                                 class="form-select"
                                 required>
 
-                                <option value="1">Aktif</option>
-                                <option value="0">Tidak Aktif</option>
+                                <option value="1"
+                                    <?= (!isset($_POST['status_aktif']) || $_POST['status_aktif'] == '1') ? 'selected' : ''; ?>>
+                                    Aktif
+                                </option>
+
+                                <option value="0"
+                                    <?= (isset($_POST['status_aktif']) && $_POST['status_aktif'] == '0') ? 'selected' : ''; ?>>
+                                    Tidak Aktif
+                                </option>
 
                             </select>
                         </div>
@@ -248,6 +304,8 @@ if (isset($_POST['simpan'])) {
 
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>

@@ -59,7 +59,8 @@ if (!$query) {
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 align-self-start"
+               style="height: 100vh; overflow-y: auto;">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
@@ -158,7 +159,6 @@ if (!$query) {
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                
                 <!-- KARTU TABEL -->
                 <div class="card border-0 shadow-sm rounded-3">
 

@@ -1,3 +1,4 @@
+
 <?php
 
 include "middleware/auth.php";
@@ -10,9 +11,139 @@ if ($_SESSION['role'] != 'admin') {
 
 $nama = $_SESSION['nama'];
 
+/* =====================================
+   PROSES UPDATE DATA PENEMPATAN SISWA
+===================================== */
+
+if (isset($_POST['simpan_edit'])) {
+
+    $id = (int) $_POST['id'];
+    $siswa_id = (int) $_POST['siswa_id'];
+    $kelas_id = (int) $_POST['kelas_id'];
+    $tahun_ajaran_id = (int) $_POST['tahun_ajaran_id'];
+    $tanggal_mulai = $_POST['tanggal_mulai'];
+    $tanggal_selesai = !empty($_POST['tanggal_selesai'])
+        ? $_POST['tanggal_selesai']
+        : null;
+    $status_aktif = (int) $_POST['status_aktif'];
+
+    if (
+        $id <= 0 ||
+        $siswa_id <= 0 ||
+        $kelas_id <= 0 ||
+        $tahun_ajaran_id <= 0 ||
+        empty($tanggal_mulai)
+    ) {
+        $_SESSION['pesan_hapus'] = "Data penempatan siswa gagal diperbarui. Periksa kembali isian.";
+        $_SESSION['jenis_pesan'] = "danger";
+    } else {
+
+        $stmt = mysqli_prepare(
+            $koneksi,
+            "UPDATE t_kelas_siswa
+             SET siswa_id = ?,
+                 kelas_id = ?,
+                 tahun_ajaran_id = ?,
+                 tanggal_mulai = ?,
+                 tanggal_selesai = ?,
+                 status_aktif = ?
+             WHERE id = ?"
+        );
+
+        if ($stmt) {
+
+            mysqli_stmt_bind_param(
+                $stmt,
+                "iiissii",
+                $siswa_id,
+                $kelas_id,
+                $tahun_ajaran_id,
+                $tanggal_mulai,
+                $tanggal_selesai,
+                $status_aktif,
+                $id
+            );
+
+            if (mysqli_stmt_execute($stmt)) {
+                $_SESSION['pesan_hapus'] = "Data penempatan siswa berhasil diperbarui.";
+                $_SESSION['jenis_pesan'] = "success";
+            } else {
+                $_SESSION['pesan_hapus'] = "Data penempatan siswa gagal diperbarui. " . mysqli_stmt_error($stmt);
+                $_SESSION['jenis_pesan'] = "danger";
+            }
+
+            mysqli_stmt_close($stmt);
+
+        } else {
+            $_SESSION['pesan_hapus'] = "Query gagal diproses: " . mysqli_error($koneksi);
+            $_SESSION['jenis_pesan'] = "danger";
+        }
+    }
+
+    header("Location: data_penempatan_siswa.php");
+    exit;
+}
+
+/* =====================================
+   NOTIFIKASI
+===================================== */
+
+$pesan_notifikasi = $_SESSION['pesan_hapus']
+    ?? $_SESSION['pesan_notifikasi']
+    ?? '';
+
+$jenis_notifikasi = $_SESSION['jenis_pesan']
+    ?? $_SESSION['jenis_notifikasi']
+    ?? 'success';
+
+unset(
+    $_SESSION['pesan_hapus'],
+    $_SESSION['jenis_pesan'],
+    $_SESSION['pesan_notifikasi'],
+    $_SESSION['jenis_notifikasi']
+);
+
+if (!in_array($jenis_notifikasi, ['success', 'danger', 'warning', 'info'])) {
+    $jenis_notifikasi = 'success';
+}
+
+/* =====================================
+   DATA SISWA UNTUK MODAL EDIT
+===================================== */
+
+$query_siswa = mysqli_query(
+    $koneksi,
+    "SELECT id, nis, nama FROM t_siswa ORDER BY nama ASC"
+);
+
+/* =====================================
+   DATA KELAS UNTUK MODAL EDIT
+===================================== */
+
+$query_kelas = mysqli_query(
+    $koneksi,
+    "SELECT id, nama FROM t_kelas ORDER BY nama ASC"
+);
+
+/* =====================================
+   DATA TAHUN AJARAN UNTUK MODAL EDIT
+===================================== */
+
+$query_tahun = mysqli_query(
+    $koneksi,
+    "SELECT id, nama FROM t_tahun_ajaran ORDER BY id DESC"
+);
+
+/* =====================================
+   DATA PENEMPATAN SISWA
+===================================== */
+
 $query = "
     SELECT
         ks.id,
+        ks.siswa_id,
+        ks.kelas_id,
+        ks.tahun_ajaran_id,
         s.nis,
         s.nama AS nama_siswa,
         k.nama AS nama_kelas,
@@ -56,6 +187,44 @@ if (!$result) {
     <link
         href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
         rel="stylesheet">
+
+    <!-- SIDEBAR TETAP SAAT KONTEN DI-SCROLL -->
+    <style>
+
+        @media (min-width: 768px) {
+
+            .sidebar-tetap {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                overflow-y: auto;
+                z-index: 1030;
+                width: 25%;
+            }
+
+            .konten-utama {
+                margin-left: 25%;
+                width: 75%;
+            }
+
+        }
+
+        @media (min-width: 992px) {
+
+            .sidebar-tetap {
+                width: 16.666667%;
+            }
+
+            .konten-utama {
+                margin-left: 16.666667%;
+                width: 83.333333%;
+            }
+
+        }
+
+    </style>
+
 </head>
 
 <body class="bg-light">
@@ -64,7 +233,7 @@ if (!$result) {
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 sidebar-tetap">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
@@ -146,7 +315,7 @@ if (!$result) {
         </aside>
 
         <!-- KONTEN UTAMA -->
-        <main class="col-md-9 col-lg-10 p-0">
+        <main class="col-md-9 col-lg-10 p-0 konten-utama">
 
             <!-- HEADER -->
             <header class="bg-white border-bottom p-3 p-md-4
@@ -185,8 +354,6 @@ if (!$result) {
 
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
-
-                
 
                 <!-- KARTU TABEL -->
                 <div class="card border-0 shadow-sm rounded-3">
@@ -272,13 +439,9 @@ if (!$result) {
                                         </td>
 
                                         <td>
-                                            <?php
-                                            if (!empty($data['tanggal_selesai'])) {
-                                                echo htmlspecialchars($data['tanggal_selesai']);
-                                            } else {
-                                                echo "-";
-                                            }
-                                            ?>
+                                            <?= !empty($data['tanggal_selesai'])
+                                                ? htmlspecialchars($data['tanggal_selesai'])
+                                                : "-"; ?>
                                         </td>
 
                                         <td class="text-center">
@@ -294,11 +457,18 @@ if (!$result) {
                                         <td class="text-center">
                                             <div class="d-flex justify-content-center gap-1">
 
-                                                <a
-                                                    href="edit_penempatan_siswa.php?id=<?= urlencode($data['id']); ?>"
-                                                    class="btn btn-warning btn-sm">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-warning btn-sm tombol-edit"
+                                                    data-id="<?= (int) $data['id']; ?>"
+                                                    data-siswa="<?= (int) $data['siswa_id']; ?>"
+                                                    data-kelas="<?= (int) $data['kelas_id']; ?>"
+                                                    data-tahun="<?= (int) $data['tahun_ajaran_id']; ?>"
+                                                    data-mulai="<?= htmlspecialchars($data['tanggal_mulai'], ENT_QUOTES); ?>"
+                                                    data-selesai="<?= htmlspecialchars($data['tanggal_selesai'] ?? '', ENT_QUOTES); ?>"
+                                                    data-status="<?= (int) $data['status_aktif']; ?>">
                                                     Edit
-                                                </a>
+                                                </button>
 
                                                 <a
                                                     href="hapus_penempatan_siswa.php?id=<?= urlencode($data['id']); ?>"
@@ -350,17 +520,197 @@ if (!$result) {
     </div>
 </div>
 
+
+<!-- MODAL EDIT PENEMPATAN SISWA -->
+<div class="modal fade" id="modalEditPenempatan" tabindex="-1"
+     aria-labelledby="judulModalEdit" aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+
+        <div class="modal-content">
+
+            <form method="POST" action="">
+
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="judulModalEdit">
+                        Edit Penempatan Siswa
+                    </h5>
+
+                    <button type="button" class="btn-close"
+                            data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <input type="hidden" name="id" id="edit_id">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nama Siswa</label>
+
+                        <select name="siswa_id" id="edit_siswa"
+                                class="form-select" required>
+
+                            <option value="">Pilih Siswa</option>
+
+                            <?php
+                            while ($siswa = mysqli_fetch_assoc($query_siswa)) {
+                            ?>
+                                <option value="<?= (int) $siswa['id']; ?>">
+                                    <?= htmlspecialchars($siswa['nis'] . ' - ' . $siswa['nama']); ?>
+                                </option>
+                            <?php
+                            }
+                            ?>
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Kelas</label>
+
+                        <select name="kelas_id" id="edit_kelas"
+                                class="form-select" required>
+
+                            <option value="">Pilih Kelas</option>
+
+                            <?php
+                            while ($kelas = mysqli_fetch_assoc($query_kelas)) {
+                            ?>
+                                <option value="<?= (int) $kelas['id']; ?>">
+                                    <?= htmlspecialchars($kelas['nama']); ?>
+                                </option>
+                            <?php
+                            }
+                            ?>
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tahun Ajaran</label>
+
+                        <select name="tahun_ajaran_id" id="edit_tahun"
+                                class="form-select" required>
+
+                            <option value="">Pilih Tahun Ajaran</option>
+
+                            <?php
+                            while ($tahun = mysqli_fetch_assoc($query_tahun)) {
+                            ?>
+                                <option value="<?= (int) $tahun['id']; ?>">
+                                    <?= htmlspecialchars($tahun['nama']); ?>
+                                </option>
+                            <?php
+                            }
+                            ?>
+
+                        </select>
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">
+                                Tanggal Mulai
+                            </label>
+
+                            <input type="date" name="tanggal_mulai"
+                                   id="edit_mulai" class="form-control" required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">
+                                Tanggal Selesai
+                            </label>
+
+                            <input type="date" name="tanggal_selesai"
+                                   id="edit_selesai" class="form-control">
+                        </div>
+
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Status</label>
+
+                        <select name="status_aktif" id="edit_status"
+                                class="form-select" required>
+
+                            <option value="1">Aktif</option>
+                            <option value="0">Tidak Aktif</option>
+
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Batal
+                    </button>
+
+                    <button type="submit" name="simpan_edit"
+                            class="btn btn-primary">
+                        Simpan Perubahan
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+</div>
+
+
+<!-- NOTIFIKASI MELAYANG KANAN ATAS -->
+<?php if (!empty($pesan_notifikasi)) { ?>
+
+<div class="toast-container position-fixed top-0 end-0 p-3"
+     style="z-index: 9999;">
+
+    <div id="notifikasiToast"
+         class="toast align-items-center text-bg-<?= htmlspecialchars($jenis_notifikasi); ?> border-0"
+         role="alert" aria-live="assertive" aria-atomic="true">
+
+        <div class="d-flex">
+
+            <div class="toast-body">
+                <?= htmlspecialchars($pesan_notifikasi); ?>
+            </div>
+
+            <button type="button"
+                    class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast"
+                    aria-label="Close">
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<?php } ?>
+
+
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- DataTables -->
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
 
-<!-- Konfigurasi DataTables -->
+
 <script>
 $(document).ready(function () {
 
+    // DATATABLES
     $('#tabelPenempatanSiswa').DataTable({
         pageLength: 10,
         lengthMenu: [5, 10, 25, 50, 100],
@@ -394,6 +744,40 @@ $(document).ready(function () {
             }
         }
     });
+
+
+    // MODAL EDIT MELAYANG
+    $('.tombol-edit').on('click', function () {
+
+        $('#edit_id').val($(this).data('id'));
+        $('#edit_siswa').val($(this).data('siswa'));
+        $('#edit_kelas').val($(this).data('kelas'));
+        $('#edit_tahun').val($(this).data('tahun'));
+        $('#edit_mulai').val($(this).data('mulai'));
+        $('#edit_selesai').val($(this).data('selesai'));
+        $('#edit_status').val($(this).data('status'));
+
+        var modal = new bootstrap.Modal(
+            document.getElementById('modalEditPenempatan')
+        );
+
+        modal.show();
+
+    });
+
+
+    // NOTIFIKASI OTOMATIS HILANG SETELAH 3 DETIK
+    var toastElement = document.getElementById('notifikasiToast');
+
+    if (toastElement) {
+
+        var toast = new bootstrap.Toast(toastElement, {
+            delay: 3000
+        });
+
+        toast.show();
+
+    }
 
 });
 </script>
