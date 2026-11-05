@@ -1,4 +1,3 @@
-
 <?php
 
 include "middleware/auth.php";
@@ -10,6 +9,77 @@ if ($_SESSION['role'] != 'admin') {
 }
 
 $nama = $_SESSION['nama'];
+
+// PROSES TAMBAH DATA KELAS
+if (isset($_POST['simpan_tambah'])) {
+
+    $nama_kelas = trim($_POST['nama']);
+    $tingkat = trim($_POST['tingkat']);
+    $jurusan = trim($_POST['jurusan']);
+    $status_aktif = (int) $_POST['status_aktif'];
+
+    if ($nama_kelas == "" || $tingkat == "" || $jurusan == "") {
+
+        $_SESSION['pesan_hapus'] = "Semua data kelas wajib diisi.";
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } else {
+
+        // CEK NAMA KELAS YANG SAMA
+        $cek = mysqli_prepare(
+            $koneksi,
+            "SELECT id FROM t_kelas WHERE nama = ?"
+        );
+
+        mysqli_stmt_bind_param($cek, "s", $nama_kelas);
+        mysqli_stmt_execute($cek);
+        mysqli_stmt_store_result($cek);
+
+        if (mysqli_stmt_num_rows($cek) > 0) {
+
+            $_SESSION['pesan_hapus'] = "Nama kelas sudah digunakan.";
+            $_SESSION['jenis_pesan'] = "danger";
+
+        } else {
+
+            $insert = mysqli_prepare(
+                $koneksi,
+                "INSERT INTO t_kelas
+                (nama, tingkat, jurusan, status_aktif)
+                VALUES (?, ?, ?, ?)"
+            );
+
+            mysqli_stmt_bind_param(
+                $insert,
+                "sssi",
+                $nama_kelas,
+                $tingkat,
+                $jurusan,
+                $status_aktif
+            );
+
+            if (mysqli_stmt_execute($insert)) {
+
+                $_SESSION['pesan_hapus'] = "Data kelas berhasil ditambahkan.";
+                $_SESSION['jenis_pesan'] = "success";
+
+            } else {
+
+                $_SESSION['pesan_hapus'] = "Gagal menambahkan data kelas.";
+                $_SESSION['jenis_pesan'] = "danger";
+
+            }
+
+            mysqli_stmt_close($insert);
+        }
+
+        mysqli_stmt_close($cek);
+    }
+
+    header("Location: data_kelas.php");
+    exit;
+}
+
 
 // PROSES EDIT DATA KELAS
 if (isset($_POST['simpan_edit'])) {
@@ -82,6 +152,7 @@ if (isset($_POST['simpan_edit'])) {
     header("Location: data_kelas.php");
     exit;
 }
+
 
 // MENGAMBIL DATA KELAS
 $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id DESC");
@@ -251,9 +322,15 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id DESC");
 
                         </div>
 
-                        <a href="tambah_kelas.php" class="btn btn-primary">
+                        <!-- TOMBOL TAMBAH -->
+                        <button type="button"
+                                class="btn btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalTambahKelas">
+
                             + Tambah Kelas
-                        </a>
+
+                        </button>
 
                     </div>
 
@@ -405,7 +482,158 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id DESC");
 </div>
 
 
+<!-- ===================================================== -->
+<!-- MODAL TAMBAH KELAS -->
+<!-- ===================================================== -->
+
+<div class="modal fade"
+     id="modalTambahKelas"
+     tabindex="-1"
+     aria-labelledby="judulModalTambah"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content border-0 shadow rounded-3">
+
+            <!-- HEADER MODAL -->
+            <div class="modal-header bg-white">
+
+                <div>
+
+                    <h5 class="modal-title fw-bold" id="judulModalTambah">
+                        Tambah Data Kelas
+                    </h5>
+
+                    <small class="text-secondary">
+                        Silakan isi informasi kelas yang akan ditambahkan.
+                    </small>
+
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+            <!-- FORM TAMBAH -->
+            <form method="POST" action="data_kelas.php">
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+
+                        <label for="tambah_nama" class="form-label fw-semibold">
+                            Nama Kelas
+                        </label>
+
+                        <input type="text"
+                               name="nama"
+                               id="tambah_nama"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="tambah_tingkat" class="form-label fw-semibold">
+                            Tingkat
+                        </label>
+
+                        <select name="tingkat"
+                                id="tambah_tingkat"
+                                class="form-select"
+                                required>
+
+                            <option value="">Pilih Tingkat</option>
+                            <option value="X">X</option>
+                            <option value="XI">XI</option>
+                            <option value="XII">XII</option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="tambah_jurusan" class="form-label fw-semibold">
+                            Jurusan
+                        </label>
+
+                        <select name="jurusan"
+                                id="tambah_jurusan"
+                                class="form-select"
+                                required>
+
+                            <option value="">Pilih Jurusan</option>
+                            <option value="RPL">RPL</option>
+                            <option value="TKJ">TKJ</option>
+                            <option value="TBSM">TBSM</option>
+                            <option value="AKL">AKL</option>
+                            <option value="OTKP">OTKP</option>
+
+                        </select>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="tambah_status" class="form-label fw-semibold">
+                            Status Kelas
+                        </label>
+
+                        <select name="status_aktif"
+                                id="tambah_status"
+                                class="form-select"
+                                required>
+
+                            <option value="1">Aktif</option>
+                            <option value="0">Tidak Aktif</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <!-- FOOTER MODAL -->
+                <div class="modal-footer">
+
+                    <button type="submit"
+                            name="simpan_tambah"
+                            class="btn btn-primary">
+
+                        Simpan
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ===================================================== -->
 <!-- MODAL EDIT KELAS -->
+<!-- ===================================================== -->
+
 <div class="modal fade"
      id="modalEditKelas"
      tabindex="-1"
@@ -482,17 +710,26 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id DESC");
 
                     </div>
 
+                    <!-- JURUSAN TETAP DROPDOWN -->
                     <div class="mb-3">
 
                         <label for="edit_jurusan" class="form-label fw-semibold">
                             Jurusan
                         </label>
 
-                        <input type="text"
-                               name="jurusan"
-                               id="edit_jurusan"
-                               class="form-control"
-                               required>
+                        <select name="jurusan"
+                                id="edit_jurusan"
+                                class="form-select"
+                                required>
+
+                            <option value="">Pilih Jurusan</option>
+                            <option value="RPL">RPL</option>
+                            <option value="TKJ">TKJ</option>
+                            <option value="TBSM">TBSM</option>
+                            <option value="AKL">AKL</option>
+                            <option value="OTKP">OTKP</option>
+
+                        </select>
 
                     </div>
 
@@ -652,16 +889,21 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id DESC");
 </script>
 
 
+<!-- ===================================================== -->
 <!-- NOTIFIKASI MELAYANG -->
+<!-- ===================================================== -->
+
 <?php if (isset($_SESSION['pesan_hapus'])) { ?>
 
     <?php
+
     $jenis_pesan = $_SESSION['jenis_pesan'] ?? 'success';
 
     $jenis_pesan = in_array(
         $jenis_pesan,
         ['success', 'danger', 'warning', 'info', 'primary', 'secondary', 'dark']
     ) ? $jenis_pesan : 'success';
+
     ?>
 
     <div class="toast-container position-fixed top-0 end-0 p-3"
@@ -694,8 +936,10 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id DESC");
     </div>
 
     <?php
+
     unset($_SESSION['pesan_hapus']);
     unset($_SESSION['jenis_pesan']);
+
     ?>
 
 <?php } ?>

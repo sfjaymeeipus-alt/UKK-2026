@@ -158,7 +158,7 @@ $query = "
         ON ks.kelas_id = k.id
     INNER JOIN t_tahun_ajaran ta
         ON ks.tahun_ajaran_id = ta.id
-    ORDER BY ks.id DESC
+    ORDER BY ks.id ASC
 ";
 
 $result = mysqli_query($koneksi, $query);

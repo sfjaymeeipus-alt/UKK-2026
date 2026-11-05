@@ -1,4 +1,3 @@
-
 <?php
 
 include "middleware/auth.php";
@@ -10,7 +9,6 @@ if ($_SESSION['role'] != 'admin') {
 }
 
 $nama = $_SESSION['nama'];
-$pesan = "";
 
 if (isset($_POST['simpan'])) {
 
@@ -31,7 +29,13 @@ if (isset($_POST['simpan'])) {
 
     if (mysqli_num_rows($cek) > 0) {
 
-        $pesan = "Data gagal disimpan! NIS atau NISN sudah terdaftar.";
+        $_SESSION['pesan_hapus'] =
+            "Data gagal disimpan! NIS atau NISN sudah terdaftar.";
+
+        $_SESSION['jenis_pesan'] = "danger";
+
+        header("Location: data_siswa.php");
+        exit;
 
     } else {
 
@@ -45,12 +49,23 @@ if (isset($_POST['simpan'])) {
 
         if (mysqli_query($koneksi, $query)) {
 
+            $_SESSION['pesan_hapus'] =
+                "Data siswa berhasil ditambahkan.";
+
+            $_SESSION['jenis_pesan'] = "success";
+
             header("Location: data_siswa.php");
             exit;
 
         } else {
 
-            $pesan = "Gagal menyimpan data: " . mysqli_error($koneksi);
+            $_SESSION['pesan_hapus'] =
+                "Gagal menyimpan data siswa.";
+
+            $_SESSION['jenis_pesan'] = "danger";
+
+            header("Location: data_siswa.php");
+            exit;
 
         }
     }
@@ -82,8 +97,13 @@ if (isset($_POST['simpan'])) {
         <!-- SIDEBAR -->
         <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
 
-            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
-            <h6 class="fw-bold">Pelanggaran Siswa</h6>
+            <h5 class="fw-bold mb-1">
+                Sistem Informasi
+            </h5>
+
+            <h6 class="fw-bold">
+                Pelanggaran Siswa
+            </h6>
 
             <p class="text-secondary small mb-4">
                 SMK Muhammadiyah Kota Tasikmalaya
@@ -95,7 +115,8 @@ if (isset($_POST['simpan'])) {
 
             <nav class="nav flex-column gap-1">
 
-                <a href="dashboard.php" class="nav-link text-white rounded py-2">
+                <a href="dashboard.php"
+                   class="nav-link text-white rounded py-2">
                     Dashboard
                 </a>
 
@@ -104,45 +125,55 @@ if (isset($_POST['simpan'])) {
                     Data Siswa
                 </a>
 
-                <a href="data_guru.php" class="nav-link text-white rounded py-2">
+                <a href="data_guru.php"
+                   class="nav-link text-white rounded py-2">
                     Data Guru
                 </a>
 
-                <a href="data_kelas.php" class="nav-link text-white rounded py-2">
+                <a href="data_kelas.php"
+                   class="nav-link text-white rounded py-2">
                     Kelas
                 </a>
 
-                <a href="data_tahun_ajaran.php" class="nav-link text-white rounded py-2">
+                <a href="data_tahun_ajaran.php"
+                   class="nav-link text-white rounded py-2">
                     Tahun Ajaran
                 </a>
 
-                <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">
+                <a href="data_penempatan_siswa.php"
+                   class="nav-link text-white rounded py-2">
                     Penempatan Siswa
                 </a>
 
-                <a href="data_wali_kelas.php" class="nav-link text-white rounded py-2">
+                <a href="data_wali_kelas.php"
+                   class="nav-link text-white rounded py-2">
                     Wali Kelas
                 </a>
 
-                <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">
+                <a href="data_kategori_pelanggaran.php"
+                   class="nav-link text-white rounded py-2">
                     Kategori Pelanggaran
                 </a>
 
-                <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">
+                <a href="data_jenis_pelanggaran.php"
+                   class="nav-link text-white rounded py-2">
                     Jenis Pelanggaran
                 </a>
 
-                <a href="data_laporan.php" class="nav-link text-white rounded py-2">
+                <a href="data_laporan.php"
+                   class="nav-link text-white rounded py-2">
                     Laporan
                 </a>
 
-                <a href="about_me.php" class="nav-link text-white rounded py-2">
+                <a href="about_me.php"
+                   class="nav-link text-white rounded py-2">
                     About Me
                 </a>
 
                 <hr class="border-secondary my-2">
 
-                <a href="logout.php" class="nav-link text-danger rounded py-2">
+                <a href="logout.php"
+                   class="nav-link text-danger rounded py-2">
                     Logout
                 </a>
 
@@ -157,63 +188,89 @@ if (isset($_POST['simpan'])) {
 
                 <div class="card-body">
 
-                    <h2 class="mb-3">Tambah Data Siswa</h2>
+                    <h2 class="mb-3">
+                        Tambah Data Siswa
+                    </h2>
 
                     <p class="text-muted">
                         Silakan isi formulir berikut untuk menambahkan siswa.
                     </p>
 
-                    <?php if ($pesan != "") { ?>
+                    <?php if (isset($_SESSION['pesan_hapus'])) { ?>
 
                         <div class="alert alert-danger">
-                            <?= htmlspecialchars($pesan); ?>
+                            <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
                         </div>
+
+                        <?php
+                        unset($_SESSION['pesan_hapus']);
+                        unset($_SESSION['jenis_pesan']);
+                        ?>
 
                     <?php } ?>
 
                     <form method="POST" action="">
 
                         <div class="mb-3">
-    <label for="nis" class="form-label">NIS</label>
-    <input
-        type="text"
-        name="nis"
-        id="nis"
-        class="form-control"
-        maxlength="10"
-        minlength="10"
-        pattern="[0-9]{10}"
-        title="NIS harus terdiri dari tepat 10 angka."
-        required>
-</div>
 
-                        
-<div class="mb-3">
-    <label for="nisn" class="form-label">NISN</label>
-    <input
-        type="text"
-        name="nisn"
-        id="nisn"
-        class="form-control"
-        maxlength="10"
-        minlength="10"
-        pattern="[0-9]{10}"
-        title="NISN harus terdiri dari tepat 10 angka."
-        required>
-</div>
+                            <label for="nis"
+                                   class="form-label">
+                                NIS
+                            </label>
+
+                            <input
+                                type="text"
+                                name="nis"
+                                id="nis"
+                                class="form-control"
+                                maxlength="10"
+                                minlength="10"
+                                pattern="[0-9]{10}"
+                                title="NIS harus terdiri dari tepat 10 angka."
+                                required>
+
+                        </div>
 
                         <div class="mb-3">
-                            <label for="nama" class="form-label">Nama Siswa</label>
+
+                            <label for="nisn"
+                                   class="form-label">
+                                NISN
+                            </label>
+
+                            <input
+                                type="text"
+                                name="nisn"
+                                id="nisn"
+                                class="form-control"
+                                maxlength="10"
+                                minlength="10"
+                                pattern="[0-9]{10}"
+                                title="NISN harus terdiri dari tepat 10 angka."
+                                required>
+
+                        </div>
+
+                        <div class="mb-3">
+
+                            <label for="nama"
+                                   class="form-label">
+                                Nama Siswa
+                            </label>
+
                             <input
                                 type="text"
                                 name="nama"
                                 id="nama"
                                 class="form-control"
                                 required>
+
                         </div>
 
                         <div class="mb-3">
-                            <label for="jenis_kelamin" class="form-label">
+
+                            <label for="jenis_kelamin"
+                                   class="form-label">
                                 Jenis Kelamin
                             </label>
 
@@ -223,15 +280,26 @@ if (isset($_POST['simpan'])) {
                                 class="form-select"
                                 required>
 
-                                <option value="">-- Pilih Jenis Kelamin --</option>
-                                <option value="L">Laki-laki</option>
-                                <option value="P">Perempuan</option>
+                                <option value="">
+                                    -- Pilih Jenis Kelamin --
+                                </option>
+
+                                <option value="L">
+                                    Laki-laki
+                                </option>
+
+                                <option value="P">
+                                    Perempuan
+                                </option>
 
                             </select>
+
                         </div>
 
                         <div class="mb-3">
-                            <label for="tanggal_lahir" class="form-label">
+
+                            <label for="tanggal_lahir"
+                                   class="form-label">
                                 Tanggal Lahir
                             </label>
 
@@ -241,10 +309,15 @@ if (isset($_POST['simpan'])) {
                                 id="tanggal_lahir"
                                 class="form-control"
                                 required>
+
                         </div>
 
                         <div class="mb-3">
-                            <label for="alamat" class="form-label">Alamat</label>
+
+                            <label for="alamat"
+                                   class="form-label">
+                                Alamat
+                            </label>
 
                             <textarea
                                 name="alamat"
@@ -252,10 +325,13 @@ if (isset($_POST['simpan'])) {
                                 class="form-control"
                                 rows="3"
                                 required></textarea>
+
                         </div>
 
                         <div class="mb-3">
-                            <label for="status_aktif" class="form-label">
+
+                            <label for="status_aktif"
+                                   class="form-label">
                                 Status
                             </label>
 
@@ -265,10 +341,16 @@ if (isset($_POST['simpan'])) {
                                 class="form-select"
                                 required>
 
-                                <option value="1">Aktif</option>
-                                <option value="0">Tidak Aktif</option>
+                                <option value="1">
+                                    Aktif
+                                </option>
+
+                                <option value="0">
+                                    Tidak Aktif
+                                </option>
 
                             </select>
+
                         </div>
 
                         <button
@@ -278,7 +360,8 @@ if (isset($_POST['simpan'])) {
                             Simpan
                         </button>
 
-                        <a href="data_siswa.php" class="btn btn-secondary">
+                        <a href="data_siswa.php"
+                           class="btn btn-secondary">
                             Kembali
                         </a>
 

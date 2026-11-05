@@ -1,4 +1,3 @@
-
 <?php
 
 include "middleware/auth.php";
@@ -245,9 +244,15 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id ASC");
 
                         </div>
 
-                        <a href="tambah_guru.php" class="btn btn-primary">
+                        <!-- TOMBOL TAMBAH GURU -->
+                        <button type="button"
+                                class="btn btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalTambahGuru">
+
                             + Tambah Guru
-                        </a>
+
+                        </button>
 
                     </div>
 
@@ -397,7 +402,193 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id ASC");
 </div>
 
 
+<!-- ====================================================== -->
+<!-- MODAL TAMBAH GURU -->
+<!-- ====================================================== -->
+
+<div class="modal fade"
+     id="modalTambahGuru"
+     tabindex="-1"
+     aria-labelledby="judulModalTambah"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content border-0 shadow rounded-3">
+
+            <!-- HEADER MODAL -->
+            <div class="modal-header bg-white">
+
+                <div>
+
+                    <h5 class="modal-title fw-bold" id="judulModalTambah">
+                        Tambah Data Guru
+                    </h5>
+
+                    <small class="text-secondary">
+                        Silakan isi informasi guru yang akan ditambahkan.
+                    </small>
+
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+            <!-- FORM TAMBAH -->
+            <form method="POST" action="tambah_guru.php">
+
+                <div class="modal-body">
+
+                    <!-- NIP -->
+                    <div class="mb-3">
+
+                        <label for="tambah_nip"
+                               class="form-label fw-semibold">
+                            NIP
+                        </label>
+
+                        <input type="text"
+                               name="nip"
+                               id="tambah_nip"
+                               class="form-control"
+                               maxlength="18"
+                               required>
+
+                    </div>
+
+                    <!-- NAMA -->
+                    <div class="mb-3">
+
+                        <label for="tambah_nama"
+                               class="form-label fw-semibold">
+                            Nama Guru
+                        </label>
+
+                        <input type="text"
+                               name="nama"
+                               id="tambah_nama"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+                    <!-- EMAIL -->
+                    <div class="mb-3">
+
+                        <label for="tambah_email"
+                               class="form-label fw-semibold">
+                            Email
+                        </label>
+
+                        <input type="email"
+                               name="email"
+                               id="tambah_email"
+                               class="form-control"
+                               autocomplete="off"
+                               required>
+
+                    </div>
+
+                    <!-- PASSWORD -->
+                    <div class="mb-3">
+
+                        <label for="tambah_password"
+                               class="form-label fw-semibold">
+                            Password
+                        </label>
+
+                        <input type="password"
+                               name="password"
+                               id="tambah_password"
+                               class="form-control"
+                               autocomplete="new-password"
+                               required>
+
+                    </div>
+
+                    <!-- KONFIRMASI PASSWORD -->
+                    <div class="mb-3">
+
+                        <label for="tambah_konfirmasi_password"
+                               class="form-label fw-semibold">
+                            Konfirmasi Password
+                        </label>
+
+                        <input type="password"
+                               name="konfirmasi_password"
+                               id="tambah_konfirmasi_password"
+                               class="form-control"
+                               autocomplete="new-password"
+                               required>
+
+                    </div>
+
+                    <!-- STATUS -->
+                    <div class="mb-3">
+
+                        <label for="tambah_status"
+                               class="form-label fw-semibold">
+                            Status Guru
+                        </label>
+
+                        <select name="status_aktif"
+                                id="tambah_status"
+                                class="form-select"
+                                required>
+
+                            <option value="1">
+                                Aktif
+                            </option>
+
+                            <option value="0">
+                                Tidak Aktif
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <!-- FOOTER MODAL -->
+                <div class="modal-footer">
+
+                    <button type="submit"
+                            name="simpan"
+                            class="btn btn-primary">
+
+                        Simpan
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ====================================================== -->
 <!-- MODAL EDIT GURU -->
+<!-- ====================================================== -->
+
 <div class="modal fade"
      id="modalEditGuru"
      tabindex="-1"
@@ -639,7 +830,10 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_guru ORDER BY id ASC");
 </script>
 
 
+<!-- ====================================================== -->
 <!-- NOTIFIKASI MELAYANG -->
+<!-- ====================================================== -->
+
 <?php if (isset($_SESSION['pesan_hapus'])) { ?>
 
     <div class="toast-container position-fixed top-0 end-0 p-3"
