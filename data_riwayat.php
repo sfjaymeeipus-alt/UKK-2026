@@ -23,7 +23,7 @@ $query = "
         tanggal,
         status
     FROM t_pelanggaran_siswa
-    ORDER BY id DESC
+    ORDER BY id ASC
 ";
 
 $result = mysqli_query($koneksi, $query);

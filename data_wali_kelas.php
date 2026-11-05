@@ -1,4 +1,3 @@
-
 <?php
 
 include "middleware/auth.php";
@@ -80,6 +79,152 @@ function periksaWaliKelasGanda($koneksi) {
 
 
 /* =====================================
+   PROSES TAMBAH WALI KELAS
+===================================== */
+
+if (isset($_POST['simpan_tambah'])) {
+
+    $guru_id = (int) $_POST['guru_id'];
+    $kelas_id = (int) $_POST['kelas_id'];
+    $tahun_ajaran_id = (int) $_POST['tahun_ajaran_id'];
+
+    $tanggal_mulai = $_POST['tanggal_mulai'];
+
+    $tanggal_selesai = !empty($_POST['tanggal_selesai'])
+        ? $_POST['tanggal_selesai']
+        : null;
+
+    $status_aktif = (int) $_POST['status_aktif'];
+
+    if (
+        $guru_id <= 0 ||
+        $kelas_id <= 0 ||
+        $tahun_ajaran_id <= 0 ||
+        empty($tanggal_mulai) ||
+        !in_array($status_aktif, [0, 1])
+    ) {
+
+        $_SESSION['pesan_hapus'] =
+            "Data wali kelas gagal ditambahkan. Periksa kembali isian.";
+
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } elseif (
+        $tanggal_selesai !== null &&
+        $tanggal_selesai < $tanggal_mulai
+    ) {
+
+        $_SESSION['pesan_hapus'] =
+            "Tanggal selesai tidak boleh sebelum tanggal mulai.";
+
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } else {
+
+        $stmt = mysqli_prepare(
+            $koneksi,
+            "INSERT INTO t_wali_kelas
+            (
+                guru_id,
+                kelas_id,
+                tahun_ajaran_id,
+                tanggal_mulai,
+                tanggal_selesai,
+                status_aktif
+            )
+            VALUES (?, ?, ?, ?, ?, ?)"
+        );
+
+        if ($stmt) {
+
+            mysqli_stmt_bind_param(
+                $stmt,
+                "iiissi",
+                $guru_id,
+                $kelas_id,
+                $tahun_ajaran_id,
+                $tanggal_mulai,
+                $tanggal_selesai,
+                $status_aktif
+            );
+
+            if (mysqli_stmt_execute($stmt)) {
+
+                $idBaru = mysqli_insert_id($koneksi);
+
+                mysqli_stmt_close($stmt);
+
+                // Periksa dan nonaktifkan data ganda
+                periksaWaliKelasGanda($koneksi);
+
+                // Periksa status akhir data baru
+                $cekStatus = mysqli_prepare(
+                    $koneksi,
+                    "SELECT status_aktif
+                     FROM t_wali_kelas
+                     WHERE id = ?"
+                );
+
+                mysqli_stmt_bind_param(
+                    $cekStatus,
+                    "i",
+                    $idBaru
+                );
+
+                mysqli_stmt_execute($cekStatus);
+
+                $hasilStatus = mysqli_stmt_get_result($cekStatus);
+
+                $dataStatus = mysqli_fetch_assoc($hasilStatus);
+
+                mysqli_stmt_close($cekStatus);
+
+                if (
+                    $status_aktif == 1 &&
+                    $dataStatus['status_aktif'] == 0
+                ) {
+
+                    $_SESSION['pesan_hapus'] =
+                        "Data berhasil ditambahkan, tetapi otomatis menjadi Tidak Aktif karena terdapat wali kelas yang ganda.";
+
+                    $_SESSION['jenis_pesan'] = "warning";
+
+                } else {
+
+                    $_SESSION['pesan_hapus'] =
+                        "Data wali kelas berhasil ditambahkan.";
+
+                    $_SESSION['jenis_pesan'] = "success";
+
+                }
+
+            } else {
+
+                $_SESSION['pesan_hapus'] =
+                    "Data wali kelas gagal ditambahkan: " . mysqli_stmt_error($stmt);
+
+                $_SESSION['jenis_pesan'] = "danger";
+
+                mysqli_stmt_close($stmt);
+
+            }
+
+        } else {
+
+            $_SESSION['pesan_hapus'] =
+                "Query gagal diproses: " . mysqli_error($koneksi);
+
+            $_SESSION['jenis_pesan'] = "danger";
+
+        }
+    }
+
+    header("Location: data_wali_kelas.php");
+    exit;
+}
+
+
+/* =====================================
    PROSES EDIT WALI KELAS
 ===================================== */
 
@@ -109,6 +254,16 @@ if (isset($_POST['simpan_edit'])) {
 
         $_SESSION['pesan_hapus'] =
             "Data tidak valid. Periksa kembali isian.";
+
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } elseif (
+        $tanggal_selesai !== null &&
+        $tanggal_selesai < $tanggal_mulai
+    ) {
+
+        $_SESSION['pesan_hapus'] =
+            "Tanggal selesai tidak boleh sebelum tanggal mulai.";
 
         $_SESSION['jenis_pesan'] = "danger";
 
@@ -144,10 +299,8 @@ if (isset($_POST['simpan_edit'])) {
 
                 mysqli_stmt_close($stmt);
 
-                // Periksa dan nonaktifkan data ganda
                 periksaWaliKelasGanda($koneksi);
 
-                // Periksa status akhir data yang diedit
                 $cekStatus = mysqli_prepare(
                     $koneksi,
                     "SELECT status_aktif
@@ -156,9 +309,11 @@ if (isset($_POST['simpan_edit'])) {
                 );
 
                 mysqli_stmt_bind_param($cekStatus, "i", $id);
+
                 mysqli_stmt_execute($cekStatus);
 
                 $hasilStatus = mysqli_stmt_get_result($cekStatus);
+
                 $dataStatus = mysqli_fetch_assoc($hasilStatus);
 
                 mysqli_stmt_close($cekStatus);
@@ -242,7 +397,7 @@ if (!in_array(
 
 
 /* =====================================
-   DATA GURU UNTUK MODAL
+   DATA GURU UNTUK MODAL EDIT
 ===================================== */
 
 $queryGuru = mysqli_query(
@@ -252,7 +407,17 @@ $queryGuru = mysqli_query(
 
 
 /* =====================================
-   DATA KELAS UNTUK MODAL
+   DATA GURU UNTUK MODAL TAMBAH
+===================================== */
+
+$queryGuruTambah = mysqli_query(
+    $koneksi,
+    "SELECT id, nama FROM t_guru ORDER BY nama ASC"
+);
+
+
+/* =====================================
+   DATA KELAS UNTUK MODAL EDIT
 ===================================== */
 
 $queryKelas = mysqli_query(
@@ -262,10 +427,30 @@ $queryKelas = mysqli_query(
 
 
 /* =====================================
-   DATA TAHUN AJARAN UNTUK MODAL
+   DATA KELAS UNTUK MODAL TAMBAH
+===================================== */
+
+$queryKelasTambah = mysqli_query(
+    $koneksi,
+    "SELECT id, nama FROM t_kelas ORDER BY nama ASC"
+);
+
+
+/* =====================================
+   DATA TAHUN AJARAN UNTUK MODAL EDIT
 ===================================== */
 
 $queryTahun = mysqli_query(
+    $koneksi,
+    "SELECT id, nama FROM t_tahun_ajaran ORDER BY id ASC"
+);
+
+
+/* =====================================
+   DATA TAHUN AJARAN UNTUK MODAL TAMBAH
+===================================== */
+
+$queryTahunTambah = mysqli_query(
     $koneksi,
     "SELECT id, nama FROM t_tahun_ajaran ORDER BY id ASC"
 );
@@ -288,7 +473,6 @@ $totalKelasAktif = (int) $dataKelasAktif['total'];
 
 /* =====================================
    MENGECEK DATA GANDA
-   BERDASARKAN GURU DAN KELAS
 ===================================== */
 
 $queryGanda = mysqli_query($koneksi, "
@@ -579,12 +763,16 @@ if (!$result) {
                         </div>
 
 
-                        <a href="tambah_wali_kelas.php"
-                           class="btn btn-primary">
+                        <!-- TOMBOL TAMBAH MEMBUKA MODAL -->
+
+                        <button type="button"
+                                class="btn btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalTambahWaliKelas">
 
                             + Tambah Wali Kelas
 
-                        </a>
+                        </button>
 
                     </div>
 
@@ -820,7 +1008,291 @@ if (!$result) {
 
 
 
+<!-- ================================================= -->
+<!-- MODAL TAMBAH WALI KELAS -->
+<!-- ================================================= -->
+
+<div class="modal fade"
+     id="modalTambahWaliKelas"
+     tabindex="-1"
+     aria-labelledby="judulModalTambah"
+     aria-hidden="true">
+
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+
+
+        <div class="modal-content">
+
+
+            <form method="POST" action="data_wali_kelas.php">
+
+
+                <div class="modal-header">
+
+                    <div>
+
+                        <h5 class="modal-title fw-bold"
+                            id="judulModalTambah">
+
+                            Tambah Data Wali Kelas
+
+                        </h5>
+
+                        <small class="text-secondary">
+
+                            Silakan isi informasi wali kelas yang akan ditambahkan.
+
+                        </small>
+
+                    </div>
+
+
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                    </button>
+
+                </div>
+
+
+
+                <div class="modal-body">
+
+
+                    <!-- NAMA GURU -->
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Nama Guru
+                        </label>
+
+                        <select name="guru_id"
+                                class="form-select"
+                                required>
+
+                            <option value="">
+                                Pilih Guru
+                            </option>
+
+
+                            <?php
+
+                            while ($guru = mysqli_fetch_assoc($queryGuruTambah)) {
+
+                            ?>
+
+                                <option value="<?= (int) $guru['id']; ?>">
+
+                                    <?= htmlspecialchars($guru['nama']); ?>
+
+                                </option>
+
+                            <?php
+
+                            }
+
+                            ?>
+
+
+                        </select>
+
+                    </div>
+
+
+
+                    <!-- KELAS -->
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Kelas
+                        </label>
+
+                        <select name="kelas_id"
+                                class="form-select"
+                                required>
+
+                            <option value="">
+                                Pilih Kelas
+                            </option>
+
+
+                            <?php
+
+                            while ($kelas = mysqli_fetch_assoc($queryKelasTambah)) {
+
+                            ?>
+
+                                <option value="<?= (int) $kelas['id']; ?>">
+
+                                    <?= htmlspecialchars($kelas['nama']); ?>
+
+                                </option>
+
+                            <?php
+
+                            }
+
+                            ?>
+
+
+                        </select>
+
+                    </div>
+
+
+
+                    <!-- TAHUN AJARAN -->
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Tahun Ajaran
+                        </label>
+
+                        <select name="tahun_ajaran_id"
+                                class="form-select"
+                                required>
+
+                            <option value="">
+                                Pilih Tahun Ajaran
+                            </option>
+
+
+                            <?php
+
+                            while ($tahun = mysqli_fetch_assoc($queryTahunTambah)) {
+
+                            ?>
+
+                                <option value="<?= (int) $tahun['id']; ?>">
+
+                                    <?= htmlspecialchars($tahun['nama']); ?>
+
+                                </option>
+
+                            <?php
+
+                            }
+
+                            ?>
+
+
+                        </select>
+
+                    </div>
+
+
+
+                    <!-- TANGGAL -->
+
+                    <div class="row">
+
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label fw-semibold">
+                                Tanggal Mulai
+                            </label>
+
+                            <input type="date"
+                                   name="tanggal_mulai"
+                                   class="form-control"
+                                   required>
+
+                        </div>
+
+
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label fw-semibold">
+                                Tanggal Selesai
+                            </label>
+
+                            <input type="date"
+                                   name="tanggal_selesai"
+                                   class="form-control">
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    <!-- STATUS -->
+
+                    <div class="mb-2">
+
+                        <label class="form-label fw-semibold">
+                            Status
+                        </label>
+
+                        <select name="status_aktif"
+                                class="form-select"
+                                required>
+
+                            <option value="1">
+                                Aktif
+                            </option>
+
+                            <option value="0">
+                                Tidak Aktif
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                </div>
+
+
+
+                <div class="modal-footer">
+
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+
+
+                    <button type="submit"
+                            name="simpan_tambah"
+                            class="btn btn-primary">
+
+                        Simpan
+
+                    </button>
+
+
+                </div>
+
+
+            </form>
+
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+
+<!-- ================================================= -->
 <!-- MODAL EDIT WALI KELAS -->
+<!-- ================================================= -->
 
 <div class="modal fade"
      id="modalEditWaliKelas"
@@ -835,7 +1307,7 @@ if (!$result) {
         <div class="modal-content">
 
 
-            <form method="POST" action="">
+            <form method="POST" action="data_wali_kelas.php">
 
 
                 <div class="modal-header">
@@ -1096,7 +1568,9 @@ if (!$result) {
 
 
 
+<!-- ================================================= -->
 <!-- NOTIFIKASI MELAYANG KANAN ATAS -->
+<!-- ================================================= -->
 
 <?php if (!empty($pesan_notifikasi)) { ?>
 

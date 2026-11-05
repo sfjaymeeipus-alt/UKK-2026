@@ -1,4 +1,3 @@
-
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -9,6 +8,86 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 }
 
 $nama = $_SESSION['nama'];
+
+// PROSES TAMBAH DATA TAHUN AJARAN
+if (isset($_POST['simpan_tambah'])) {
+
+    $nama_tahun = trim($_POST['nama']);
+    $tanggal_mulai = trim($_POST['tanggal_mulai']);
+    $tanggal_selesai = trim($_POST['tanggal_selesai']);
+    $status_aktif = (int) $_POST['status_aktif'];
+
+    if (
+        $nama_tahun == "" ||
+        $tanggal_mulai == "" ||
+        $tanggal_selesai == ""
+    ) {
+
+        $_SESSION['pesan_hapus'] = "Semua data tahun ajaran wajib diisi.";
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } elseif ($tanggal_selesai < $tanggal_mulai) {
+
+        $_SESSION['pesan_hapus'] = "Tanggal selesai tidak boleh sebelum tanggal mulai.";
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } else {
+
+        // CEK NAMA TAHUN AJARAN YANG SAMA
+        $cek = mysqli_prepare(
+            $koneksi,
+            "SELECT id FROM t_tahun_ajaran WHERE nama = ?"
+        );
+
+        mysqli_stmt_bind_param($cek, "s", $nama_tahun);
+        mysqli_stmt_execute($cek);
+        mysqli_stmt_store_result($cek);
+
+        if (mysqli_stmt_num_rows($cek) > 0) {
+
+            $_SESSION['pesan_hapus'] = "Nama tahun ajaran sudah digunakan.";
+            $_SESSION['jenis_pesan'] = "danger";
+
+        } else {
+
+            $insert = mysqli_prepare(
+                $koneksi,
+                "INSERT INTO t_tahun_ajaran
+                (nama, tanggal_mulai, tanggal_selesai, status_aktif)
+                VALUES (?, ?, ?, ?)"
+            );
+
+            mysqli_stmt_bind_param(
+                $insert,
+                "sssi",
+                $nama_tahun,
+                $tanggal_mulai,
+                $tanggal_selesai,
+                $status_aktif
+            );
+
+            if (mysqli_stmt_execute($insert)) {
+
+                $_SESSION['pesan_hapus'] = "Data tahun ajaran berhasil ditambahkan.";
+                $_SESSION['jenis_pesan'] = "success";
+
+            } else {
+
+                $_SESSION['pesan_hapus'] = "Gagal menambahkan data tahun ajaran.";
+                $_SESSION['jenis_pesan'] = "danger";
+
+            }
+
+            mysqli_stmt_close($insert);
+        }
+
+        mysqli_stmt_close($cek);
+    }
+
+    header("Location: data_tahun_ajaran.php");
+    exit;
+}
+
 
 // PROSES EDIT DATA TAHUN AJARAN
 if (isset($_POST['simpan_edit'])) {
@@ -73,6 +152,7 @@ if (isset($_POST['simpan_edit'])) {
     exit;
 }
 
+
 // MENGHITUNG JUMLAH TAHUN AJARAN AKTIF
 $cekAktif = mysqli_query(
     $koneksi,
@@ -81,6 +161,7 @@ $cekAktif = mysqli_query(
 
 $dataAktif = mysqli_fetch_assoc($cekAktif);
 $totalAktif = (int) $dataAktif['total'];
+
 
 // MENGAMBIL SELURUH DATA TAHUN AJARAN
 $query = mysqli_query(
@@ -187,6 +268,7 @@ $query = mysqli_query(
 
         </aside>
 
+
         <!-- KONTEN UTAMA -->
         <main class="col-md-9 col-lg-10 p-0">
 
@@ -230,6 +312,7 @@ $query = mysqli_query(
                 </div>
 
             </header>
+
 
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
@@ -291,12 +374,15 @@ $query = mysqli_query(
 
                         </div>
 
-                        <a href="tambah_tahun_ajaran.php"
-                           class="btn btn-primary">
+                        <!-- TOMBOL TAMBAH MODAL -->
+                        <button type="button"
+                                class="btn btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalTambahTahunAjaran">
 
                             + Tambah Tahun Ajaran
 
-                        </a>
+                        </button>
 
                     </div>
 
@@ -325,11 +411,13 @@ $query = mysqli_query(
                                 <tbody>
 
                                 <?php
+
                                 $no = 1;
 
                                 if ($query && mysqli_num_rows($query) > 0) {
 
                                     while ($data = mysqli_fetch_assoc($query)) {
+
                                 ?>
 
                                     <tr>
@@ -402,9 +490,11 @@ $query = mysqli_query(
                                     </tr>
 
                                 <?php
+
                                     }
 
                                 }
+
                                 ?>
 
                                 </tbody>
@@ -446,7 +536,147 @@ $query = mysqli_query(
 </div>
 
 
+<!-- ===================================================== -->
+<!-- MODAL TAMBAH TAHUN AJARAN -->
+<!-- ===================================================== -->
+
+<div class="modal fade"
+     id="modalTambahTahunAjaran"
+     tabindex="-1"
+     aria-labelledby="judulModalTambahTahunAjaran"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content border-0 shadow rounded-3">
+
+            <!-- HEADER MODAL -->
+            <div class="modal-header bg-white">
+
+                <div>
+
+                    <h5 class="modal-title fw-bold" id="judulModalTambahTahunAjaran">
+                        Tambah Data Tahun Ajaran
+                    </h5>
+
+                    <small class="text-secondary">
+                        Silakan isi informasi tahun ajaran yang akan ditambahkan.
+                    </small>
+
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+
+            <!-- FORM TAMBAH -->
+            <form method="POST" action="data_tahun_ajaran.php">
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+
+                        <label for="tambah_nama_tahun" class="form-label fw-semibold">
+                            Nama Tahun Ajaran
+                        </label>
+
+                        <input type="text"
+                               name="nama"
+                               id="tambah_nama_tahun"
+                               class="form-control"
+                               placeholder="Contoh: 2026/2027"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="tambah_tanggal_mulai" class="form-label fw-semibold">
+                            Tanggal Mulai
+                        </label>
+
+                        <input type="date"
+                               name="tanggal_mulai"
+                               id="tambah_tanggal_mulai"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="tambah_tanggal_selesai" class="form-label fw-semibold">
+                            Tanggal Selesai
+                        </label>
+
+                        <input type="date"
+                               name="tanggal_selesai"
+                               id="tambah_tanggal_selesai"
+                               class="form-control"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="tambah_status_tahun" class="form-label fw-semibold">
+                            Status Tahun Ajaran
+                        </label>
+
+                        <select name="status_aktif"
+                                id="tambah_status_tahun"
+                                class="form-select"
+                                required>
+
+                            <option value="1">Aktif</option>
+                            <option value="0">Tidak Aktif</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <!-- FOOTER MODAL -->
+                <div class="modal-footer">
+
+                    <button type="submit"
+                            name="simpan_tambah"
+                            class="btn btn-primary">
+
+                        Simpan
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ===================================================== -->
 <!-- MODAL EDIT TAHUN AJARAN -->
+<!-- ===================================================== -->
+
 <div class="modal fade"
      id="modalEditTahunAjaran"
      tabindex="-1"
@@ -702,16 +932,21 @@ document.querySelectorAll('.tombolEdit').forEach(function (tombol) {
 </script>
 
 
+<!-- ===================================================== -->
 <!-- NOTIFIKASI MELAYANG -->
+<!-- ===================================================== -->
+
 <?php if (isset($_SESSION['pesan_hapus'])) { ?>
 
     <?php
+
     $jenis_pesan = $_SESSION['jenis_pesan'] ?? 'success';
 
     $jenis_pesan = in_array(
         $jenis_pesan,
         ['success', 'danger', 'warning', 'info', 'primary', 'secondary', 'dark']
     ) ? $jenis_pesan : 'success';
+
     ?>
 
     <div class="toast-container position-fixed top-0 end-0 p-3"
@@ -744,8 +979,10 @@ document.querySelectorAll('.tombolEdit').forEach(function (tombol) {
     </div>
 
     <?php
+
     unset($_SESSION['pesan_hapus']);
     unset($_SESSION['jenis_pesan']);
+
     ?>
 
 <?php } ?>

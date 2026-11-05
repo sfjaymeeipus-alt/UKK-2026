@@ -18,8 +18,107 @@ unset($_SESSION['notifikasi_hapus']);
 $notifikasi_edit = $_SESSION['notifikasi_edit'] ?? null;
 unset($_SESSION['notifikasi_edit']);
 
+$notifikasi_tambah = $_SESSION['notifikasi_tambah'] ?? null;
+unset($_SESSION['notifikasi_tambah']);
+
 $error = "";
 $editData = null;
+
+// PROSES TAMBAH DATA
+if (isset($_POST['simpan_tambah'])) {
+
+    $kode = trim($_POST['kode'] ?? '');
+    $nama_pelanggaran = trim($_POST['nama'] ?? '');
+    $kategori_id = (int) ($_POST['pelanggaran_kategori_id'] ?? 0);
+    $poin = filter_var($_POST['poin'] ?? null, FILTER_VALIDATE_INT);
+    $deskripsi = trim($_POST['deskripsi'] ?? '');
+    $status_aktif = (int) ($_POST['status_aktif'] ?? -1);
+
+    if (
+        $kode == '' ||
+        $nama_pelanggaran == '' ||
+        $kategori_id <= 0 ||
+        $poin === false ||
+        $poin === null ||
+        $poin < 0 ||
+        !in_array($status_aktif, [0, 1], true)
+    ) {
+
+        $_SESSION['notifikasi_tambah'] = [
+            'tipe' => 'danger',
+            'pesan' => 'Periksa kembali data yang kamu masukkan.'
+        ];
+
+    } else {
+
+        $cek = mysqli_prepare(
+            $koneksi,
+            "SELECT id FROM t_pelanggaran_kategori WHERE id = ?"
+        );
+
+        mysqli_stmt_bind_param($cek, "i", $kategori_id);
+        mysqli_stmt_execute($cek);
+
+        $hasil_cek = mysqli_stmt_get_result($cek);
+        $kategori_ada = mysqli_fetch_assoc($hasil_cek);
+
+        mysqli_stmt_close($cek);
+
+        if (!$kategori_ada) {
+
+            $_SESSION['notifikasi_tambah'] = [
+                'tipe' => 'danger',
+                'pesan' => 'Kategori pelanggaran tidak ditemukan.'
+            ];
+
+        } else {
+
+            $stmt = mysqli_prepare($koneksi, "
+                INSERT INTO t_pelanggaran
+                (kode, nama, pelanggaran_kategori_id, poin, deskripsi, status_aktif)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ");
+
+            mysqli_stmt_bind_param(
+                $stmt,
+                "ssiisi",
+                $kode,
+                $nama_pelanggaran,
+                $kategori_id,
+                $poin,
+                $deskripsi,
+                $status_aktif
+            );
+
+            if (mysqli_stmt_execute($stmt)) {
+
+                $_SESSION['notifikasi_tambah'] = [
+                    'tipe' => 'success',
+                    'pesan' => 'Data jenis pelanggaran berhasil ditambahkan.'
+                ];
+
+            } else {
+
+                if (mysqli_errno($koneksi) == 1062) {
+                    $_SESSION['notifikasi_tambah'] = [
+                        'tipe' => 'danger',
+                        'pesan' => 'Kode pelanggaran sudah digunakan.'
+                    ];
+                } else {
+                    $_SESSION['notifikasi_tambah'] = [
+                        'tipe' => 'danger',
+                        'pesan' => 'Gagal menambahkan data jenis pelanggaran.'
+                    ];
+                }
+            }
+
+            mysqli_stmt_close($stmt);
+        }
+    }
+
+    header("Location: data_jenis_pelanggaran.php");
+    exit;
+}
 
 // PROSES EDIT DATA
 if (isset($_POST['simpan_edit'])) {
@@ -332,10 +431,12 @@ if (!$result) {
                             </small>
                         </div>
 
-                        <a href="tambah_jenis_pelanggaran.php"
-                           class="btn btn-primary">
+                        <button type="button"
+                                class="btn btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalTambah">
                             + Tambah Jenis Pelanggaran
-                        </a>
+                        </button>
 
                     </div>
 
@@ -479,6 +580,168 @@ if (!$result) {
         </main>
 
     </div>
+</div>
+
+
+<!-- POP-UP TAMBAH JENIS PELANGGARAN -->
+<div class="modal fade" id="modalTambah" tabindex="-1"
+     aria-labelledby="judulModalTambah" aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+
+        <div class="modal-content border-0 shadow rounded-3">
+
+            <div class="modal-header bg-white">
+
+                <div>
+                    <h5 class="modal-title fw-bold" id="judulModalTambah">
+                        Tambah Jenis Pelanggaran
+                    </h5>
+
+                    <small class="text-secondary">
+                        Masukkan informasi jenis pelanggaran siswa.
+                    </small>
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+            <form method="POST" action="data_jenis_pelanggaran.php">
+
+                <div class="modal-body p-4">
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Kode Pelanggaran
+                        </label>
+
+                        <input type="text"
+                               name="kode"
+                               class="form-control"
+                               maxlength="50"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Nama Pelanggaran
+                        </label>
+
+                        <input type="text"
+                               name="nama"
+                               class="form-control"
+                               maxlength="150"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Kategori Pelanggaran
+                        </label>
+
+                        <select name="pelanggaran_kategori_id"
+                                class="form-select"
+                                required>
+
+                            <option value="">
+                                -- Pilih Kategori --
+                            </option>
+
+                            <?php foreach ($daftar_kategori as $kat) { ?>
+
+                                <option value="<?= (int) $kat['id']; ?>">
+                                    <?= htmlspecialchars($kat['nama']); ?>
+                                </option>
+
+                            <?php } ?>
+
+                        </select>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Poin Pelanggaran
+                        </label>
+
+                        <input type="number"
+                               name="poin"
+                               class="form-control"
+                               min="0"
+                               step="1"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Deskripsi
+                        </label>
+
+                        <textarea name="deskripsi"
+                                  class="form-control"
+                                  rows="4"
+                                  placeholder="Masukkan deskripsi pelanggaran"></textarea>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Status
+                        </label>
+
+                        <select name="status_aktif"
+                                class="form-select"
+                                required>
+
+                            <option value="1">Aktif</option>
+                            <option value="0">Tidak Aktif</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer bg-white">
+
+                    <button type="submit"
+                            name="simpan_tambah"
+                            class="btn btn-primary">
+
+                        Simpan
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
 </div>
 
 
@@ -683,6 +946,31 @@ if (!$result) {
 <div class="toast-container position-fixed top-0 end-0 p-3"
      style="z-index: 1100;">
 
+    <?php if ($notifikasi_tambah) { ?>
+
+        <div id="toastTambah"
+             class="toast align-items-center text-bg-<?= htmlspecialchars($notifikasi_tambah['tipe']); ?> border-0"
+             role="alert"
+             aria-live="assertive"
+             aria-atomic="true">
+
+            <div class="d-flex">
+
+                <div class="toast-body">
+                    <?= htmlspecialchars($notifikasi_tambah['pesan']); ?>
+                </div>
+
+                <button type="button"
+                        class="btn-close btn-close-white me-2 m-auto"
+                        data-bs-dismiss="toast">
+                </button>
+
+            </div>
+
+        </div>
+
+    <?php } ?>
+
     <?php if ($notifikasi_edit) { ?>
 
         <div id="toastNotifikasi"
@@ -838,6 +1126,14 @@ document.querySelectorAll('.tombolEdit').forEach(function (tombol) {
 
 // NOTIFIKASI MELAYANG
 document.addEventListener('DOMContentLoaded', function () {
+
+    const toastTambah = document.getElementById('toastTambah');
+
+    if (toastTambah) {
+        new bootstrap.Toast(toastTambah, {
+            delay: 3500
+        }).show();
+    }
 
     const toastEdit = document.getElementById('toastNotifikasi');
 

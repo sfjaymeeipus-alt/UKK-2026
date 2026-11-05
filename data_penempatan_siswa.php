@@ -1,4 +1,3 @@
-
 <?php
 
 include "middleware/auth.php";
@@ -10,6 +9,72 @@ if ($_SESSION['role'] != 'admin') {
 }
 
 $nama = $_SESSION['nama'];
+
+/* =====================================
+   PROSES TAMBAH DATA PENEMPATAN SISWA
+===================================== */
+
+if (isset($_POST['simpan_tambah'])) {
+
+    $siswa_id = (int) $_POST['siswa_id'];
+    $kelas_id = (int) $_POST['kelas_id'];
+    $tahun_ajaran_id = (int) $_POST['tahun_ajaran_id'];
+    $tanggal_mulai = $_POST['tanggal_mulai'];
+    $tanggal_selesai = !empty($_POST['tanggal_selesai'])
+        ? $_POST['tanggal_selesai']
+        : null;
+    $status_aktif = (int) $_POST['status_aktif'];
+
+    if (
+        $siswa_id <= 0 ||
+        $kelas_id <= 0 ||
+        $tahun_ajaran_id <= 0 ||
+        empty($tanggal_mulai)
+    ) {
+        $_SESSION['pesan_hapus'] = "Data penempatan siswa gagal ditambahkan. Periksa kembali isian.";
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } else {
+
+        $stmt = mysqli_prepare(
+            $koneksi,
+            "INSERT INTO t_kelas_siswa
+                (siswa_id, kelas_id, tahun_ajaran_id, tanggal_mulai, tanggal_selesai, status_aktif)
+             VALUES (?, ?, ?, ?, ?, ?)"
+        );
+
+        if ($stmt) {
+
+            mysqli_stmt_bind_param(
+                $stmt,
+                "iiissi",
+                $siswa_id,
+                $kelas_id,
+                $tahun_ajaran_id,
+                $tanggal_mulai,
+                $tanggal_selesai,
+                $status_aktif
+            );
+
+            if (mysqli_stmt_execute($stmt)) {
+                $_SESSION['pesan_hapus'] = "Data penempatan siswa berhasil ditambahkan.";
+                $_SESSION['jenis_pesan'] = "success";
+            } else {
+                $_SESSION['pesan_hapus'] = "Data penempatan siswa gagal ditambahkan. " . mysqli_stmt_error($stmt);
+                $_SESSION['jenis_pesan'] = "danger";
+            }
+
+            mysqli_stmt_close($stmt);
+
+        } else {
+            $_SESSION['pesan_hapus'] = "Query gagal diproses: " . mysqli_error($koneksi);
+            $_SESSION['jenis_pesan'] = "danger";
+        }
+    }
+
+    header("Location: data_penempatan_siswa.php");
+    exit;
+}
 
 /* =====================================
    PROSES UPDATE DATA PENEMPATAN SISWA
@@ -108,7 +173,7 @@ if (!in_array($jenis_notifikasi, ['success', 'danger', 'warning', 'info'])) {
 }
 
 /* =====================================
-   DATA SISWA UNTUK MODAL EDIT
+   DATA SISWA UNTUK MODAL
 ===================================== */
 
 $query_siswa = mysqli_query(
@@ -116,8 +181,13 @@ $query_siswa = mysqli_query(
     "SELECT id, nis, nama FROM t_siswa ORDER BY nama ASC"
 );
 
+$query_siswa_tambah = mysqli_query(
+    $koneksi,
+    "SELECT id, nis, nama FROM t_siswa ORDER BY nama ASC"
+);
+
 /* =====================================
-   DATA KELAS UNTUK MODAL EDIT
+   DATA KELAS UNTUK MODAL
 ===================================== */
 
 $query_kelas = mysqli_query(
@@ -125,11 +195,21 @@ $query_kelas = mysqli_query(
     "SELECT id, nama FROM t_kelas ORDER BY nama ASC"
 );
 
+$query_kelas_tambah = mysqli_query(
+    $koneksi,
+    "SELECT id, nama FROM t_kelas ORDER BY nama ASC"
+);
+
 /* =====================================
-   DATA TAHUN AJARAN UNTUK MODAL EDIT
+   DATA TAHUN AJARAN UNTUK MODAL
 ===================================== */
 
 $query_tahun = mysqli_query(
+    $koneksi,
+    "SELECT id, nama FROM t_tahun_ajaran ORDER BY id DESC"
+);
+
+$query_tahun_tambah = mysqli_query(
     $koneksi,
     "SELECT id, nama FROM t_tahun_ajaran ORDER BY id DESC"
 );
@@ -373,10 +453,12 @@ if (!$result) {
                             </small>
                         </div>
 
-                        <a href="tambah_penempatan_siswa.php"
-                           class="btn btn-primary">
+                        <button type="button"
+                                class="btn btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalTambahPenempatan">
                             + Tambah Penempatan
-                        </a>
+                        </button>
 
                     </div>
 
@@ -516,6 +598,139 @@ if (!$result) {
             </section>
 
         </main>
+
+    </div>
+</div>
+
+
+<!-- MODAL TAMBAH PENEMPATAN SISWA -->
+<div class="modal fade" id="modalTambahPenempatan" tabindex="-1"
+     aria-labelledby="judulModalTambah" aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+
+        <div class="modal-content">
+
+            <form method="POST" action="">
+
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="judulModalTambah">
+                        Tambah Penempatan Siswa
+                    </h5>
+
+                    <button type="button" class="btn-close"
+                            data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nama Siswa</label>
+
+                        <select name="siswa_id" class="form-select" required>
+                            <option value="">Pilih Siswa</option>
+
+                            <?php
+                            while ($siswa = mysqli_fetch_assoc($query_siswa_tambah)) {
+                            ?>
+                                <option value="<?= (int) $siswa['id']; ?>">
+                                    <?= htmlspecialchars($siswa['nis'] . ' - ' . $siswa['nama']); ?>
+                                </option>
+                            <?php
+                            }
+                            ?>
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Kelas</label>
+
+                        <select name="kelas_id" class="form-select" required>
+                            <option value="">Pilih Kelas</option>
+
+                            <?php
+                            while ($kelas = mysqli_fetch_assoc($query_kelas_tambah)) {
+                            ?>
+                                <option value="<?= (int) $kelas['id']; ?>">
+                                    <?= htmlspecialchars($kelas['nama']); ?>
+                                </option>
+                            <?php
+                            }
+                            ?>
+
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tahun Ajaran</label>
+
+                        <select name="tahun_ajaran_id" class="form-select" required>
+                            <option value="">Pilih Tahun Ajaran</option>
+
+                            <?php
+                            while ($tahun = mysqli_fetch_assoc($query_tahun_tambah)) {
+                            ?>
+                                <option value="<?= (int) $tahun['id']; ?>">
+                                    <?= htmlspecialchars($tahun['nama']); ?>
+                                </option>
+                            <?php
+                            }
+                            ?>
+
+                        </select>
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">
+                                Tanggal Mulai
+                            </label>
+
+                            <input type="date" name="tanggal_mulai"
+                                   class="form-control" required>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">
+                                Tanggal Selesai
+                            </label>
+
+                            <input type="date" name="tanggal_selesai"
+                                   class="form-control">
+                        </div>
+
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Status</label>
+
+                        <select name="status_aktif" class="form-select" required>
+                            <option value="1">Aktif</option>
+                            <option value="0">Tidak Aktif</option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Batal
+                    </button>
+
+                    <button type="submit" name="simpan_tambah"
+                            class="btn btn-primary">
+                        Simpan
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
 
     </div>
 </div>

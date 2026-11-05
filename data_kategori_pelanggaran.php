@@ -1,3 +1,4 @@
+
 <?php
 
 include "middleware/auth.php";
@@ -9,6 +10,55 @@ if ($_SESSION['role'] != 'admin') {
 }
 
 $nama = $_SESSION['nama'];
+
+// PROSES TAMBAH KATEGORI
+if (isset($_POST['simpan_tambah'])) {
+
+    $nama_kategori = trim($_POST['nama']);
+    $deskripsi = trim($_POST['deskripsi']);
+    $status_aktif = (int) $_POST['status_aktif'];
+
+    if ($nama_kategori == "") {
+
+        $_SESSION['pesan_hapus'] = "Nama kategori wajib diisi.";
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } else {
+
+        $insert = mysqli_prepare(
+            $koneksi,
+            "INSERT INTO t_pelanggaran_kategori
+            (nama, deskripsi, status_aktif)
+            VALUES (?, ?, ?)"
+        );
+
+        mysqli_stmt_bind_param(
+            $insert,
+            "ssi",
+            $nama_kategori,
+            $deskripsi,
+            $status_aktif
+        );
+
+        if (mysqli_stmt_execute($insert)) {
+
+            $_SESSION['pesan_hapus'] = "Data kategori pelanggaran berhasil ditambahkan.";
+            $_SESSION['jenis_pesan'] = "success";
+
+        } else {
+
+            $_SESSION['pesan_hapus'] = "Gagal menambahkan data kategori pelanggaran.";
+            $_SESSION['jenis_pesan'] = "danger";
+
+        }
+
+        mysqli_stmt_close($insert);
+    }
+
+    header("Location: data_kategori_pelanggaran.php");
+    exit;
+}
+
 
 // PROSES EDIT KATEGORI PELANGGARAN
 if (isset($_POST['simpan_edit'])) {
@@ -59,6 +109,7 @@ if (isset($_POST['simpan_edit'])) {
     header("Location: data_kategori_pelanggaran.php");
     exit;
 }
+
 
 // MENGAMBIL DATA KATEGORI
 $query = "
@@ -252,10 +303,15 @@ if (!$result) {
                             </small>
                         </div>
 
-                        <a href="tambah_kategori_pelanggaran.php"
-                           class="btn btn-primary">
+                        <!-- TOMBOL TAMBAH MODAL -->
+                        <button type="button"
+                                class="btn btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalTambahKategori">
+
                             + Tambah Kategori
-                        </a>
+
+                        </button>
 
                     </div>
 
@@ -392,7 +448,129 @@ if (!$result) {
 </div>
 
 
+<!-- ===================================================== -->
+<!-- MODAL TAMBAH KATEGORI PELANGGARAN -->
+<!-- ===================================================== -->
+
+<div class="modal fade"
+     id="modalTambahKategori"
+     tabindex="-1"
+     aria-labelledby="judulModalTambah"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content border-0 shadow rounded-3">
+
+            <div class="modal-header bg-white">
+
+                <div>
+
+                    <h5 class="modal-title fw-bold" id="judulModalTambah">
+                        Tambah Kategori Pelanggaran
+                    </h5>
+
+                    <small class="text-secondary">
+                        Silakan isi informasi kategori pelanggaran.
+                    </small>
+
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+            <form method="POST" action="data_kategori_pelanggaran.php">
+
+                <div class="modal-body">
+
+                    <div class="mb-3">
+
+                        <label for="tambah_nama" class="form-label fw-semibold">
+                            Nama Kategori
+                        </label>
+
+                        <input type="text"
+                               name="nama"
+                               id="tambah_nama"
+                               class="form-control"
+                               placeholder="Masukkan nama kategori"
+                               required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="tambah_deskripsi" class="form-label fw-semibold">
+                            Deskripsi
+                        </label>
+
+                        <textarea
+                            name="deskripsi"
+                            id="tambah_deskripsi"
+                            class="form-control"
+                            rows="4"
+                            placeholder="Masukkan deskripsi kategori"></textarea>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label for="tambah_status" class="form-label fw-semibold">
+                            Status Kategori
+                        </label>
+
+                        <select name="status_aktif"
+                                id="tambah_status"
+                                class="form-select"
+                                required>
+
+                            <option value="1">Aktif</option>
+                            <option value="0">Tidak Aktif</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button type="submit"
+                            name="simpan_tambah"
+                            class="btn btn-primary">
+
+                        Simpan
+
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+
+                        Batal
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ===================================================== -->
 <!-- MODAL EDIT KATEGORI PELANGGARAN -->
+<!-- ===================================================== -->
+
 <div class="modal fade"
      id="modalEditKategori"
      tabindex="-1"
@@ -473,7 +651,6 @@ if (!$result) {
                                 required>
 
                             <option value="1">Aktif</option>
-
                             <option value="0">Tidak Aktif</option>
 
                         </select>
@@ -614,16 +791,21 @@ if (!$result) {
 </script>
 
 
+<!-- ===================================================== -->
 <!-- NOTIFIKASI MELAYANG -->
+<!-- ===================================================== -->
+
 <?php if (isset($_SESSION['pesan_hapus'])) { ?>
 
     <?php
+
     $jenis_pesan = $_SESSION['jenis_pesan'] ?? 'success';
 
     $jenis_pesan = in_array(
         $jenis_pesan,
         ['success', 'danger', 'warning', 'info', 'primary', 'secondary', 'dark']
     ) ? $jenis_pesan : 'success';
+
     ?>
 
     <div class="toast-container position-fixed top-0 end-0 p-3"
@@ -656,8 +838,10 @@ if (!$result) {
     </div>
 
     <?php
+
     unset($_SESSION['pesan_hapus']);
     unset($_SESSION['jenis_pesan']);
+
     ?>
 
 <?php } ?>
