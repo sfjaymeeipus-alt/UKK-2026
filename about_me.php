@@ -10,12 +10,51 @@ if (!isset($_SESSION['role'])) {
 
 $nama = $_SESSION['nama'] ?? 'Pengguna';
 $role = $_SESSION['role'];
+$user_id = (int) ($_SESSION['user_id'] ?? 0);
+
+/* =====================================
+   CEK APAKAH GURU MERUPAKAN WALI KELAS
+===================================== */
+
+$is_wali_kelas = false;
+
+if ($role == 'guru') {
+
+    $sql_wali = "
+        SELECT COUNT(*) AS total
+        FROM t_guru g
+        INNER JOIN t_wali_kelas wk
+            ON wk.guru_id = g.id
+        INNER JOIN t_tahun_ajaran ta
+            ON ta.id = wk.tahun_ajaran_id
+        WHERE g.user_id = ?
+          AND wk.status_aktif = 1
+          AND ta.status_aktif = 1
+    ";
+
+    $query_wali = mysqli_prepare($koneksi, $sql_wali);
+
+    if (!$query_wali) {
+        exit("Error query wali kelas: " . mysqli_error($koneksi));
+    }
+
+    mysqli_stmt_bind_param($query_wali, "i", $user_id);
+    mysqli_stmt_execute($query_wali);
+
+    $result_wali = mysqli_stmt_get_result($query_wali);
+    $data_wali = mysqli_fetch_assoc($result_wali);
+
+    $is_wali_kelas = ((int) $data_wali['total'] > 0);
+
+    mysqli_stmt_close($query_wali);
+}
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
 
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -23,19 +62,26 @@ $role = $_SESSION['role'];
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet">
+
 </head>
 
 <body class="bg-light">
 
 <div class="container-fluid">
+
     <div class="row">
 
         <!-- SIDEBAR -->
         <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 position-sticky top-0 align-self-start"
                style="height: 100vh; overflow-y: auto;">
 
-            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
-            <h6 class="fw-bold">Pelanggaran Siswa</h6>
+            <h5 class="fw-bold mb-1">
+                Sistem Informasi
+            </h5>
+
+            <h6 class="fw-bold">
+                Pelanggaran Siswa
+            </h6>
 
             <p class="text-secondary small mb-4">
                 SMK Muhammadiyah Kota Tasikmalaya
@@ -47,12 +93,15 @@ $role = $_SESSION['role'];
 
             <nav class="nav flex-column gap-1">
 
+                <!-- DASHBOARD -->
                 <a href="dashboard.php"
                    class="nav-link text-white rounded py-2">
                     Dashboard
                 </a>
 
                 <?php if ($role == 'admin') { ?>
+
+                    <!-- MENU ADMIN -->
 
                     <a href="data_siswa.php"
                        class="nav-link text-white rounded py-2">
@@ -99,7 +148,28 @@ $role = $_SESSION['role'];
                         Laporan
                     </a>
 
+                <?php } elseif ($role == 'guru' && $is_wali_kelas) { ?>
+
+                    <!-- MENU WALI KELAS -->
+
+                    <a href="walikelas/data_siswa.php"
+                       class="nav-link text-white rounded py-2">
+                        Data Siswa
+                    </a>
+
+                    <a href="walikelas/rekap_pelanggaran.php"
+                       class="nav-link text-white rounded py-2">
+                        Rekap Pelanggaran
+                    </a>
+
+                    <a href="walikelas/cetak_rekap.php"
+                       class="nav-link text-white rounded py-2">
+                        Cetak Rekap
+                    </a>
+
                 <?php } elseif ($role == 'guru') { ?>
+
+                    <!-- MENU GURU BIASA -->
 
                     <a href="data_catatan_pelanggaran.php"
                        class="nav-link text-white rounded py-2">
@@ -123,6 +193,7 @@ $role = $_SESSION['role'];
 
                 <?php } ?>
 
+                <!-- ABOUT ME -->
                 <a href="about_me.php"
                    class="nav-link active bg-primary text-white rounded py-2">
                     About Me
@@ -130,6 +201,7 @@ $role = $_SESSION['role'];
 
                 <hr class="border-secondary my-2">
 
+                <!-- LOGOUT -->
                 <a href="logout.php"
                    class="nav-link text-danger rounded py-2">
                     Logout
@@ -143,32 +215,44 @@ $role = $_SESSION['role'];
         <main class="col-md-9 col-lg-10 p-0">
 
             <!-- HEADER -->
-            <header class="bg-white border-bottomp-3 p-md-4
+            <header class="bg-white border-bottom p-3 p-md-4
                            d-flex justify-content-between align-items-center">
 
                 <div>
-                    <h4 class="fw-bold mb-1">About Me</h4>
+
+                    <h4 class="fw-bold mb-1">
+                        About Me
+                    </h4>
+
                     <small class="text-secondary">
                         Kenali profil pengembang dan proyek yang saya buat.
                     </small>
+
                 </div>
 
                 <div class="d-flex align-items-center gap-3">
+
                     <div class="text-end">
+
                         <div class="fw-bold">
                             <?= htmlspecialchars($nama); ?>
                         </div>
+
                         <small class="text-secondary">
-                            <?= htmlspecialchars(ucfirst($role)); ?>
+                            <?= $is_wali_kelas ? 'Wali Kelas' : htmlspecialchars(ucfirst($role)); ?>
                         </small>
+
                     </div>
 
                     <div class="rounded-circle bg-primary-subtle text-primary
                                 d-flex justify-content-center align-items-center
                                 fw-bold"
                          style="width: 42px; height: 42px;">
+
                         <?= strtoupper(substr($nama, 0, 1)); ?>
+
                     </div>
+
                 </div>
 
             </header>
@@ -179,10 +263,15 @@ $role = $_SESSION['role'];
                 <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
 
                     <div class="bg-primary-subtle p-4 text-primary-emphasis">
-                        <h5 class="fw-bold mb-1">Profil Pengembang</h5>
+
+                        <h5 class="fw-bold mb-1">
+                            Profil Pengembang
+                        </h5>
+
                         <p class="mb-0 small">
                             Informasi singkat mengenai diri saya.
                         </p>
+
                     </div>
 
                     <div class="card-body p-4 p-md-5">
@@ -194,13 +283,14 @@ $role = $_SESSION['role'];
                                 <img src="foto_profil.jpeg"
                                      alt="Foto Puspita Dewi"
                                      class="rounded-circle img-thumbnail shadow-sm"
-                                     style="width: 210px; height: 210px;
-                                            object-fit: cover;">
+                                     style="width: 210px; height: 210px; object-fit: cover;">
 
                                 <div class="mt-3">
+
                                     <span class="badge rounded-pill text-bg-primary px-3 py-2">
                                         XII RPL 2
                                     </span>
+
                                 </div>
 
                             </div>
@@ -220,12 +310,14 @@ $role = $_SESSION['role'];
                                 </h5>
 
                                 <p class="text-secondary lh-lg">
+
                                     Saya merupakan siswa kelas XII RPL 2
                                     di SMK Muhammadiyah Tasikmalaya.
                                     Saya memiliki minat dalam pengembangan
                                     aplikasi berbasis web dan sedang
                                     mengembangkan kemampuan pemrograman
                                     menggunakan PHP Native dan MySQL.
+
                                 </p>
 
                                 <div class="d-flex flex-wrap gap-2 mt-4">
@@ -265,23 +357,32 @@ $role = $_SESSION['role'];
 
                 </div>
 
-                <!-- INFORMASI PENDIDIKAN DAN KEAHLIAN -->
+                <!-- PENDIDIKAN DAN KEAHLIAN -->
                 <div class="row g-4 mb-4">
 
                     <div class="col-md-6">
 
                         <div class="card border-0 shadow-sm rounded-4 h-100">
+
                             <div class="card-body p-4">
 
                                 <div class="rounded-3 bg-primary-subtle text-primary
                                             d-flex justify-content-center align-items-center mb-3"
                                      style="width: 48px; height: 48px;">
-                                    <span class="fw-bold fs-5">01</span>
+
+                                    <span class="fw-bold fs-5">
+                                        01
+                                    </span>
+
                                 </div>
 
-                                <h5 class="fw-bold mb-3">Pendidikan</h5>
+                                <h5 class="fw-bold mb-3">
+                                    Pendidikan
+                                </h5>
 
-                                <h6 class="fw-bold mb-1">XII RPL 2</h6>
+                                <h6 class="fw-bold mb-1">
+                                    XII RPL 2
+                                </h6>
 
                                 <p class="text-secondary mb-2">
                                     SMK Muhammadiyah Tasikmalaya
@@ -292,6 +393,7 @@ $role = $_SESSION['role'];
                                 </p>
 
                             </div>
+
                         </div>
 
                     </div>
@@ -299,15 +401,22 @@ $role = $_SESSION['role'];
                     <div class="col-md-6">
 
                         <div class="card border-0 shadow-sm rounded-4 h-100">
+
                             <div class="card-body p-4">
 
                                 <div class="rounded-3 bg-success-subtle text-success
                                             d-flex justify-content-center align-items-center mb-3"
                                      style="width: 48px; height: 48px;">
-                                    <span class="fw-bold fs-5">02</span>
+
+                                    <span class="fw-bold fs-5">
+                                        02
+                                    </span>
+
                                 </div>
 
-                                <h5 class="fw-bold mb-3">Keahlian</h5>
+                                <h5 class="fw-bold mb-3">
+                                    Keahlian
+                                </h5>
 
                                 <h6 class="fw-bold mb-1">
                                     Pengembangan Aplikasi Web
@@ -323,6 +432,7 @@ $role = $_SESSION['role'];
                                 </p>
 
                             </div>
+
                         </div>
 
                     </div>
@@ -347,17 +457,21 @@ $role = $_SESSION['role'];
                                 </h4>
 
                                 <p class="text-secondary lh-lg mb-3">
+
                                     Aplikasi berbasis web ini dibuat untuk
                                     membantu sekolah mengelola informasi
                                     pelanggaran siswa secara lebih terstruktur.
                                     Sistem menyediakan pengelolaan data dan
                                     informasi pelanggaran sesuai hak akses pengguna.
+
                                 </p>
 
                                 <p class="text-secondary mb-0">
+
                                     <strong>Teknologi:</strong>
                                     PHP Native, MySQL, HTML, JavaScript,
                                     dan Bootstrap.
+
                                 </p>
 
                             </div>
@@ -390,10 +504,14 @@ $role = $_SESSION['role'];
 
                 <!-- FOOTER -->
                 <div class="text-center py-3">
+
                     <small class="text-secondary">
+
                         &copy; 2026 Sistem Informasi Pelanggaran Siswa
                         | Dibuat oleh Puspita Dewi
+
                     </small>
+
                 </div>
 
             </div>
@@ -401,6 +519,7 @@ $role = $_SESSION['role'];
         </main>
 
     </div>
+
 </div>
 
 </body>
