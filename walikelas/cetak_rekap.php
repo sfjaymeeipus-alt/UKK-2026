@@ -1,4 +1,3 @@
-
 <?php
 require_once __DIR__ . "/../middleware/auth.php";
 require_once __DIR__ . "/../config/koneksi.php";
@@ -17,6 +16,15 @@ if (!isset($koneksi) || !$koneksi) {
 $user_id = (int) ($_SESSION['user_id'] ?? 0);
 $nama = $_SESSION['nama'] ?? 'Wali Kelas';
 
+function cekQuery($query, $koneksi, $pesan)
+{
+    if (!$query) {
+        exit($pesan . ": " . mysqli_error($koneksi));
+    }
+
+    return $query;
+}
+
 /* =====================================
    AMBIL DATA GURU
 ===================================== */
@@ -27,11 +35,11 @@ $sql_guru = "
     LIMIT 1
 ";
 
-$query_guru = mysqli_prepare($koneksi, $sql_guru);
-
-if (!$query_guru) {
-    exit("Error query guru: " . mysqli_error($koneksi));
-}
+$query_guru = cekQuery(
+    mysqli_prepare($koneksi, $sql_guru),
+    $koneksi,
+    "Error mengambil data guru"
+);
 
 mysqli_stmt_bind_param($query_guru, "i", $user_id);
 mysqli_stmt_execute($query_guru);
@@ -48,7 +56,7 @@ if (!$data_guru) {
 $guru_id = (int) $data_guru['id'];
 
 /* =====================================
-   CEK WALI KELAS AKTIF
+   AMBIL DAFTAR KELAS WALI
 ===================================== */
 $sql_wali = "
     SELECT
@@ -57,21 +65,25 @@ $sql_wali = "
         k.nama AS nama_kelas,
         ta.nama AS tahun_ajaran
     FROM t_wali_kelas wk
+
     INNER JOIN t_kelas k
         ON k.id = wk.kelas_id
+
     INNER JOIN t_tahun_ajaran ta
         ON ta.id = wk.tahun_ajaran_id
+
     WHERE wk.guru_id = ?
       AND wk.status_aktif = 1
       AND ta.status_aktif = 1
+
     ORDER BY k.nama ASC
 ";
 
-$query_wali = mysqli_prepare($koneksi, $sql_wali);
-
-if (!$query_wali) {
-    exit("Error query wali kelas: " . mysqli_error($koneksi));
-}
+$query_wali = cekQuery(
+    mysqli_prepare($koneksi, $sql_wali),
+    $koneksi,
+    "Error mengambil data wali kelas"
+);
 
 mysqli_stmt_bind_param($query_wali, "i", $guru_id);
 mysqli_stmt_execute($query_wali);
@@ -92,12 +104,12 @@ if (count($daftar_wali) == 0) {
 
 /* =====================================
    AMBIL REKAP PELANGGARAN
-   SESUAI KELAS WALI KELAS
+   BERDASARKAN PENEMPATAN AKTIF
 ===================================== */
 $sql_rekap = "
     SELECT
         ps.nama_siswa,
-        ps.nama_kelas,
+        k.nama AS nama_kelas,
         ps.nama_pelanggaran,
         ps.nama_guru,
         ps.tanggal,
@@ -109,31 +121,38 @@ $sql_rekap = "
 
     FROM t_pelanggaran_siswa ps
 
+    INNER JOIN t_kelas_siswa ks
+        ON ks.siswa_id = ps.siswa_id
+       AND ks.tahun_ajaran_id = ps.tahun_ajaran_id
+       AND ks.status_aktif = 1
+
+    INNER JOIN t_kelas k
+        ON k.id = ks.kelas_id
+
     INNER JOIN t_tahun_ajaran ta
-        ON ta.id = ps.tahun_ajaran_id
+        ON ta.id = ks.tahun_ajaran_id
+       AND ta.status_aktif = 1
 
     WHERE EXISTS (
         SELECT 1
         FROM t_wali_kelas wk
 
         WHERE wk.guru_id = ?
-          AND wk.kelas_id = ps.kelas_id
-          AND wk.tahun_ajaran_id = ps.tahun_ajaran_id
+          AND wk.kelas_id = ks.kelas_id
+          AND wk.tahun_ajaran_id = ks.tahun_ajaran_id
           AND wk.status_aktif = 1
-          AND ta.status_aktif = 1
     )
 
     ORDER BY
-        ps.nama_kelas ASC,
-        ps.nama_siswa ASC,
-        ps.tanggal DESC
+        ps.tanggal ASC,
+        ps.nama_siswa ASC
 ";
 
-$query_rekap = mysqli_prepare($koneksi, $sql_rekap);
-
-if (!$query_rekap) {
-    exit("Error query rekap: " . mysqli_error($koneksi));
-}
+$query_rekap = cekQuery(
+    mysqli_prepare($koneksi, $sql_rekap),
+    $koneksi,
+    "Error mengambil data rekap"
+);
 
 mysqli_stmt_bind_param($query_rekap, "i", $guru_id);
 mysqli_stmt_execute($query_rekap);
@@ -165,8 +184,6 @@ while ($data = mysqli_fetch_assoc($result_rekap)) {
 }
 
 mysqli_stmt_close($query_rekap);
-
-$halamanAktif = basename($_SERVER['PHP_SELF']);
 ?>
 
 <!DOCTYPE html>
@@ -178,6 +195,7 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
 
     <title>Cetak Rekap Pelanggaran - Wali Kelas</title>
 
+    <!-- BOOTSTRAP -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet">
 
@@ -202,6 +220,7 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
                 width: 100% !important;
                 max-width: 100% !important;
                 flex: 0 0 100% !important;
+                margin-left: 0 !important;
             }
 
             .container-fluid {
@@ -230,11 +249,18 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
 <div class="container-fluid">
     <div class="row">
 
-        <!-- SIDEBAR -->
-        <aside class="sidebar col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
+        <!-- SIDEBAR TETAP DIAM -->
+        <aside
+            class="sidebar bg-dark text-white p-3 position-fixed top-0 start-0 vh-100 overflow-auto"
+            style="width:16.666667%; max-width:16.666667%;">
 
-            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
-            <h6 class="fw-bold">Pelanggaran Siswa</h6>
+            <h5 class="fw-bold mb-1">
+                Sistem Informasi
+            </h5>
+
+            <h6 class="fw-bold">
+                Pelanggaran Siswa
+            </h6>
 
             <p class="text-secondary small mb-4">
                 SMK Muhammadiyah Kota Tasikmalaya
@@ -283,7 +309,7 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
         </aside>
 
         <!-- KONTEN UTAMA -->
-        <main class="main-content col-md-9 col-lg-10 p-3 p-md-4">
+        <main class="main-content col-9 col-lg-10 ms-auto p-3 p-md-4">
 
             <!-- HEADER -->
             <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
@@ -429,12 +455,13 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
 
                 </div>
 
-                <!-- TABEL REKAP -->
+                <!-- TABEL REKAP BIASA -->
                 <div class="table-responsive">
 
                     <table class="table table-bordered table-striped align-middle">
 
                         <thead class="table-dark">
+
                             <tr>
                                 <th>No</th>
                                 <th>Nama Siswa</th>
@@ -446,6 +473,7 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
                                 <th>Tindakan</th>
                                 <th>Status</th>
                             </tr>
+
                         </thead>
 
                         <tbody>
@@ -523,7 +551,9 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
                             Tasikmalaya, <?= date('d-m-Y') ?>
                         </p>
 
-                        <p>Wali Kelas</p>
+                        <p>
+                            Wali Kelas
+                        </p>
 
                         <br><br><br>
 

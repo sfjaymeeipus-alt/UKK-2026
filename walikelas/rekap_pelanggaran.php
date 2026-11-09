@@ -1,21 +1,18 @@
-
 <?php
 require_once __DIR__ . "/../middleware/auth.php";
 require_once __DIR__ . "/../config/koneksi.php";
 
-/* =====================================
-   CEK AKSES
-===================================== */
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'guru') {
     exit("Anda tidak memiliki akses.");
+}
+
+if (!isset($koneksi) || !$koneksi) {
+    exit("Koneksi database tidak tersedia.");
 }
 
 $user_id = (int) ($_SESSION['user_id'] ?? 0);
 $nama = $_SESSION['nama'] ?? 'Wali Kelas';
 
-/* =====================================
-   FUNGSI PENGECEKAN QUERY
-===================================== */
 function cekQuery($query, $koneksi, $pesan)
 {
     if (!$query) {
@@ -56,78 +53,90 @@ if (!$data_guru) {
 $guru_id = (int) $data_guru['id'];
 
 /* =====================================
-   CEK AKSES WALI KELAS AKTIF
+   CEK WALI KELAS AKTIF
 ===================================== */
-$sql_akses = "
-    SELECT COUNT(*) AS total
+$sql_wali = "
+    SELECT
+        wk.kelas_id,
+        wk.tahun_ajaran_id,
+        k.nama AS nama_kelas,
+        ta.nama AS tahun_ajaran
     FROM t_wali_kelas wk
+    INNER JOIN t_kelas k
+        ON k.id = wk.kelas_id
     INNER JOIN t_tahun_ajaran ta
         ON ta.id = wk.tahun_ajaran_id
     WHERE wk.guru_id = ?
       AND wk.status_aktif = 1
       AND ta.status_aktif = 1
+    ORDER BY k.nama ASC
 ";
 
-$query_akses = cekQuery(
-    mysqli_prepare($koneksi, $sql_akses),
+$query_wali = cekQuery(
+    mysqli_prepare($koneksi, $sql_wali),
     $koneksi,
-    "Error mengecek akses wali kelas"
+    "Error mengambil data wali kelas"
 );
 
-mysqli_stmt_bind_param($query_akses, "i", $guru_id);
-mysqli_stmt_execute($query_akses);
+mysqli_stmt_bind_param($query_wali, "i", $guru_id);
+mysqli_stmt_execute($query_wali);
 
-$result_akses = mysqli_stmt_get_result($query_akses);
-$akses = mysqli_fetch_assoc($result_akses);
+$result_wali = mysqli_stmt_get_result($query_wali);
 
-mysqli_stmt_close($query_akses);
+$daftar_wali = [];
 
-if ((int) ($akses['total'] ?? 0) < 1) {
+while ($wali = mysqli_fetch_assoc($result_wali)) {
+    $daftar_wali[] = $wali;
+}
+
+mysqli_stmt_close($query_wali);
+
+if (count($daftar_wali) == 0) {
     exit("Anda bukan wali kelas aktif.");
 }
 
 /* =====================================
    STATISTIK PELANGGARAN
-   KHUSUS KELAS YANG DIAMPU
+   BERDASARKAN PENEMPATAN SISWA AKTIF
 ===================================== */
 $sql_statistik = "
     SELECT
         COUNT(*) AS total_pelanggaran,
-
         COALESCE(SUM(ps.poin), 0) AS total_poin,
 
-        COALESCE(
-            SUM(
-                CASE
-                    WHEN ps.status = 'Selesai' THEN 1
-                    ELSE 0
-                END
-            ), 0
-        ) AS total_selesai,
+        COALESCE(SUM(
+            CASE
+                WHEN ps.status = 'Selesai' THEN 1
+                ELSE 0
+            END
+        ), 0) AS total_selesai,
 
-        COALESCE(
-            SUM(
-                CASE
-                    WHEN ps.status IS NULL
-                         OR ps.status <> 'Selesai'
-                    THEN 1
-                    ELSE 0
-                END
-            ), 0
-        ) AS total_proses
+        COALESCE(SUM(
+            CASE
+                WHEN ps.status IS NULL
+                     OR ps.status <> 'Selesai'
+                THEN 1
+                ELSE 0
+            END
+        ), 0) AS total_proses
 
     FROM t_pelanggaran_siswa ps
 
     WHERE EXISTS (
         SELECT 1
-        FROM t_wali_kelas wk
+        FROM t_kelas_siswa ks
+
+        INNER JOIN t_wali_kelas wk
+            ON wk.kelas_id = ks.kelas_id
+           AND wk.tahun_ajaran_id = ks.tahun_ajaran_id
 
         INNER JOIN t_tahun_ajaran ta
-            ON ta.id = wk.tahun_ajaran_id
+            ON ta.id = ks.tahun_ajaran_id
 
-        WHERE wk.guru_id = ?
-          AND wk.kelas_id = ps.kelas_id
-          AND wk.tahun_ajaran_id = ps.tahun_ajaran_id
+        WHERE ks.siswa_id = ps.siswa_id
+          AND ks.tahun_ajaran_id = ps.tahun_ajaran_id
+          AND ks.status_aktif = 1
+          AND wk.guru_id = ?
           AND wk.status_aktif = 1
           AND ta.status_aktif = 1
     )
@@ -147,9 +156,6 @@ $statistik = mysqli_fetch_assoc($result_statistik);
 
 mysqli_stmt_close($query_statistik);
 
-/* =====================================
-   TOTAL STATISTIK
-===================================== */
 $total_pelanggaran = (int) ($statistik['total_pelanggaran'] ?? 0);
 $total_poin = (int) ($statistik['total_poin'] ?? 0);
 $total_selesai = (int) ($statistik['total_selesai'] ?? 0);
@@ -157,13 +163,13 @@ $total_proses = (int) ($statistik['total_proses'] ?? 0);
 
 /* =====================================
    RIWAYAT PELANGGARAN
-   KHUSUS KELAS WALI KELAS
+   KELAS DIAMBIL DARI PENEMPATAN AKTIF
 ===================================== */
 $sql_rekap = "
     SELECT
         ps.id,
         ps.nama_siswa,
-        ps.nama_kelas,
+        k.nama AS nama_kelas,
         ps.nama_pelanggaran,
         ps.nama_guru,
         ps.tanggal,
@@ -175,24 +181,30 @@ $sql_rekap = "
 
     FROM t_pelanggaran_siswa ps
 
+    INNER JOIN t_kelas_siswa ks
+        ON ks.siswa_id = ps.siswa_id
+       AND ks.tahun_ajaran_id = ps.tahun_ajaran_id
+       AND ks.status_aktif = 1
+
+    INNER JOIN t_kelas k
+        ON k.id = ks.kelas_id
+
     INNER JOIN t_tahun_ajaran ta
-        ON ta.id = ps.tahun_ajaran_id
+        ON ta.id = ks.tahun_ajaran_id
+       AND ta.status_aktif = 1
 
     WHERE EXISTS (
         SELECT 1
         FROM t_wali_kelas wk
-
         WHERE wk.guru_id = ?
-          AND wk.kelas_id = ps.kelas_id
-          AND wk.tahun_ajaran_id = ps.tahun_ajaran_id
+          AND wk.kelas_id = ks.kelas_id
+          AND wk.tahun_ajaran_id = ks.tahun_ajaran_id
           AND wk.status_aktif = 1
-          AND wk.tahun_ajaran_id = ta.id
-          AND ta.status_aktif = 1
     )
 
     ORDER BY
-        ps.tanggal DESC,
-        ps.id DESC
+        ps.tanggal ASC,
+        ps.id ASC
 ";
 
 $query_rekap = cekQuery(
@@ -205,33 +217,29 @@ mysqli_stmt_bind_param($query_rekap, "i", $guru_id);
 mysqli_stmt_execute($query_rekap);
 
 $daftar_rekap = mysqli_stmt_get_result($query_rekap);
-
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
 
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>Rekap Pelanggaran - Wali Kelas</title>
 
+    <!-- BOOTSTRAP -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet">
-
 </head>
 
 <body class="bg-light">
 
 <div class="container-fluid">
-
     <div class="row">
 
-        <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
-
+        <!-- SIDEBAR TETAP DIAM -->
+        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
             <h5 class="fw-bold mb-1">
                 Sistem Informasi
             </h5>
@@ -287,13 +295,12 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
         </aside>
 
         <!-- KONTEN UTAMA -->
-        <main class="col-md-9 col-lg-10 p-0">
+        <main class="col-9 col-lg-10 ms-auto p-0">
 
             <!-- HEADER -->
             <header class="bg-white border-bottom p-3 p-md-4 d-flex justify-content-between align-items-center">
 
                 <div>
-
                     <h4 class="fw-bold mb-1">
                         Rekap Pelanggaran
                     </h4>
@@ -301,11 +308,9 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
                     <small class="text-secondary">
                         Rekap pelanggaran siswa kelas yang Anda ampu
                     </small>
-
                 </div>
 
                 <div class="text-end">
-
                     <div class="fw-bold">
                         <?= htmlspecialchars($nama) ?>
                     </div>
@@ -313,7 +318,6 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
                     <small class="text-secondary">
                         Wali Kelas
                     </small>
-
                 </div>
 
             </header>
@@ -324,11 +328,8 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
                 <div class="row g-3 mb-4">
 
                     <div class="col-12 col-md-6 col-xl-3">
-
                         <div class="card border-0 shadow-sm h-100">
-
                             <div class="card-body">
-
                                 <p class="text-secondary small mb-2">
                                     Pelanggaran Selesai
                                 </p>
@@ -336,19 +337,13 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
                                 <h4 class="fw-bold text-success">
                                     <?= number_format($total_selesai, 0, ',', '.') ?>
                                 </h4>
-
                             </div>
-
                         </div>
-
                     </div>
 
                     <div class="col-12 col-md-6 col-xl-3">
-
                         <div class="card border-0 shadow-sm h-100">
-
                             <div class="card-body">
-
                                 <p class="text-secondary small mb-2">
                                     Sedang Diproses
                                 </p>
@@ -356,19 +351,13 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
                                 <h4 class="fw-bold text-warning">
                                     <?= number_format($total_proses, 0, ',', '.') ?>
                                 </h4>
-
                             </div>
-
                         </div>
-
                     </div>
 
                     <div class="col-12 col-md-6 col-xl-3">
-
                         <div class="card border-0 shadow-sm h-100">
-
                             <div class="card-body">
-
                                 <p class="text-secondary small mb-2">
                                     Total Poin
                                 </p>
@@ -376,19 +365,13 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
                                 <h4 class="fw-bold text-primary">
                                     <?= number_format($total_poin, 0, ',', '.') ?>
                                 </h4>
-
                             </div>
-
                         </div>
-
                     </div>
 
                     <div class="col-12 col-md-6 col-xl-3">
-
                         <div class="card border-0 shadow-sm h-100">
-
                             <div class="card-body">
-
                                 <p class="text-secondary small mb-2">
                                     Total Pelanggaran
                                 </p>
@@ -396,11 +379,8 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
                                 <h4 class="fw-bold text-danger">
                                     <?= number_format($total_pelanggaran, 0, ',', '.') ?>
                                 </h4>
-
                             </div>
-
                         </div>
-
                     </div>
 
                 </div>
@@ -409,7 +389,6 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
 
                     <div>
-
                         <h5 class="fw-bold mb-1">
                             Riwayat Pelanggaran Siswa
                         </h5>
@@ -417,7 +396,6 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
                         <p class="text-secondary mb-0">
                             Data hanya berasal dari kelas yang Anda ampu.
                         </p>
-
                     </div>
 
                     <a href="cetak_rekap.php"
@@ -505,13 +483,9 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
                                     <?php } else { ?>
 
                                         <tr>
-
                                             <td colspan="9" class="text-center py-4">
-
                                                 Belum ada data pelanggaran pada kelas yang Anda ampu.
-
                                             </td>
-
                                         </tr>
 
                                     <?php } ?>
@@ -528,9 +502,7 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
 
                 <!-- FOOTER -->
                 <footer class="text-center text-secondary small mt-4">
-
                     Sistem Informasi Pelanggaran Siswa &copy; 2026
-
                 </footer>
 
             </section>
@@ -538,7 +510,6 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
         </main>
 
     </div>
-
 </div>
 
 </body>

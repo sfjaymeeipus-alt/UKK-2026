@@ -342,6 +342,10 @@ if ($role == 'guru') {
                                         Bootstrap
                                     </span>
 
+                                     <span class="badge border text-dark bg-light p-2">
+                                        CSS
+                                    </span>
+
                                 </div>
 
                                 <a href="dashboard.php"

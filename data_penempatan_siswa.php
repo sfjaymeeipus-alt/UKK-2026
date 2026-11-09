@@ -220,25 +220,33 @@ $query_tahun_tambah = mysqli_query(
 
 $query = "
     SELECT
-        ks.id,
-        ks.siswa_id,
-        ks.kelas_id,
-        ks.tahun_ajaran_id,
+        s.id AS siswa_id,
         s.nis,
         s.nama AS nama_siswa,
+
+        ks.id,
+        ks.kelas_id,
+        ks.tahun_ajaran_id,
+
         k.nama AS nama_kelas,
         ta.nama AS tahun_ajaran,
+
         ks.tanggal_mulai,
         ks.tanggal_selesai,
         ks.status_aktif
-    FROM t_kelas_siswa ks
-    INNER JOIN t_siswa s
-        ON ks.siswa_id = s.id
-    INNER JOIN t_kelas k
+
+    FROM t_siswa s
+
+    LEFT JOIN t_kelas_siswa ks
+        ON s.id = ks.siswa_id
+
+    LEFT JOIN t_kelas k
         ON ks.kelas_id = k.id
-    INNER JOIN t_tahun_ajaran ta
+
+    LEFT JOIN t_tahun_ajaran ta
         ON ks.tahun_ajaran_id = ta.id
-    ORDER BY ks.id ASC
+
+    ORDER BY s.id ASC
 ";
 
 $result = mysqli_query($koneksi, $query);
@@ -509,57 +517,110 @@ if (!$result) {
                                         </td>
 
                                         <td>
-                                            <?= htmlspecialchars($data['nama_kelas'] ?? ''); ?>
-                                        </td>
-
-                                        <td>
-                                            <?= htmlspecialchars($data['tahun_ajaran'] ?? ''); ?>
-                                        </td>
-
-                                        <td>
-                                            <?= htmlspecialchars($data['tanggal_mulai'] ?? ''); ?>
-                                        </td>
-
-                                        <td>
-                                            <?= !empty($data['tanggal_selesai'])
-                                                ? htmlspecialchars($data['tanggal_selesai'])
-                                                : "-"; ?>
-                                        </td>
-
-                                        <td class="text-center">
                                             <?php
-                                            if ($data['status_aktif'] == 1) {
-                                                echo '<span class="badge bg-success">Aktif</span>';
+                                            if (!empty($data['nama_kelas'])) {
+                                                echo htmlspecialchars($data['nama_kelas']);
                                             } else {
-                                                echo '<span class="badge bg-danger">Tidak Aktif</span>';
+                                                echo '<span class="badge bg-secondary">Belum Ditempatkan</span>';
+                                            }
+                                            ?>
+                                        </td>
+
+                                        <td>
+                                            <?php
+                                            if (!empty($data['tahun_ajaran'])) {
+                                                echo htmlspecialchars($data['tahun_ajaran']);
+                                            } else {
+                                                echo '<span class="badge bg-secondary">Belum Ditempatkan</span>';
+                                            }
+                                            ?>
+                                        </td>
+
+                                        <td>
+                                            <?php
+                                            if (!empty($data['tanggal_mulai'])) {
+                                                echo htmlspecialchars($data['tanggal_mulai']);
+                                            } else {
+                                                echo "-";
+                                            }
+                                            ?>
+                                        </td>
+
+                                        <td>
+                                            <?php
+                                            if (!empty($data['tanggal_selesai'])) {
+                                                echo htmlspecialchars($data['tanggal_selesai']);
+                                            } else {
+                                                echo "-";
                                             }
                                             ?>
                                         </td>
 
                                         <td class="text-center">
-                                            <div class="d-flex justify-content-center gap-1">
+                                            <?php
+
+                                            if (empty($data['id'])) {
+
+                                                echo '<span class="badge bg-secondary">
+                                                        Belum Ditempatkan
+                                                      </span>';
+
+                                            } elseif ($data['status_aktif'] == 1) {
+
+                                                echo '<span class="badge bg-success">
+                                                        Aktif
+                                                      </span>';
+
+                                            } else {
+
+                                                echo '<span class="badge bg-danger">
+                                                        Tidak Aktif
+                                                      </span>';
+
+                                            }
+
+                                            ?>
+                                        </td>
+
+                                        <td class="text-center">
+
+                                            <?php if (!empty($data['id'])) { ?>
+
+                                                <div class="d-flex justify-content-center gap-1">
+
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-warning btn-sm tombol-edit"
+                                                        data-id="<?= (int) $data['id']; ?>"
+                                                        data-siswa="<?= (int) $data['siswa_id']; ?>"
+                                                        data-kelas="<?= (int) $data['kelas_id']; ?>"
+                                                        data-tahun="<?= (int) $data['tahun_ajaran_id']; ?>"
+                                                        data-mulai="<?= htmlspecialchars($data['tanggal_mulai'], ENT_QUOTES); ?>"
+                                                        data-selesai="<?= htmlspecialchars($data['tanggal_selesai'] ?? '', ENT_QUOTES); ?>"
+                                                        data-status="<?= (int) $data['status_aktif']; ?>">
+                                                        Edit
+                                                    </button>
+
+                                                    <a
+                                                        href="hapus_penempatan_siswa.php?id=<?= urlencode($data['id']); ?>"
+                                                        class="btn btn-danger btn-sm"
+                                                        onclick="return confirm('Yakin ingin menghapus data penempatan siswa ini?');">
+                                                        Hapus
+                                                    </a>
+
+                                                </div>
+
+                                            <?php } else { ?>
 
                                                 <button
                                                     type="button"
-                                                    class="btn btn-warning btn-sm tombol-edit"
-                                                    data-id="<?= (int) $data['id']; ?>"
-                                                    data-siswa="<?= (int) $data['siswa_id']; ?>"
-                                                    data-kelas="<?= (int) $data['kelas_id']; ?>"
-                                                    data-tahun="<?= (int) $data['tahun_ajaran_id']; ?>"
-                                                    data-mulai="<?= htmlspecialchars($data['tanggal_mulai'], ENT_QUOTES); ?>"
-                                                    data-selesai="<?= htmlspecialchars($data['tanggal_selesai'] ?? '', ENT_QUOTES); ?>"
-                                                    data-status="<?= (int) $data['status_aktif']; ?>">
-                                                    Edit
+                                                    class="btn btn-primary btn-sm tombol-tempatkan"
+                                                    data-siswa="<?= (int) $data['siswa_id']; ?>">
+                                                    Tempatkan
                                                 </button>
 
-                                                <a
-                                                    href="hapus_penempatan_siswa.php?id=<?= urlencode($data['id']); ?>"
-                                                    class="btn btn-danger btn-sm"
-                                                    onclick="return confirm('Yakin ingin menghapus data penempatan siswa ini?');">
-                                                    Hapus
-                                                </a>
+                                            <?php } ?>
 
-                                            </div>
                                         </td>
                                     </tr>
 
@@ -614,114 +675,174 @@ if (!$result) {
             <form method="POST" action="">
 
                 <div class="modal-header">
+
                     <h5 class="modal-title fw-bold" id="judulModalTambah">
                         Tambah Penempatan Siswa
                     </h5>
 
-                    <button type="button" class="btn-close"
-                            data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                    </button>
+
                 </div>
 
                 <div class="modal-body">
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Nama Siswa</label>
 
-                        <select name="siswa_id" class="form-select" required>
-                            <option value="">Pilih Siswa</option>
+                        <label class="form-label fw-semibold">
+                            Nama Siswa
+                        </label>
+
+                        <select name="siswa_id"
+                                class="form-select"
+                                required>
+
+                            <option value="">
+                                Pilih Siswa
+                            </option>
 
                             <?php
                             while ($siswa = mysqli_fetch_assoc($query_siswa_tambah)) {
                             ?>
+
                                 <option value="<?= (int) $siswa['id']; ?>">
                                     <?= htmlspecialchars($siswa['nis'] . ' - ' . $siswa['nama']); ?>
                                 </option>
+
                             <?php
                             }
                             ?>
 
                         </select>
+
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Kelas</label>
 
-                        <select name="kelas_id" class="form-select" required>
-                            <option value="">Pilih Kelas</option>
+                        <label class="form-label fw-semibold">
+                            Kelas
+                        </label>
+
+                        <select name="kelas_id"
+                                class="form-select"
+                                required>
+
+                            <option value="">
+                                Pilih Kelas
+                            </option>
 
                             <?php
                             while ($kelas = mysqli_fetch_assoc($query_kelas_tambah)) {
                             ?>
+
                                 <option value="<?= (int) $kelas['id']; ?>">
                                     <?= htmlspecialchars($kelas['nama']); ?>
                                 </option>
+
                             <?php
                             }
                             ?>
 
                         </select>
+
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Tahun Ajaran</label>
 
-                        <select name="tahun_ajaran_id" class="form-select" required>
-                            <option value="">Pilih Tahun Ajaran</option>
+                        <label class="form-label fw-semibold">
+                            Tahun Ajaran
+                        </label>
+
+                        <select name="tahun_ajaran_id"
+                                class="form-select"
+                                required>
+
+                            <option value="">
+                                Pilih Tahun Ajaran
+                            </option>
 
                             <?php
                             while ($tahun = mysqli_fetch_assoc($query_tahun_tambah)) {
                             ?>
+
                                 <option value="<?= (int) $tahun['id']; ?>">
                                     <?= htmlspecialchars($tahun['nama']); ?>
                                 </option>
+
                             <?php
                             }
                             ?>
 
                         </select>
+
                     </div>
 
                     <div class="row">
 
                         <div class="col-md-6 mb-3">
+
                             <label class="form-label fw-semibold">
                                 Tanggal Mulai
                             </label>
 
-                            <input type="date" name="tanggal_mulai"
-                                   class="form-control" required>
+                            <input type="date"
+                                   name="tanggal_mulai"
+                                   class="form-control"
+                                   required>
+
                         </div>
 
                         <div class="col-md-6 mb-3">
+
                             <label class="form-label fw-semibold">
                                 Tanggal Selesai
                             </label>
 
-                            <input type="date" name="tanggal_selesai"
+                            <input type="date"
+                                   name="tanggal_selesai"
                                    class="form-control">
+
                         </div>
 
                     </div>
 
                     <div class="mb-2">
-                        <label class="form-label fw-semibold">Status</label>
 
-                        <select name="status_aktif" class="form-select" required>
-                            <option value="1">Aktif</option>
-                            <option value="0">Tidak Aktif</option>
+                        <label class="form-label fw-semibold">
+                            Status
+                        </label>
+
+                        <select name="status_aktif"
+                                class="form-select"
+                                required>
+
+                            <option value="1">
+                                Aktif
+                            </option>
+
+                            <option value="0">
+                                Tidak Aktif
+                            </option>
+
                         </select>
+
                     </div>
 
                 </div>
 
                 <div class="modal-footer">
 
-                    <button type="button" class="btn btn-secondary"
+                    <button type="button"
+                            class="btn btn-secondary"
                             data-bs-dismiss="modal">
                         Batal
                     </button>
 
-                    <button type="submit" name="simpan_tambah"
+                    <button type="submit"
+                            name="simpan_tambah"
                             class="btn btn-primary">
                         Simpan
                     </button>
@@ -747,125 +868,184 @@ if (!$result) {
             <form method="POST" action="">
 
                 <div class="modal-header">
+
                     <h5 class="modal-title fw-bold" id="judulModalEdit">
                         Edit Penempatan Siswa
                     </h5>
 
-                    <button type="button" class="btn-close"
-                            data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                    </button>
+
                 </div>
 
                 <div class="modal-body">
 
-                    <input type="hidden" name="id" id="edit_id">
+                    <input type="hidden"
+                           name="id"
+                           id="edit_id">
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Nama Siswa</label>
 
-                        <select name="siswa_id" id="edit_siswa"
-                                class="form-select" required>
+                        <label class="form-label fw-semibold">
+                            Nama Siswa
+                        </label>
 
-                            <option value="">Pilih Siswa</option>
+                        <select name="siswa_id"
+                                id="edit_siswa"
+                                class="form-select"
+                                required>
+
+                            <option value="">
+                                Pilih Siswa
+                            </option>
 
                             <?php
                             while ($siswa = mysqli_fetch_assoc($query_siswa)) {
                             ?>
+
                                 <option value="<?= (int) $siswa['id']; ?>">
                                     <?= htmlspecialchars($siswa['nis'] . ' - ' . $siswa['nama']); ?>
                                 </option>
+
                             <?php
                             }
                             ?>
 
                         </select>
+
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Kelas</label>
 
-                        <select name="kelas_id" id="edit_kelas"
-                                class="form-select" required>
+                        <label class="form-label fw-semibold">
+                            Kelas
+                        </label>
 
-                            <option value="">Pilih Kelas</option>
+                        <select name="kelas_id"
+                                id="edit_kelas"
+                                class="form-select"
+                                required>
+
+                            <option value="">
+                                Pilih Kelas
+                            </option>
 
                             <?php
                             while ($kelas = mysqli_fetch_assoc($query_kelas)) {
                             ?>
+
                                 <option value="<?= (int) $kelas['id']; ?>">
                                     <?= htmlspecialchars($kelas['nama']); ?>
                                 </option>
+
                             <?php
                             }
                             ?>
 
                         </select>
+
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Tahun Ajaran</label>
 
-                        <select name="tahun_ajaran_id" id="edit_tahun"
-                                class="form-select" required>
+                        <label class="form-label fw-semibold">
+                            Tahun Ajaran
+                        </label>
 
-                            <option value="">Pilih Tahun Ajaran</option>
+                        <select name="tahun_ajaran_id"
+                                id="edit_tahun"
+                                class="form-select"
+                                required>
+
+                            <option value="">
+                                Pilih Tahun Ajaran
+                            </option>
 
                             <?php
                             while ($tahun = mysqli_fetch_assoc($query_tahun)) {
                             ?>
+
                                 <option value="<?= (int) $tahun['id']; ?>">
                                     <?= htmlspecialchars($tahun['nama']); ?>
                                 </option>
+
                             <?php
                             }
                             ?>
 
                         </select>
+
                     </div>
 
                     <div class="row">
 
                         <div class="col-md-6 mb-3">
+
                             <label class="form-label fw-semibold">
                                 Tanggal Mulai
                             </label>
 
-                            <input type="date" name="tanggal_mulai"
-                                   id="edit_mulai" class="form-control" required>
+                            <input type="date"
+                                   name="tanggal_mulai"
+                                   id="edit_mulai"
+                                   class="form-control"
+                                   required>
+
                         </div>
 
                         <div class="col-md-6 mb-3">
+
                             <label class="form-label fw-semibold">
                                 Tanggal Selesai
                             </label>
 
-                            <input type="date" name="tanggal_selesai"
-                                   id="edit_selesai" class="form-control">
+                            <input type="date"
+                                   name="tanggal_selesai"
+                                   id="edit_selesai"
+                                   class="form-control">
+
                         </div>
 
                     </div>
 
                     <div class="mb-2">
-                        <label class="form-label fw-semibold">Status</label>
 
-                        <select name="status_aktif" id="edit_status"
-                                class="form-select" required>
+                        <label class="form-label fw-semibold">
+                            Status
+                        </label>
 
-                            <option value="1">Aktif</option>
-                            <option value="0">Tidak Aktif</option>
+                        <select name="status_aktif"
+                                id="edit_status"
+                                class="form-select"
+                                required>
+
+                            <option value="1">
+                                Aktif
+                            </option>
+
+                            <option value="0">
+                                Tidak Aktif
+                            </option>
 
                         </select>
+
                     </div>
 
                 </div>
 
                 <div class="modal-footer">
 
-                    <button type="button" class="btn btn-secondary"
+                    <button type="button"
+                            class="btn btn-secondary"
                             data-bs-dismiss="modal">
                         Batal
                     </button>
 
-                    <button type="submit" name="simpan_edit"
+                    <button type="submit"
+                            name="simpan_edit"
                             class="btn btn-primary">
                         Simpan Perubahan
                     </button>
@@ -888,7 +1068,9 @@ if (!$result) {
 
     <div id="notifikasiToast"
          class="toast align-items-center text-bg-<?= htmlspecialchars($jenis_notifikasi); ?> border-0"
-         role="alert" aria-live="assertive" aria-atomic="true">
+         role="alert"
+         aria-live="assertive"
+         aria-atomic="true">
 
         <div class="d-flex">
 
@@ -962,7 +1144,7 @@ $(document).ready(function () {
 
 
     // MODAL EDIT MELAYANG
-    $('.tombol-edit').on('click', function () {
+    $(document).on('click', '.tombol-edit', function () {
 
         $('#edit_id').val($(this).data('id'));
         $('#edit_siswa').val($(this).data('siswa'));
@@ -974,6 +1156,23 @@ $(document).ready(function () {
 
         var modal = new bootstrap.Modal(
             document.getElementById('modalEditPenempatan')
+        );
+
+        modal.show();
+
+    });
+
+
+    // TOMBOL TEMPATKAN
+    $(document).on('click', '.tombol-tempatkan', function () {
+
+        var siswaId = $(this).attr('data-siswa');
+
+        $('#modalTambahPenempatan select[name="siswa_id"]')
+            .val(siswaId);
+
+        var modal = new bootstrap.Modal(
+            document.getElementById('modalTambahPenempatan')
         );
 
         modal.show();
@@ -998,4 +1197,5 @@ $(document).ready(function () {
 </script>
 
 </body>
+
 </html>

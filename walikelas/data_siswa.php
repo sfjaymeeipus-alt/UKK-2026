@@ -1,4 +1,3 @@
-
 <?php
 require_once __DIR__ . "/../middleware/auth.php";
 require_once __DIR__ . "/../config/koneksi.php";
@@ -100,6 +99,7 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
 
     <title>Data Siswa - Wali Kelas</title>
 
+    <!-- BOOTSTRAP -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet">
 </head>
@@ -110,7 +110,7 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
     <div class="row">
 
         <!-- SIDEBAR TETAP DIAM -->
-        <aside class="col-3 col-lg-2 bg-dark text-white p-3 position-fixed top-0 start-0 vh-100 overflow-auto">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-fixed top-0 start-0 vh-100 overflow-auto">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
@@ -161,7 +161,7 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
 
         </aside>
 
-        <!-- KONTEN BISA DI-SCROLL -->
+        <!-- KONTEN -->
         <main class="col-9 col-lg-10 ms-auto p-0">
 
             <!-- HEADER -->
@@ -200,9 +200,11 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
 
                         <div class="table-responsive">
 
+                            <!-- TABEL BIASA -->
                             <table class="table table-bordered table-striped align-middle">
 
                                 <thead class="table-dark">
+
                                     <tr>
                                         <th>No</th>
                                         <th>NIS</th>
@@ -214,6 +216,7 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                                         <th>Tahun Ajaran</th>
                                         <th>Status</th>
                                     </tr>
+
                                 </thead>
 
                                 <tbody>
@@ -225,7 +228,10 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                                         <?php while ($siswa = mysqli_fetch_assoc($daftar_siswa)) { ?>
 
                                             <tr>
-                                                <td><?= $no++ ?></td>
+
+                                                <td>
+                                                    <?= $no++ ?>
+                                                </td>
 
                                                 <td>
                                                     <?= htmlspecialchars($siswa['nis'] ?? '') ?>
@@ -260,6 +266,7 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                                                         Terdaftar
                                                     </span>
                                                 </td>
+
                                             </tr>
 
                                         <?php } ?>
@@ -281,6 +288,7 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                         </div>
 
                     </div>
+
                 </div>
 
                 <!-- FOOTER -->

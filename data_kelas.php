@@ -155,7 +155,7 @@ if (isset($_POST['simpan_edit'])) {
 
 
 // MENGAMBIL DATA KELAS
-$query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id DESC");
+$query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
 ?>
 
