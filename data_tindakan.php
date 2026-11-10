@@ -1,33 +1,82 @@
-
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
 
 if (
     !isset($_SESSION['role']) ||
-    ($_SESSION['role'] != 'admin' && $_SESSION['role'] != 'guru')
+    !in_array($_SESSION['role'], ['admin', 'guru'])
 ) {
-    echo "Anda tidak memiliki akses";
-    exit;
+    exit("Anda tidak memiliki akses");
 }
 
 $nama = $_SESSION['nama'] ?? 'Pengguna';
 $role = $_SESSION['role'];
 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
+/* =====================================
+   MEMBERSIHKAN NAMA KATEGORI
+   CONTOH: TERLAMBAT 1
+   MENJADI: TERLAMBAT
+===================================== */
+
+function bersihkanNamaPelanggaran($nama)
+{
+    return trim(preg_replace('/\s+[0-9]+$/', '', $nama));
+}
+
+/* =====================================
+   MENGAMBIL DATA TINDAKAN
+   NAMA PELANGGARAN DARI KATEGORI
+   NAMA GURU DARI TABEL GURU
+===================================== */
+
 $query = mysqli_query($koneksi, "
     SELECT
-        id,
-        nama_siswa,
-        nama_kelas,
-        nama_pelanggaran,
-        nama_guru,
-        tanggal,
-        keterangan,
-        poin,
-        tindakan,
-        status
-    FROM t_pelanggaran_siswa
-    ORDER BY id DESC
+        ps.id,
+        ps.nama_siswa,
+        ps.nama_kelas,
+
+        CASE
+            WHEN pk.nama IS NOT NULL THEN pk.nama
+            WHEN ps.nama_pelanggaran IS NOT NULL
+                 AND ps.nama_pelanggaran != '0'
+                 AND ps.nama_pelanggaran != ''
+                THEN ps.nama_pelanggaran
+            WHEN p.nama IS NOT NULL THEN p.nama
+            ELSE '-'
+        END AS nama_pelanggaran,
+
+        CASE
+            WHEN g.nama IS NOT NULL THEN g.nama
+            WHEN ps.nama_guru IS NOT NULL
+                 AND ps.nama_guru != '0'
+                 AND ps.nama_guru != ''
+                THEN ps.nama_guru
+            ELSE '-'
+        END AS nama_guru,
+
+        ps.tanggal,
+        ps.keterangan,
+        ps.poin,
+        ps.tindakan,
+        ps.status
+
+    FROM t_pelanggaran_siswa ps
+
+    LEFT JOIN t_pelanggaran p
+        ON p.id = ps.pelanggaran_id
+
+    LEFT JOIN t_pelanggaran_kategori pk
+        ON pk.id = COALESCE(
+            NULLIF(ps.pelanggaran_kategori_id, 0),
+            p.pelanggaran_kategori_id
+        )
+
+    LEFT JOIN t_guru g
+        ON g.id = ps.guru_id
+
+    ORDER BY ps.id DESC
 ");
 
 if (!$query) {
@@ -44,11 +93,9 @@ if (!$query) {
 
     <title>Data Tindakan - Sistem Informasi Pelanggaran Siswa</title>
 
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet">
 
-    <!-- DataTables Bootstrap 5 -->
     <link href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
           rel="stylesheet">
 </head>
@@ -136,6 +183,7 @@ if (!$query) {
                 <div class="d-flex align-items-center gap-2">
 
                     <div class="text-end">
+
                         <div class="fw-bold">
                             <?= htmlspecialchars($nama); ?>
                         </div>
@@ -143,13 +191,16 @@ if (!$query) {
                         <small class="text-secondary">
                             <?= htmlspecialchars(ucfirst($role)); ?>
                         </small>
+
                     </div>
 
                     <div class="bg-primary-subtle text-primary rounded-circle
                                 d-flex justify-content-center align-items-center
                                 fw-bold flex-shrink-0"
                          style="width: 42px; height: 42px;">
-                        <?= strtoupper(substr($nama, 0, 1)); ?>
+
+                        <?= htmlspecialchars(strtoupper(substr($nama, 0, 1))); ?>
+
                     </div>
 
                 </div>
@@ -159,7 +210,6 @@ if (!$query) {
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                <!-- KARTU TABEL -->
                 <div class="card border-0 shadow-sm rounded-3">
 
                     <div class="card-header bg-white p-3 p-md-4
@@ -167,6 +217,7 @@ if (!$query) {
                                 flex-wrap gap-3">
 
                         <div>
+
                             <h5 class="fw-bold mb-1">
                                 Daftar Tindakan Siswa
                             </h5>
@@ -174,6 +225,7 @@ if (!$query) {
                             <small class="text-secondary">
                                 Informasi siswa, pelanggaran, poin, dan status tindakan.
                             </small>
+
                         </div>
 
                         <span class="badge bg-primary fs-6">
@@ -192,6 +244,7 @@ if (!$query) {
                                           align-middle mb-0">
 
                                 <thead class="table-dark">
+
                                     <tr>
                                         <th>No</th>
                                         <th>Nama Siswa</th>
@@ -204,17 +257,30 @@ if (!$query) {
                                         <th>Tindakan</th>
                                         <th>Status</th>
                                     </tr>
+
                                 </thead>
 
                                 <tbody>
+
                                     <?php
                                     $no = 1;
 
                                     if (mysqli_num_rows($query) > 0) {
+
                                         while ($data = mysqli_fetch_assoc($query)) {
+
+                                            $namaPelanggaran = bersihkanNamaPelanggaran(
+                                                $data['nama_pelanggaran'] ?? '-'
+                                            );
+
+                                            $namaGuru = $data['nama_guru'] ?? '-';
                                     ?>
+
                                         <tr>
-                                            <td><?= $no++; ?></td>
+
+                                            <td>
+                                                <?= $no++; ?>
+                                            </td>
 
                                             <td>
                                                 <?= htmlspecialchars($data['nama_siswa'] ?? '-'); ?>
@@ -225,11 +291,11 @@ if (!$query) {
                                             </td>
 
                                             <td>
-                                                <?= htmlspecialchars($data['nama_pelanggaran'] ?? '-'); ?>
+                                                <?= htmlspecialchars($namaPelanggaran); ?>
                                             </td>
 
                                             <td>
-                                                <?= htmlspecialchars($data['nama_guru'] ?? '-'); ?>
+                                                <?= htmlspecialchars($namaGuru); ?>
                                             </td>
 
                                             <td>
@@ -249,6 +315,7 @@ if (!$query) {
                                             </td>
 
                                             <td>
+
                                                 <?php
                                                 $status = $data['status'] ?? '-';
                                                 $warnaStatus = 'secondary';
@@ -265,21 +332,26 @@ if (!$query) {
                                                 <span class="badge bg-<?= $warnaStatus; ?>">
                                                     <?= htmlspecialchars($status); ?>
                                                 </span>
+
                                             </td>
+
                                         </tr>
+
                                     <?php
                                         }
+
                                     } else {
                                     ?>
+
                                         <tr>
                                             <td colspan="10"
                                                 class="text-center text-secondary py-4">
                                                 Belum ada data tindakan siswa.
                                             </td>
                                         </tr>
-                                    <?php
-                                    }
-                                    ?>
+
+                                    <?php } ?>
+
                                 </tbody>
 
                             </table>
@@ -290,10 +362,12 @@ if (!$query) {
 
                     <!-- BAGIAN BAWAH -->
                     <div class="card-footer bg-white p-3">
+
                         <a href="dashboard.php"
                            class="btn btn-outline-secondary btn-sm">
                             Kembali ke Dashboard
                         </a>
+
                     </div>
 
                 </div>
@@ -310,30 +384,44 @@ if (!$query) {
     </div>
 </div>
 
-<!-- jQuery -->
+<!-- JAVASCRIPT -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-<!-- DataTables -->
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
+
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
 
 <script>
 $(document).ready(function () {
+
     $('#tabelTindakan').DataTable({
+
         pageLength: 10,
+
         lengthMenu: [5, 10, 25, 50, 100],
+
         ordering: true,
+
         searching: true,
+
         paging: true,
+
         info: true,
 
         language: {
+
             search: "Cari data:",
+
             lengthMenu: "Tampilkan _MENU_ data",
+
             info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+
             infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+
             infoFiltered: "(difilter dari _MAX_ total data)",
+
             zeroRecords: "Data tindakan tidak ditemukan",
+
             emptyTable: "Belum ada data tindakan",
 
             paginate: {
@@ -342,8 +430,11 @@ $(document).ready(function () {
                 next: "Berikutnya",
                 previous: "Sebelumnya"
             }
+
         }
+
     });
+
 });
 </script>
 

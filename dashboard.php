@@ -1,4 +1,3 @@
-
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -7,7 +6,11 @@ $role = $_SESSION['role'] ?? '';
 $nama = $_SESSION['nama'] ?? 'Pengguna';
 $user_id = (int) ($_SESSION['user_id'] ?? 0);
 
-if ($role != 'admin' && $role != 'guru') {
+if (
+    $role != 'admin' &&
+    $role != 'guru' &&
+    $role != 'wali kelas'
+) {
     die("Anda tidak memiliki akses.");
 }
 
@@ -126,11 +129,11 @@ $totalSiswaWali = 0;
 $totalPelanggaranWali = 0;
 $totalPoinWali = 0;
 
-$isWaliKelas = false;
+$isWaliKelas = ($role == 'wali kelas');
 $guru_id = 0;
 
 // Cari guru berdasarkan akun login
-if ($role == 'guru') {
+if ($role == 'guru' || $role == 'wali kelas') {
 
     $stmtGuru = mysqli_prepare($koneksi, "
         SELECT id, nama
@@ -139,134 +142,149 @@ if ($role == 'guru') {
         LIMIT 1
     ");
 
-    mysqli_stmt_bind_param($stmtGuru, "i", $user_id);
-    mysqli_stmt_execute($stmtGuru);
+    if ($stmtGuru) {
 
-    $hasilGuru = mysqli_stmt_get_result($stmtGuru);
-    $dataGuru = mysqli_fetch_assoc($hasilGuru);
+        mysqli_stmt_bind_param($stmtGuru, "i", $user_id);
+        mysqli_stmt_execute($stmtGuru);
 
-    if ($dataGuru) {
+        $hasilGuru = mysqli_stmt_get_result($stmtGuru);
+        $dataGuru = mysqli_fetch_assoc($hasilGuru);
 
-        $guru_id = (int) $dataGuru['id'];
+        if ($dataGuru) {
 
-        // Ambil penugasan wali kelas yang masih aktif
-        $stmtKelas = mysqli_prepare($koneksi, "
-            SELECT
-                wk.id,
-                wk.kelas_id,
-                wk.tahun_ajaran_id,
-                k.nama AS nama_kelas,
-                ta.nama AS tahun_ajaran
-            FROM t_wali_kelas wk
-            JOIN t_kelas k
-                ON wk.kelas_id = k.id
-            JOIN t_tahun_ajaran ta
-                ON wk.tahun_ajaran_id = ta.id
-            WHERE wk.guru_id = ?
-                AND wk.status_aktif = 1
-                AND ta.status_aktif = 1
-            ORDER BY k.nama ASC
-        ");
+            $guru_id = (int) $dataGuru['id'];
 
-        mysqli_stmt_bind_param($stmtKelas, "i", $guru_id);
-        mysqli_stmt_execute($stmtKelas);
+            // Ambil penugasan wali kelas yang masih aktif
+            $stmtKelas = mysqli_prepare($koneksi, "
+                SELECT
+                    wk.id,
+                    wk.kelas_id,
+                    wk.tahun_ajaran_id,
+                    k.nama AS nama_kelas,
+                    ta.nama AS tahun_ajaran
+                FROM t_wali_kelas wk
+                JOIN t_kelas k
+                    ON wk.kelas_id = k.id
+                JOIN t_tahun_ajaran ta
+                    ON wk.tahun_ajaran_id = ta.id
+                WHERE wk.guru_id = ?
+                    AND wk.status_aktif = 1
+                    AND ta.status_aktif = 1
+                ORDER BY k.nama ASC
+            ");
 
-        $hasilKelas = mysqli_stmt_get_result($stmtKelas);
+            if ($stmtKelas) {
 
-        while ($barisKelas = mysqli_fetch_assoc($hasilKelas)) {
-            $daftarKelas[] = $barisKelas;
-        }
+                mysqli_stmt_bind_param($stmtKelas, "i", $guru_id);
+                mysqli_stmt_execute($stmtKelas);
 
-        // Jika memiliki penugasan aktif, berarti wali kelas
-        if (count($daftarKelas) > 0) {
+                $hasilKelas = mysqli_stmt_get_result($stmtKelas);
 
-            $isWaliKelas = true;
-
-            // Ambil data siswa dan statistik sesuai kelas serta tahun ajaran
-            foreach ($daftarKelas as $kelas) {
-
-                $kelas_id = (int) $kelas['kelas_id'];
-                $tahun_ajaran_id = (int) $kelas['tahun_ajaran_id'];
-
-                // Hitung siswa
-                $stmtJumlahSiswa = mysqli_prepare($koneksi, "
-                    SELECT COUNT(DISTINCT siswa_id) AS total
-                    FROM t_kelas_siswa
-                    WHERE kelas_id = ?
-                        AND tahun_ajaran_id = ?
-                        AND status_aktif = 1
-                ");
-
-                mysqli_stmt_bind_param(
-                    $stmtJumlahSiswa,
-                    "ii",
-                    $kelas_id,
-                    $tahun_ajaran_id
-                );
-
-                mysqli_stmt_execute($stmtJumlahSiswa);
-
-                $hasilJumlahSiswa = mysqli_stmt_get_result($stmtJumlahSiswa);
-                $dataJumlahSiswa = mysqli_fetch_assoc($hasilJumlahSiswa);
-
-                $totalSiswaWali += (int) ($dataJumlahSiswa['total'] ?? 0);
-
-                // Ambil daftar siswa
-                $stmtDaftarSiswa = mysqli_prepare($koneksi, "
-                    SELECT DISTINCT
-                        s.nis,
-                        s.nama,
-                        k.nama AS nama_kelas
-                    FROM t_kelas_siswa ks
-                    JOIN t_siswa s
-                        ON ks.siswa_id = s.id
-                    JOIN t_kelas k
-                        ON ks.kelas_id = k.id
-                    WHERE ks.kelas_id = ?
-                        AND ks.tahun_ajaran_id = ?
-                        AND ks.status_aktif = 1
-                    ORDER BY s.nama ASC
-                ");
-
-                mysqli_stmt_bind_param(
-                    $stmtDaftarSiswa,
-                    "ii",
-                    $kelas_id,
-                    $tahun_ajaran_id
-                );
-
-                mysqli_stmt_execute($stmtDaftarSiswa);
-
-                $hasilDaftarSiswa = mysqli_stmt_get_result($stmtDaftarSiswa);
-
-                while ($siswa = mysqli_fetch_assoc($hasilDaftarSiswa)) {
-                    $daftarSiswa[] = $siswa;
+                while ($barisKelas = mysqli_fetch_assoc($hasilKelas)) {
+                    $daftarKelas[] = $barisKelas;
                 }
 
-                // Hitung pelanggaran berdasarkan kelas dan tahun ajaran
-                $stmtPelanggaran = mysqli_prepare($koneksi, "
-                    SELECT
-                        COUNT(*) AS total,
-                        COALESCE(SUM(poin), 0) AS total_poin
-                    FROM t_pelanggaran_siswa
-                    WHERE kelas_id = ?
-                        AND tahun_ajaran_id = ?
-                ");
+                // Jika memiliki penugasan aktif, berarti wali kelas
+                if (count($daftarKelas) > 0) {
 
-                mysqli_stmt_bind_param(
-                    $stmtPelanggaran,
-                    "ii",
-                    $kelas_id,
-                    $tahun_ajaran_id
-                );
+                    $isWaliKelas = true;
 
-                mysqli_stmt_execute($stmtPelanggaran);
+                    // Ambil data siswa dan statistik sesuai kelas serta tahun ajaran
+                    foreach ($daftarKelas as $kelas) {
 
-                $hasilPelanggaran = mysqli_stmt_get_result($stmtPelanggaran);
-                $dataPelanggaran = mysqli_fetch_assoc($hasilPelanggaran);
+                        $kelas_id = (int) $kelas['kelas_id'];
+                        $tahun_ajaran_id = (int) $kelas['tahun_ajaran_id'];
 
-                $totalPelanggaranWali += (int) ($dataPelanggaran['total'] ?? 0);
-                $totalPoinWali += (int) ($dataPelanggaran['total_poin'] ?? 0);
+                        // Hitung siswa
+                        $stmtJumlahSiswa = mysqli_prepare($koneksi, "
+                            SELECT COUNT(DISTINCT siswa_id) AS total
+                            FROM t_kelas_siswa
+                            WHERE kelas_id = ?
+                                AND tahun_ajaran_id = ?
+                                AND status_aktif = 1
+                        ");
+
+                        if ($stmtJumlahSiswa) {
+
+                            mysqli_stmt_bind_param(
+                                $stmtJumlahSiswa,
+                                "ii",
+                                $kelas_id,
+                                $tahun_ajaran_id
+                            );
+
+                            mysqli_stmt_execute($stmtJumlahSiswa);
+
+                            $hasilJumlahSiswa = mysqli_stmt_get_result($stmtJumlahSiswa);
+                            $dataJumlahSiswa = mysqli_fetch_assoc($hasilJumlahSiswa);
+
+                            $totalSiswaWali += (int) ($dataJumlahSiswa['total'] ?? 0);
+                        }
+
+                        // Ambil daftar siswa
+                        $stmtDaftarSiswa = mysqli_prepare($koneksi, "
+                            SELECT DISTINCT
+                                s.nis,
+                                s.nama,
+                                k.nama AS nama_kelas
+                            FROM t_kelas_siswa ks
+                            JOIN t_siswa s
+                                ON ks.siswa_id = s.id
+                            JOIN t_kelas k
+                                ON ks.kelas_id = k.id
+                            WHERE ks.kelas_id = ?
+                                AND ks.tahun_ajaran_id = ?
+                                AND ks.status_aktif = 1
+                            ORDER BY s.nama ASC
+                        ");
+
+                        if ($stmtDaftarSiswa) {
+
+                            mysqli_stmt_bind_param(
+                                $stmtDaftarSiswa,
+                                "ii",
+                                $kelas_id,
+                                $tahun_ajaran_id
+                            );
+
+                            mysqli_stmt_execute($stmtDaftarSiswa);
+
+                            $hasilDaftarSiswa = mysqli_stmt_get_result($stmtDaftarSiswa);
+
+                            while ($siswa = mysqli_fetch_assoc($hasilDaftarSiswa)) {
+                                $daftarSiswa[] = $siswa;
+                            }
+                        }
+
+                        // Hitung pelanggaran berdasarkan kelas dan tahun ajaran
+                        $stmtPelanggaran = mysqli_prepare($koneksi, "
+                            SELECT
+                                COUNT(*) AS total,
+                                COALESCE(SUM(poin), 0) AS total_poin
+                            FROM t_pelanggaran_siswa
+                            WHERE kelas_id = ?
+                                AND tahun_ajaran_id = ?
+                        ");
+
+                        if ($stmtPelanggaran) {
+
+                            mysqli_stmt_bind_param(
+                                $stmtPelanggaran,
+                                "ii",
+                                $kelas_id,
+                                $tahun_ajaran_id
+                            );
+
+                            mysqli_stmt_execute($stmtPelanggaran);
+
+                            $hasilPelanggaran = mysqli_stmt_get_result($stmtPelanggaran);
+                            $dataPelanggaran = mysqli_fetch_assoc($hasilPelanggaran);
+
+                            $totalPelanggaranWali += (int) ($dataPelanggaran['total'] ?? 0);
+                            $totalPoinWali += (int) ($dataPelanggaran['total_poin'] ?? 0);
+                        }
+                    }
+                }
             }
         }
     }
@@ -634,12 +652,24 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
 
                                     <tbody>
 
-                                        <?php foreach ($daftarKelas as $i => $kelas) { ?>
+                                        <?php if (count($daftarKelas) > 0) { ?>
+
+                                            <?php foreach ($daftarKelas as $i => $kelas) { ?>
+
+                                                <tr>
+                                                    <td><?= $i + 1 ?></td>
+                                                    <td><?= htmlspecialchars($kelas['nama_kelas']) ?></td>
+                                                    <td><?= htmlspecialchars($kelas['tahun_ajaran']) ?></td>
+                                                </tr>
+
+                                            <?php } ?>
+
+                                        <?php } else { ?>
 
                                             <tr>
-                                                <td><?= $i + 1 ?></td>
-                                                <td><?= htmlspecialchars($kelas['nama_kelas']) ?></td>
-                                                <td><?= htmlspecialchars($kelas['tahun_ajaran']) ?></td>
+                                                <td colspan="3" class="text-center">
+                                                    Belum ada penugasan kelas aktif.
+                                                </td>
                                             </tr>
 
                                         <?php } ?>

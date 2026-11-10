@@ -1,4 +1,3 @@
-
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -13,46 +12,85 @@ if (
 $role = $_SESSION['role'];
 $nama = $_SESSION['nama'] ?? 'Pengguna';
 
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
 /* =====================================
-   MENGAMBIL DATA SISWA DAN KELAS
+   FUNGSI NOTIFIKASI
+===================================== */
+
+function setPesan($pesan, $jenis = 'success')
+{
+    $_SESSION['pesan_hapus'] = $pesan;
+    $_SESSION['jenis_pesan'] = $jenis;
+}
+
+/* =====================================
+   MEMBERSIHKAN NAMA PELANGGARAN
+===================================== */
+
+function bersihkanNamaPelanggaran($nama)
+{
+    return trim(preg_replace('/\s+[0-9]+$/', '', $nama));
+}
+
+/* =====================================
+   MENGAMBIL DATA PENEMPATAN SISWA AKTIF
 ===================================== */
 
 $dataSiswa = [];
 
 $querySiswa = mysqli_query($koneksi, "
-    SELECT DISTINCT
+    SELECT
+        s.id AS siswa_id,
         s.nama AS nama_siswa,
-        k.nama AS nama_kelas
-    FROM t_kelas_siswa ks
-    JOIN t_siswa s ON ks.siswa_id = s.id
-    JOIN t_kelas k ON ks.kelas_id = k.id
+        ks.kelas_id,
+        k.nama AS nama_kelas,
+        ks.tahun_ajaran_id
+    FROM t_siswa s
+    JOIN (
+        SELECT ks1.*
+        FROM t_kelas_siswa ks1
+        JOIN (
+            SELECT siswa_id, MAX(id) AS id_terbaru
+            FROM t_kelas_siswa
+            WHERE status_aktif = 1
+            GROUP BY siswa_id
+        ) terbaru ON ks1.id = terbaru.id_terbaru
+    ) ks ON ks.siswa_id = s.id
+    JOIN t_kelas k ON k.id = ks.kelas_id
     WHERE ks.status_aktif = 1
     ORDER BY s.nama ASC
 ");
 
-if ($querySiswa) {
-    while ($row = mysqli_fetch_assoc($querySiswa)) {
-        $dataSiswa[] = $row;
-    }
+while ($row = mysqli_fetch_assoc($querySiswa)) {
+    $dataSiswa[] = $row;
 }
 
 /* =====================================
-   MENGAMBIL DATA JENIS PELANGGARAN
+   MENGAMBIL DATA PELANGGARAN
+   NAMA DARI KATEGORI
+   POIN DARI JENIS PELANGGARAN
 ===================================== */
 
 $dataPelanggaran = [];
 
 $queryPelanggaran = mysqli_query($koneksi, "
-    SELECT nama, poin
-    FROM t_pelanggaran
-    WHERE status_aktif = 1
-    ORDER BY nama ASC
+    SELECT
+        p.id,
+        p.pelanggaran_kategori_id,
+        p.poin,
+        pk.nama AS nama_kategori
+    FROM t_pelanggaran p
+    INNER JOIN t_pelanggaran_kategori pk
+        ON pk.id = p.pelanggaran_kategori_id
+    WHERE p.status_aktif = 1
+      AND pk.status_aktif = 1
+    ORDER BY pk.id ASC, p.id ASC
 ");
 
-if ($queryPelanggaran) {
-    while ($row = mysqli_fetch_assoc($queryPelanggaran)) {
-        $dataPelanggaran[] = $row;
-    }
+while ($row = mysqli_fetch_assoc($queryPelanggaran)) {
+    $row['nama'] = bersihkanNamaPelanggaran($row['nama_kategori']);
+    $dataPelanggaran[] = $row;
 }
 
 /* =====================================
@@ -62,16 +100,14 @@ if ($queryPelanggaran) {
 $dataGuru = [];
 
 $queryGuru = mysqli_query($koneksi, "
-    SELECT nama
+    SELECT id, nama
     FROM t_guru
     WHERE status_aktif = 1
     ORDER BY nama ASC
 ");
 
-if ($queryGuru) {
-    while ($row = mysqli_fetch_assoc($queryGuru)) {
-        $dataGuru[] = $row;
-    }
+while ($row = mysqli_fetch_assoc($queryGuru)) {
+    $dataGuru[] = $row;
 }
 
 /* =====================================
@@ -90,27 +126,30 @@ $daftarTindakan = [
 ];
 
 /* =====================================
-   FUNGSI MENGAMBIL KELAS SISWA
+   FUNGSI MENGAMBIL DATA SISWA
 ===================================== */
 
-function ambilKelasSiswa($koneksi, $namaSiswa)
+function ambilDataSiswa($koneksi, $siswa_id)
 {
-    $stmt = mysqli_prepare(
-        $koneksi,
-        "SELECT k.nama AS nama_kelas
-         FROM t_kelas_siswa ks
-         JOIN t_siswa s ON ks.siswa_id = s.id
-         JOIN t_kelas k ON ks.kelas_id = k.id
-         WHERE s.nama = ?
-         AND ks.status_aktif = 1
-         LIMIT 1"
-    );
+    $stmt = mysqli_prepare($koneksi, "
+        SELECT
+            s.id AS siswa_id,
+            s.nama AS nama_siswa,
+            ks.kelas_id,
+            k.nama AS nama_kelas,
+            ks.tahun_ajaran_id
+        FROM t_siswa s
+        JOIN t_kelas_siswa ks
+            ON ks.siswa_id = s.id
+        JOIN t_kelas k
+            ON k.id = ks.kelas_id
+        WHERE s.id = ?
+          AND ks.status_aktif = 1
+        ORDER BY ks.id DESC
+        LIMIT 1
+    ");
 
-    if (!$stmt) {
-        return '';
-    }
-
-    mysqli_stmt_bind_param($stmt, "s", $namaSiswa);
+    mysqli_stmt_bind_param($stmt, "i", $siswa_id);
     mysqli_stmt_execute($stmt);
 
     $result = mysqli_stmt_get_result($stmt);
@@ -118,29 +157,31 @@ function ambilKelasSiswa($koneksi, $namaSiswa)
 
     mysqli_stmt_close($stmt);
 
-    return $data['nama_kelas'] ?? '';
+    return $data ?: false;
 }
 
 /* =====================================
-   FUNGSI MENGAMBIL POIN PELANGGARAN
+   FUNGSI MENGAMBIL DATA PELANGGARAN
 ===================================== */
 
-function ambilPoinPelanggaran($koneksi, $namaPelanggaran)
+function ambilDataPelanggaran($koneksi, $pelanggaran_id)
 {
-    $stmt = mysqli_prepare(
-        $koneksi,
-        "SELECT poin
-         FROM t_pelanggaran
-         WHERE nama = ?
-         AND status_aktif = 1
-         LIMIT 1"
-    );
+    $stmt = mysqli_prepare($koneksi, "
+        SELECT
+            p.id,
+            p.pelanggaran_kategori_id,
+            p.poin,
+            pk.nama AS nama_kategori
+        FROM t_pelanggaran p
+        INNER JOIN t_pelanggaran_kategori pk
+            ON pk.id = p.pelanggaran_kategori_id
+        WHERE p.id = ?
+          AND p.status_aktif = 1
+          AND pk.status_aktif = 1
+        LIMIT 1
+    ");
 
-    if (!$stmt) {
-        return 0;
-    }
-
-    mysqli_stmt_bind_param($stmt, "s", $namaPelanggaran);
+    mysqli_stmt_bind_param($stmt, "i", $pelanggaran_id);
     mysqli_stmt_execute($stmt);
 
     $result = mysqli_stmt_get_result($stmt);
@@ -148,123 +189,154 @@ function ambilPoinPelanggaran($koneksi, $namaPelanggaran)
 
     mysqli_stmt_close($stmt);
 
-    return isset($data['poin']) ? (int) $data['poin'] : 0;
+    if ($data) {
+        $data['nama'] = bersihkanNamaPelanggaran(
+            $data['nama_kategori']
+        );
+    }
+
+    return $data ?: false;
 }
 
 /* =====================================
-   VALIDASI NAMA GURU
+   FUNGSI MENGAMBIL DATA GURU
 ===================================== */
 
-function guruTerdaftar($koneksi, $namaGuru)
+function ambilDataGuru($koneksi, $guru_id)
 {
-    $stmt = mysqli_prepare(
-        $koneksi,
-        "SELECT nama
-         FROM t_guru
-         WHERE nama = ?
-         AND status_aktif = 1
-         LIMIT 1"
-    );
+    $stmt = mysqli_prepare($koneksi, "
+        SELECT id, nama
+        FROM t_guru
+        WHERE id = ?
+          AND status_aktif = 1
+        LIMIT 1
+    ");
 
-    if (!$stmt) {
-        return false;
-    }
-
-    mysqli_stmt_bind_param($stmt, "s", $namaGuru);
+    mysqli_stmt_bind_param($stmt, "i", $guru_id);
     mysqli_stmt_execute($stmt);
 
     $result = mysqli_stmt_get_result($stmt);
-    $valid = mysqli_num_rows($result) > 0;
+    $data = mysqli_fetch_assoc($result);
 
     mysqli_stmt_close($stmt);
 
-    return $valid;
+    return $data ?: false;
 }
 
 /* =====================================
-   PROSES TAMBAH DATA PELANGGARAN
+   PROSES TAMBAH CATATAN PELANGGARAN
 ===================================== */
 
 if (isset($_POST['simpan_tambah'])) {
 
-    $nama_siswa = trim($_POST['nama_siswa'] ?? '');
-    $nama_pelanggaran = trim($_POST['nama_pelanggaran'] ?? '');
-    $nama_guru = trim($_POST['nama_guru'] ?? '');
-    $tanggal = trim($_POST['tanggal'] ?? '');
-    $keterangan = trim($_POST['keterangan'] ?? '');
-    $tindakan = trim($_POST['tindakan'] ?? '');
-    $status = trim($_POST['status'] ?? '');
+    try {
 
-    $nama_kelas = ambilKelasSiswa($koneksi, $nama_siswa);
-    $poin = ambilPoinPelanggaran($koneksi, $nama_pelanggaran);
+        $siswa_id = (int) ($_POST['siswa_id'] ?? 0);
+        $pelanggaran_id = (int) ($_POST['pelanggaran_id'] ?? 0);
+        $guru_id = (int) ($_POST['guru_id'] ?? 0);
 
-    if (
-        $nama_siswa == "" ||
-        $nama_kelas == "" ||
-        $nama_pelanggaran == "" ||
-        $nama_guru == "" ||
-        $tanggal == "" ||
-        $status == ""
-    ) {
+        $tanggal = trim($_POST['tanggal'] ?? '');
+        $keterangan = trim($_POST['keterangan'] ?? '');
+        $tindakan = trim($_POST['tindakan'] ?? '');
+        $status = trim($_POST['status'] ?? '');
 
-        $_SESSION['pesan_hapus'] = "Semua data wajib diisi.";
-        $_SESSION['jenis_pesan'] = "danger";
+        if (
+            $siswa_id <= 0 ||
+            $pelanggaran_id <= 0 ||
+            $guru_id <= 0 ||
+            $tanggal == '' ||
+            $status == ''
+        ) {
+            throw new Exception("Semua data wajib diisi.");
+        }
 
-    } elseif (!guruTerdaftar($koneksi, $nama_guru)) {
+        $siswa = ambilDataSiswa($koneksi, $siswa_id);
 
-        $_SESSION['pesan_hapus'] = "Nama guru tidak ditemukan.";
-        $_SESSION['jenis_pesan'] = "danger";
+        if (!$siswa) {
+            throw new Exception("Data siswa atau kelas aktif tidak ditemukan.");
+        }
 
-    } else {
-
-        $insert = mysqli_prepare(
+        $pelanggaran = ambilDataPelanggaran(
             $koneksi,
-            "INSERT INTO t_pelanggaran_siswa
-            (
+            $pelanggaran_id
+        );
+
+        if (!$pelanggaran) {
+            throw new Exception("Data pelanggaran tidak ditemukan.");
+        }
+
+        $guru = ambilDataGuru($koneksi, $guru_id);
+
+        if (!$guru) {
+            throw new Exception("Data guru tidak ditemukan.");
+        }
+
+        $tahun_ajaran_id = (int) $siswa['tahun_ajaran_id'];
+        $nama_siswa = $siswa['nama_siswa'];
+
+        $kelas_id = (int) $siswa['kelas_id'];
+        $nama_kelas = $siswa['nama_kelas'];
+
+        $nama_pelanggaran = $pelanggaran['nama'];
+        $kategori_id = (int) $pelanggaran['pelanggaran_kategori_id'];
+        $poin = (int) $pelanggaran['poin'];
+
+        $nama_guru = $guru['nama'];
+
+        $simpan = mysqli_prepare($koneksi, "
+            INSERT INTO t_pelanggaran_siswa (
+                tahun_ajaran_id,
+                siswa_id,
                 nama_siswa,
+                kelas_id,
                 nama_kelas,
+                pelanggaran_id,
                 nama_pelanggaran,
+                pelanggaran_kategori_id,
+                guru_id,
                 nama_guru,
                 tanggal,
                 keterangan,
                 poin,
                 tindakan,
                 status
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+
+        mysqli_stmt_bind_param(
+            $simpan,
+            "iisisiisiississ",
+            $tahun_ajaran_id,
+            $siswa_id,
+            $nama_siswa,
+            $kelas_id,
+            $nama_kelas,
+            $pelanggaran_id,
+            $nama_pelanggaran,
+            $kategori_id,
+            $guru_id,
+            $nama_guru,
+            $tanggal,
+            $keterangan,
+            $poin,
+            $tindakan,
+            $status
         );
 
-        if ($insert) {
+        mysqli_stmt_execute($simpan);
+        mysqli_stmt_close($simpan);
 
-            mysqli_stmt_bind_param(
-                $insert,
-                "ssssssiss",
-                $nama_siswa,
-                $nama_kelas,
-                $nama_pelanggaran,
-                $nama_guru,
-                $tanggal,
-                $keterangan,
-                $poin,
-                $tindakan,
-                $status
-            );
+        setPesan(
+            "Catatan pelanggaran berhasil ditambahkan.",
+            "success"
+        );
 
-            if (mysqli_stmt_execute($insert)) {
-                $_SESSION['pesan_hapus'] = "Catatan pelanggaran berhasil ditambahkan.";
-                $_SESSION['jenis_pesan'] = "success";
-            } else {
-                $_SESSION['pesan_hapus'] = "Gagal menambahkan catatan pelanggaran.";
-                $_SESSION['jenis_pesan'] = "danger";
-            }
+    } catch (Throwable $e) {
 
-            mysqli_stmt_close($insert);
-
-        } else {
-
-            $_SESSION['pesan_hapus'] = "Query gagal diproses: " . mysqli_error($koneksi);
-            $_SESSION['jenis_pesan'] = "danger";
-        }
+        setPesan(
+            "Gagal menambahkan catatan: " . $e->getMessage(),
+            "danger"
+        );
     }
 
     header("Location: data_catatan_pelanggaran.php");
@@ -272,94 +344,122 @@ if (isset($_POST['simpan_tambah'])) {
 }
 
 /* =====================================
-   PROSES EDIT DATA PELANGGARAN
+   PROSES EDIT CATATAN PELANGGARAN
 ===================================== */
 
 if (isset($_POST['simpan_edit'])) {
 
-    $id = (int) ($_POST['id'] ?? 0);
-    $nama_siswa = trim($_POST['nama_siswa'] ?? '');
-    $nama_pelanggaran = trim($_POST['nama_pelanggaran'] ?? '');
-    $nama_guru = trim($_POST['nama_guru'] ?? '');
-    $tanggal = trim($_POST['tanggal'] ?? '');
-    $keterangan = trim($_POST['keterangan'] ?? '');
-    $tindakan = trim($_POST['tindakan'] ?? '');
-    $status = trim($_POST['status'] ?? '');
+    try {
 
-    $nama_kelas = ambilKelasSiswa($koneksi, $nama_siswa);
-    $poin = ambilPoinPelanggaran($koneksi, $nama_pelanggaran);
+        $id = (int) ($_POST['id'] ?? 0);
+        $siswa_id = (int) ($_POST['siswa_id'] ?? 0);
+        $pelanggaran_id = (int) ($_POST['pelanggaran_id'] ?? 0);
+        $guru_id = (int) ($_POST['guru_id'] ?? 0);
 
-    if ($nama_kelas == '') {
-        $nama_kelas = trim($_POST['nama_kelas'] ?? '');
-    }
+        $tanggal = trim($_POST['tanggal'] ?? '');
+        $keterangan = trim($_POST['keterangan'] ?? '');
+        $tindakan = trim($_POST['tindakan'] ?? '');
+        $status = trim($_POST['status'] ?? '');
 
-    if (
-        $id <= 0 ||
-        $nama_siswa == "" ||
-        $nama_kelas == "" ||
-        $nama_pelanggaran == "" ||
-        $nama_guru == "" ||
-        $tanggal == "" ||
-        $status == ""
-    ) {
+        if (
+            $id <= 0 ||
+            $siswa_id <= 0 ||
+            $pelanggaran_id <= 0 ||
+            $guru_id <= 0 ||
+            $tanggal == '' ||
+            $status == ''
+        ) {
+            throw new Exception("Semua data wajib diisi.");
+        }
 
-        $_SESSION['pesan_hapus'] = "Semua data wajib diisi.";
-        $_SESSION['jenis_pesan'] = "danger";
+        $siswa = ambilDataSiswa($koneksi, $siswa_id);
 
-    } elseif (!guruTerdaftar($koneksi, $nama_guru)) {
+        if (!$siswa) {
+            throw new Exception("Data siswa atau kelas aktif tidak ditemukan.");
+        }
 
-        $_SESSION['pesan_hapus'] = "Nama guru tidak ditemukan.";
-        $_SESSION['jenis_pesan'] = "danger";
-
-    } else {
-
-        $update = mysqli_prepare(
+        $pelanggaran = ambilDataPelanggaran(
             $koneksi,
-            "UPDATE t_pelanggaran_siswa SET
+            $pelanggaran_id
+        );
+
+        if (!$pelanggaran) {
+            throw new Exception("Data pelanggaran tidak ditemukan.");
+        }
+
+        $guru = ambilDataGuru($koneksi, $guru_id);
+
+        if (!$guru) {
+            throw new Exception("Data guru tidak ditemukan.");
+        }
+
+        $tahun_ajaran_id = (int) $siswa['tahun_ajaran_id'];
+        $nama_siswa = $siswa['nama_siswa'];
+
+        $kelas_id = (int) $siswa['kelas_id'];
+        $nama_kelas = $siswa['nama_kelas'];
+
+        $nama_pelanggaran = $pelanggaran['nama'];
+        $kategori_id = (int) $pelanggaran['pelanggaran_kategori_id'];
+        $poin = (int) $pelanggaran['poin'];
+
+        $nama_guru = $guru['nama'];
+
+        $update = mysqli_prepare($koneksi, "
+            UPDATE t_pelanggaran_siswa SET
+                tahun_ajaran_id = ?,
+                siswa_id = ?,
                 nama_siswa = ?,
+                kelas_id = ?,
                 nama_kelas = ?,
+                pelanggaran_id = ?,
                 nama_pelanggaran = ?,
+                pelanggaran_kategori_id = ?,
+                guru_id = ?,
                 nama_guru = ?,
                 tanggal = ?,
                 keterangan = ?,
                 poin = ?,
                 tindakan = ?,
                 status = ?
-            WHERE id = ?"
+            WHERE id = ?
+        ");
+
+        mysqli_stmt_bind_param(
+            $update,
+            "iisisiisiississi",
+            $tahun_ajaran_id,
+            $siswa_id,
+            $nama_siswa,
+            $kelas_id,
+            $nama_kelas,
+            $pelanggaran_id,
+            $nama_pelanggaran,
+            $kategori_id,
+            $guru_id,
+            $nama_guru,
+            $tanggal,
+            $keterangan,
+            $poin,
+            $tindakan,
+            $status,
+            $id
         );
 
-        if ($update) {
+        mysqli_stmt_execute($update);
+        mysqli_stmt_close($update);
 
-            mysqli_stmt_bind_param(
-                $update,
-                "ssssssissi",
-                $nama_siswa,
-                $nama_kelas,
-                $nama_pelanggaran,
-                $nama_guru,
-                $tanggal,
-                $keterangan,
-                $poin,
-                $tindakan,
-                $status,
-                $id
-            );
+        setPesan(
+            "Catatan pelanggaran berhasil diperbarui.",
+            "success"
+        );
 
-            if (mysqli_stmt_execute($update)) {
-                $_SESSION['pesan_hapus'] = "Catatan pelanggaran berhasil diperbarui.";
-                $_SESSION['jenis_pesan'] = "success";
-            } else {
-                $_SESSION['pesan_hapus'] = "Gagal mengubah catatan pelanggaran.";
-                $_SESSION['jenis_pesan'] = "danger";
-            }
+    } catch (Throwable $e) {
 
-            mysqli_stmt_close($update);
-
-        } else {
-
-            $_SESSION['pesan_hapus'] = "Query gagal diproses: " . mysqli_error($koneksi);
-            $_SESSION['jenis_pesan'] = "danger";
-        }
+        setPesan(
+            "Gagal mengubah catatan: " . $e->getMessage(),
+            "danger"
+        );
     }
 
     header("Location: data_catatan_pelanggaran.php");
@@ -367,30 +467,46 @@ if (isset($_POST['simpan_edit'])) {
 }
 
 /* =====================================
-   MENGAMBIL DATA PELANGGARAN
+   MENGAMBIL DATA CATATAN PELANGGARAN
+   NAMA DIAMBIL LANGSUNG DARI TABEL SUMBER
 ===================================== */
 
-$query = "
+$query = mysqli_query($koneksi, "
     SELECT
-        id,
-        nama_siswa,
-        nama_kelas,
-        nama_pelanggaran,
-        nama_guru,
-        tanggal,
-        keterangan,
-        poin,
-        tindakan,
-        status
-    FROM t_pelanggaran_siswa
-    ORDER BY id DESC
-";
+        ps.id,
+        ps.tahun_ajaran_id,
+        ps.siswa_id,
+        COALESCE(s.nama, ps.nama_siswa) AS nama_siswa,
+        ps.kelas_id,
+        COALESCE(k.nama, ps.nama_kelas) AS nama_kelas,
+        ps.pelanggaran_id,
+        CASE
+            WHEN pk.nama IS NOT NULL THEN
+                TRIM(REGEXP_REPLACE(pk.nama, '[[:space:]]+[0-9]+$', ''))
+            ELSE ps.nama_pelanggaran
+        END AS nama_pelanggaran,
+        ps.pelanggaran_kategori_id,
+        ps.guru_id,
+        COALESCE(g.nama, ps.nama_guru) AS nama_guru,
+        ps.tanggal,
+        ps.keterangan,
+        COALESCE(p.poin, ps.poin) AS poin,
+        ps.tindakan,
+        ps.status
+    FROM t_pelanggaran_siswa ps
+    LEFT JOIN t_siswa s
+        ON s.id = ps.siswa_id
+    LEFT JOIN t_kelas k
+        ON k.id = ps.kelas_id
+    LEFT JOIN t_pelanggaran p
+        ON p.id = ps.pelanggaran_id
+    LEFT JOIN t_pelanggaran_kategori pk
+        ON pk.id = p.pelanggaran_kategori_id
+    LEFT JOIN t_guru g
+        ON g.id = ps.guru_id
+    ORDER BY ps.id DESC
+");
 
-$result = mysqli_query($koneksi, $query);
-
-if (!$result) {
-    die("Query gagal: " . mysqli_error($koneksi));
-}
 ?>
 
 <!DOCTYPE html>
@@ -402,11 +518,9 @@ if (!$result) {
 
     <title>Catatan Pelanggaran - Sistem Informasi Pelanggaran Siswa</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <link href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
-          rel="stylesheet">
+    <link href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css" rel="stylesheet">
 </head>
 
 <body class="bg-light">
@@ -430,45 +544,37 @@ if (!$result) {
 
             <nav class="nav flex-column gap-1">
 
-                <a href="dashboard.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="dashboard.php" class="nav-link text-white rounded py-2">
                     Dashboard
                 </a>
 
-                <a href="data_pelanggaran_siswa.php"
-                   class="nav-link active bg-primary text-white rounded py-2">
+                <a href="data_catatan_pelanggaran.php" class="nav-link active bg-primary text-white rounded py-2">
                     Catatan Pelanggaran
                 </a>
 
-                <a href="data_tindakan.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_tindakan.php" class="nav-link text-white rounded py-2">
                     Tindakan
                 </a>
 
-                <a href="data_riwayat.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_riwayat.php" class="nav-link text-white rounded py-2">
                     Riwayat
                 </a>
 
-                <a href="data_rekap_poin.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="data_rekap_poin.php" class="nav-link text-white rounded py-2">
                     Rekap Poin
                 </a>
 
-                <a href="about_me.php"
-                   class="nav-link text-white rounded py-2">
+                <a href="about_me.php" class="nav-link text-white rounded py-2">
                     About Me
                 </a>
 
                 <hr class="border-secondary my-2">
 
-                <a href="logout.php"
-                   class="nav-link text-danger rounded py-2">
+                <a href="logout.php" class="nav-link text-danger rounded py-2">
                     Logout
                 </a>
 
             </nav>
-
         </aside>
 
         <!-- KONTEN UTAMA -->
@@ -547,7 +653,7 @@ if (!$result) {
                                         <th>No</th>
                                         <th>Nama Siswa</th>
                                         <th>Kelas</th>
-                                        <th>Jenis Pelanggaran</th>
+                                        <th>Nama Pelanggaran</th>
                                         <th>Guru</th>
                                         <th>Tanggal</th>
                                         <th>Poin</th>
@@ -559,48 +665,68 @@ if (!$result) {
                                 </thead>
 
                                 <tbody>
+
                                     <?php
                                     $no = 1;
 
-                                    while ($data = mysqli_fetch_assoc($result)) {
+                                    while ($data = mysqli_fetch_assoc($query)) {
                                     ?>
 
                                     <tr>
+
                                         <td><?= $no++; ?></td>
 
-                                        <td><?= htmlspecialchars($data['nama_siswa'] ?? ''); ?></td>
-
-                                        <td><?= htmlspecialchars($data['nama_kelas'] ?? ''); ?></td>
-
-                                        <td><?= htmlspecialchars($data['nama_pelanggaran'] ?? ''); ?></td>
-
-                                        <td><?= htmlspecialchars($data['nama_guru'] ?? ''); ?></td>
-
-                                        <td><?= htmlspecialchars($data['tanggal'] ?? ''); ?></td>
-
-                                        <td><?= htmlspecialchars($data['poin'] ?? '0'); ?></td>
-
-                                        <td><?= htmlspecialchars($data['keterangan'] ?? ''); ?></td>
-
-                                        <td><?= htmlspecialchars($data['tindakan'] ?? ''); ?></td>
+                                        <td>
+                                            <?= htmlspecialchars($data['nama_siswa'] ?? ''); ?>
+                                        </td>
 
                                         <td>
+                                            <?= htmlspecialchars($data['nama_kelas'] ?? ''); ?>
+                                        </td>
+
+                                        <td>
+                                            <?= htmlspecialchars($data['nama_pelanggaran'] ?? ''); ?>
+                                        </td>
+
+                                        <td>
+                                            <?= htmlspecialchars($data['nama_guru'] ?? ''); ?>
+                                        </td>
+
+                                        <td>
+                                            <?= htmlspecialchars($data['tanggal'] ?? ''); ?>
+                                        </td>
+
+                                        <td>
+                                            <?= htmlspecialchars($data['poin'] ?? '0'); ?>
+                                        </td>
+
+                                        <td>
+                                            <?= htmlspecialchars($data['keterangan'] ?? ''); ?>
+                                        </td>
+
+                                        <td>
+                                            <?= htmlspecialchars($data['tindakan'] ?? ''); ?>
+                                        </td>
+
+                                        <td>
+
                                             <?php
-                                            $status = $data['status'] ?? '';
+                                            $statusData = $data['status'] ?? '';
                                             $warnaStatus = 'secondary';
 
-                                            if ($status == 'Selesai') {
+                                            if ($statusData == 'Selesai') {
                                                 $warnaStatus = 'success';
-                                            } elseif ($status == 'Diproses') {
+                                            } elseif ($statusData == 'Diproses') {
                                                 $warnaStatus = 'warning';
-                                            } elseif ($status == 'Ditindaklanjuti') {
+                                            } elseif ($statusData == 'Ditindaklanjuti') {
                                                 $warnaStatus = 'primary';
                                             }
                                             ?>
 
                                             <span class="badge bg-<?= $warnaStatus; ?>">
-                                                <?= htmlspecialchars($status); ?>
+                                                <?= htmlspecialchars($statusData); ?>
                                             </span>
+
                                         </td>
 
                                         <td class="text-nowrap">
@@ -610,26 +736,28 @@ if (!$result) {
                                                 class="btn btn-warning btn-sm tombolEdit"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#modalEditPelanggaran"
-                                                data-id="<?= htmlspecialchars($data['id'], ENT_QUOTES, 'UTF-8'); ?>"
-                                                data-siswa="<?= htmlspecialchars($data['nama_siswa'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-                                                data-kelas="<?= htmlspecialchars($data['nama_kelas'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-                                                data-pelanggaran="<?= htmlspecialchars($data['nama_pelanggaran'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-                                                data-guru="<?= htmlspecialchars($data['nama_guru'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+                                                data-id="<?= (int) $data['id']; ?>"
+                                                data-siswa="<?= (int) $data['siswa_id']; ?>"
+                                                data-pelanggaran="<?= (int) $data['pelanggaran_id']; ?>"
+                                                data-guru="<?= (int) $data['guru_id']; ?>"
                                                 data-tanggal="<?= htmlspecialchars($data['tanggal'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-                                                data-poin="<?= htmlspecialchars($data['poin'] ?? '0', ENT_QUOTES, 'UTF-8'); ?>"
                                                 data-keterangan="<?= htmlspecialchars($data['keterangan'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                                                 data-tindakan="<?= htmlspecialchars($data['tindakan'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                                                 data-status="<?= htmlspecialchars($data['status'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+
                                                 Edit
+
                                             </button>
 
-                                            <a href="hapus_pelanggaran_siswa.php?id=<?= urlencode($data['id']); ?>"
+                                            <a href="hapus_pelanggaran_siswa.php?id=<?= (int) $data['id']; ?>"
                                                class="btn btn-danger btn-sm"
                                                onclick="return confirm('Yakin ingin menghapus catatan pelanggaran ini?')">
                                                 Hapus
                                             </a>
 
                                         </td>
+
                                     </tr>
 
                                     <?php } ?>
@@ -644,8 +772,7 @@ if (!$result) {
 
                     <div class="card-footer bg-white p-3">
 
-                        <a href="dashboard.php"
-                           class="btn btn-outline-secondary btn-sm">
+                        <a href="dashboard.php" class="btn btn-outline-secondary btn-sm">
                             Kembali ke Dashboard
                         </a>
 
@@ -664,12 +791,11 @@ if (!$result) {
     </div>
 </div>
 
+<!-- =====================================
+     MODAL TAMBAH
+===================================== -->
 
-<!-- MODAL TAMBAH -->
-<div class="modal fade"
-     id="modalTambahPelanggaran"
-     tabindex="-1"
-     aria-hidden="true">
+<div class="modal fade" id="modalTambahPelanggaran" tabindex="-1" aria-hidden="true">
 
     <div class="modal-dialog modal-dialog-centered modal-lg">
 
@@ -687,10 +813,7 @@ if (!$result) {
                     </small>
                 </div>
 
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal">
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 
             </div>
 
@@ -699,85 +822,98 @@ if (!$result) {
                 <div class="modal-body">
 
                     <div class="mb-3">
+
                         <label for="tambah_siswa" class="form-label fw-semibold">
                             Nama Siswa
                         </label>
 
-                        <select name="nama_siswa"
-                                id="tambah_siswa"
-                                class="form-select"
-                                required>
+                        <select name="siswa_id" id="tambah_siswa" class="form-select" required>
 
                             <option value="">Pilih Nama Siswa</option>
 
                             <?php foreach ($dataSiswa as $siswa) { ?>
-                                <option value="<?= htmlspecialchars($siswa['nama_siswa'], ENT_QUOTES, 'UTF-8'); ?>">
+
+                                <option
+                                    value="<?= (int) $siswa['siswa_id']; ?>"
+                                    data-kelas="<?= htmlspecialchars($siswa['nama_kelas'], ENT_QUOTES, 'UTF-8'); ?>">
+
                                     <?= htmlspecialchars($siswa['nama_siswa']); ?>
+
                                 </option>
+
                             <?php } ?>
 
                         </select>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="tambah_kelas" class="form-label fw-semibold">
                             Kelas
                         </label>
 
                         <input type="text"
-                               name="nama_kelas"
                                id="tambah_kelas"
                                class="form-control"
                                placeholder="Kelas otomatis terisi"
-                               readonly
-                               required>
+                               readonly>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="tambah_pelanggaran" class="form-label fw-semibold">
-                            Jenis Pelanggaran
+                            Nama Pelanggaran
                         </label>
 
-                        <select name="nama_pelanggaran"
+                        <select name="pelanggaran_id"
                                 id="tambah_pelanggaran"
                                 class="form-select"
                                 required>
 
-                            <option value="">Pilih Jenis Pelanggaran</option>
+                            <option value="">Pilih Nama Pelanggaran</option>
 
                             <?php foreach ($dataPelanggaran as $pelanggaran) { ?>
+
                                 <option
-                                    value="<?= htmlspecialchars($pelanggaran['nama'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    value="<?= (int) $pelanggaran['id']; ?>"
                                     data-poin="<?= (int) $pelanggaran['poin']; ?>">
+
                                     <?= htmlspecialchars($pelanggaran['nama']); ?>
+
                                 </option>
+
                             <?php } ?>
 
                         </select>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="tambah_guru" class="form-label fw-semibold">
                             Nama Guru
                         </label>
 
-                        <select name="nama_guru"
-                                id="tambah_guru"
-                                class="form-select"
-                                required>
+                        <select name="guru_id" id="tambah_guru" class="form-select" required>
 
                             <option value="">Pilih Nama Guru</option>
 
                             <?php foreach ($dataGuru as $guru) { ?>
-                                <option value="<?= htmlspecialchars($guru['nama'], ENT_QUOTES, 'UTF-8'); ?>">
+
+                                <option value="<?= (int) $guru['id']; ?>">
                                     <?= htmlspecialchars($guru['nama']); ?>
                                 </option>
+
                             <?php } ?>
 
                         </select>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="tambah_tanggal" class="form-label fw-semibold">
                             Tanggal
                         </label>
@@ -787,24 +923,26 @@ if (!$result) {
                                id="tambah_tanggal"
                                class="form-control"
                                required>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="tambah_poin" class="form-label fw-semibold">
                             Poin
                         </label>
 
                         <input type="number"
-                               name="poin"
                                id="tambah_poin"
                                class="form-control"
                                min="0"
                                value="0"
-                               readonly
-                               required>
+                               readonly>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="tambah_keterangan" class="form-label fw-semibold">
                             Keterangan
                         </label>
@@ -814,37 +952,38 @@ if (!$result) {
                                   class="form-control"
                                   rows="3"
                                   placeholder="Masukkan keterangan jika diperlukan"></textarea>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="tambah_tindakan" class="form-label fw-semibold">
                             Tindakan
                         </label>
 
-                        <select name="tindakan"
-                                id="tambah_tindakan"
-                                class="form-select">
+                        <select name="tindakan" id="tambah_tindakan" class="form-select">
 
                             <option value="">Pilih Tindakan</option>
 
                             <?php foreach ($daftarTindakan as $tindakan) { ?>
+
                                 <option value="<?= htmlspecialchars($tindakan); ?>">
                                     <?= htmlspecialchars($tindakan); ?>
                                 </option>
+
                             <?php } ?>
 
                         </select>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="tambah_status" class="form-label fw-semibold">
                             Status
                         </label>
 
-                        <select name="status"
-                                id="tambah_status"
-                                class="form-select"
-                                required>
+                        <select name="status" id="tambah_status" class="form-select" required>
 
                             <option value="">Pilih Status</option>
                             <option value="Diproses">Diproses</option>
@@ -852,21 +991,18 @@ if (!$result) {
                             <option value="Selesai">Selesai</option>
 
                         </select>
+
                     </div>
 
                 </div>
 
                 <div class="modal-footer">
 
-                    <button type="submit"
-                            name="simpan_tambah"
-                            class="btn btn-primary">
+                    <button type="submit" name="simpan_tambah" class="btn btn-primary">
                         Simpan
                     </button>
 
-                    <button type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         Batal
                     </button>
 
@@ -880,12 +1016,11 @@ if (!$result) {
 
 </div>
 
+<!-- =====================================
+     MODAL EDIT
+===================================== -->
 
-<!-- MODAL EDIT -->
-<div class="modal fade"
-     id="modalEditPelanggaran"
-     tabindex="-1"
-     aria-hidden="true">
+<div class="modal fade" id="modalEditPelanggaran" tabindex="-1" aria-hidden="true">
 
     <div class="modal-dialog modal-dialog-centered modal-lg">
 
@@ -903,10 +1038,7 @@ if (!$result) {
                     </small>
                 </div>
 
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal">
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
 
             </div>
 
@@ -917,84 +1049,97 @@ if (!$result) {
                     <input type="hidden" name="id" id="edit_id">
 
                     <div class="mb-3">
+
                         <label for="edit_siswa" class="form-label fw-semibold">
                             Nama Siswa
                         </label>
 
-                        <select name="nama_siswa"
-                                id="edit_siswa"
-                                class="form-select"
-                                required>
+                        <select name="siswa_id" id="edit_siswa" class="form-select" required>
 
                             <option value="">Pilih Nama Siswa</option>
 
                             <?php foreach ($dataSiswa as $siswa) { ?>
-                                <option value="<?= htmlspecialchars($siswa['nama_siswa'], ENT_QUOTES, 'UTF-8'); ?>">
+
+                                <option
+                                    value="<?= (int) $siswa['siswa_id']; ?>"
+                                    data-kelas="<?= htmlspecialchars($siswa['nama_kelas'], ENT_QUOTES, 'UTF-8'); ?>">
+
                                     <?= htmlspecialchars($siswa['nama_siswa']); ?>
+
                                 </option>
+
                             <?php } ?>
 
                         </select>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="edit_kelas" class="form-label fw-semibold">
                             Kelas
                         </label>
 
                         <input type="text"
-                               name="nama_kelas"
                                id="edit_kelas"
                                class="form-control"
-                               readonly
-                               required>
+                               readonly>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="edit_pelanggaran" class="form-label fw-semibold">
-                            Jenis Pelanggaran
+                            Nama Pelanggaran
                         </label>
 
-                        <select name="nama_pelanggaran"
+                        <select name="pelanggaran_id"
                                 id="edit_pelanggaran"
                                 class="form-select"
                                 required>
 
-                            <option value="">Pilih Jenis Pelanggaran</option>
+                            <option value="">Pilih Nama Pelanggaran</option>
 
                             <?php foreach ($dataPelanggaran as $pelanggaran) { ?>
+
                                 <option
-                                    value="<?= htmlspecialchars($pelanggaran['nama'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    value="<?= (int) $pelanggaran['id']; ?>"
                                     data-poin="<?= (int) $pelanggaran['poin']; ?>">
+
                                     <?= htmlspecialchars($pelanggaran['nama']); ?>
+
                                 </option>
+
                             <?php } ?>
 
                         </select>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="edit_guru" class="form-label fw-semibold">
                             Nama Guru
                         </label>
 
-                        <select name="nama_guru"
-                                id="edit_guru"
-                                class="form-select"
-                                required>
+                        <select name="guru_id" id="edit_guru" class="form-select" required>
 
                             <option value="">Pilih Nama Guru</option>
 
                             <?php foreach ($dataGuru as $guru) { ?>
-                                <option value="<?= htmlspecialchars($guru['nama'], ENT_QUOTES, 'UTF-8'); ?>">
+
+                                <option value="<?= (int) $guru['id']; ?>">
                                     <?= htmlspecialchars($guru['nama']); ?>
                                 </option>
+
                             <?php } ?>
 
                         </select>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="edit_tanggal" class="form-label fw-semibold">
                             Tanggal
                         </label>
@@ -1004,23 +1149,25 @@ if (!$result) {
                                id="edit_tanggal"
                                class="form-control"
                                required>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="edit_poin" class="form-label fw-semibold">
                             Poin
                         </label>
 
                         <input type="number"
-                               name="poin"
                                id="edit_poin"
                                class="form-control"
                                min="0"
-                               readonly
-                               required>
+                               readonly>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="edit_keterangan" class="form-label fw-semibold">
                             Keterangan
                         </label>
@@ -1029,37 +1176,38 @@ if (!$result) {
                                   id="edit_keterangan"
                                   class="form-control"
                                   rows="3"></textarea>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="edit_tindakan" class="form-label fw-semibold">
                             Tindakan
                         </label>
 
-                        <select name="tindakan"
-                                id="edit_tindakan"
-                                class="form-select">
+                        <select name="tindakan" id="edit_tindakan" class="form-select">
 
                             <option value="">Pilih Tindakan</option>
 
                             <?php foreach ($daftarTindakan as $tindakan) { ?>
+
                                 <option value="<?= htmlspecialchars($tindakan); ?>">
                                     <?= htmlspecialchars($tindakan); ?>
                                 </option>
+
                             <?php } ?>
 
                         </select>
+
                     </div>
 
                     <div class="mb-3">
+
                         <label for="edit_status" class="form-label fw-semibold">
                             Status
                         </label>
 
-                        <select name="status"
-                                id="edit_status"
-                                class="form-select"
-                                required>
+                        <select name="status" id="edit_status" class="form-select" required>
 
                             <option value="">Pilih Status</option>
                             <option value="Diproses">Diproses</option>
@@ -1067,21 +1215,18 @@ if (!$result) {
                             <option value="Selesai">Selesai</option>
 
                         </select>
+
                     </div>
 
                 </div>
 
                 <div class="modal-footer">
 
-                    <button type="submit"
-                            name="simpan_edit"
-                            class="btn btn-primary">
+                    <button type="submit" name="simpan_edit" class="btn btn-primary">
                         Simpan Perubahan
                     </button>
 
-                    <button type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         Batal
                     </button>
 
@@ -1095,8 +1240,10 @@ if (!$result) {
 
 </div>
 
+<!-- =====================================
+     NOTIFIKASI TOAST
+===================================== -->
 
-<!-- NOTIFIKASI MELAYANG -->
 <?php if (isset($_SESSION['pesan_hapus'])) { ?>
 
     <?php
@@ -1142,6 +1289,9 @@ if (!$result) {
 
 <?php } ?>
 
+<!-- =====================================
+     JAVASCRIPT
+===================================== -->
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
@@ -1151,47 +1301,40 @@ if (!$result) {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-
 <script>
 
-/* DATA SISWA DAN KELAS */
+/* =====================================
+   KELAS OTOMATIS
+===================================== */
 
-const dataKelasSiswa = <?= json_encode(
-    $dataSiswa,
-    JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP
-); ?>;
+function isiKelas(idSiswa, idKelas) {
 
-
-/* KELAS OTOMATIS */
-
-function isiKelas(namaSiswa, idKelas) {
-
-    const siswa = dataKelasSiswa.find(function (item) {
-        return item.nama_siswa === namaSiswa;
-    });
+    const siswa = document.getElementById(idSiswa);
+    const pilihan = siswa.options[siswa.selectedIndex];
 
     document.getElementById(idKelas).value =
-        siswa ? siswa.nama_kelas : '';
+        pilihan ? (pilihan.getAttribute('data-kelas') || '') : '';
 }
 
 document.getElementById('tambah_siswa').addEventListener('change', function () {
-    isiKelas(this.value, 'tambah_kelas');
+    isiKelas('tambah_siswa', 'tambah_kelas');
 });
 
 document.getElementById('edit_siswa').addEventListener('change', function () {
-    isiKelas(this.value, 'edit_kelas');
+    isiKelas('edit_siswa', 'edit_kelas');
 });
 
-
-/* POIN OTOMATIS */
+/* =====================================
+   POIN OTOMATIS
+===================================== */
 
 function isiPoin(idPelanggaran, idPoin) {
 
-    const pilihan = document.getElementById(idPelanggaran);
-    const opsi = pilihan.options[pilihan.selectedIndex];
+    const pelanggaran = document.getElementById(idPelanggaran);
+    const pilihan = pelanggaran.options[pelanggaran.selectedIndex];
 
     document.getElementById(idPoin).value =
-        opsi ? (opsi.getAttribute('data-poin') || 0) : 0;
+        pilihan ? (pilihan.getAttribute('data-poin') || 0) : 0;
 }
 
 document.getElementById('tambah_pelanggaran').addEventListener('change', function () {
@@ -1202,8 +1345,9 @@ document.getElementById('edit_pelanggaran').addEventListener('change', function 
     isiPoin('edit_pelanggaran', 'edit_poin');
 });
 
-
-/* DATATABLES */
+/* =====================================
+   DATATABLES
+===================================== */
 
 $(document).ready(function () {
 
@@ -1258,38 +1402,32 @@ $(document).ready(function () {
 
 });
 
-
-/* MENGISI DATA MODAL EDIT */
+/* =====================================
+   MENGISI MODAL EDIT
+===================================== */
 
 document.querySelectorAll('.tombolEdit').forEach(function (tombol) {
 
     tombol.addEventListener('click', function () {
 
-        const siswa = this.getAttribute('data-siswa');
-        const kelas = this.getAttribute('data-kelas');
-
         document.getElementById('edit_id').value =
             this.getAttribute('data-id');
 
-        document.getElementById('edit_siswa').value = siswa;
+        document.getElementById('edit_siswa').value =
+            this.getAttribute('data-siswa');
 
-        isiKelas(siswa, 'edit_kelas');
-
-        if (document.getElementById('edit_kelas').value === '') {
-            document.getElementById('edit_kelas').value = kelas;
-        }
+        isiKelas('edit_siswa', 'edit_kelas');
 
         document.getElementById('edit_pelanggaran').value =
             this.getAttribute('data-pelanggaran');
+
+        isiPoin('edit_pelanggaran', 'edit_poin');
 
         document.getElementById('edit_guru').value =
             this.getAttribute('data-guru');
 
         document.getElementById('edit_tanggal').value =
             this.getAttribute('data-tanggal');
-
-        document.getElementById('edit_poin').value =
-            this.getAttribute('data-poin');
 
         document.getElementById('edit_keterangan').value =
             this.getAttribute('data-keterangan');
@@ -1304,8 +1442,23 @@ document.querySelectorAll('.tombolEdit').forEach(function (tombol) {
 
 });
 
+/* =====================================
+   RESET MODAL TAMBAH
+===================================== */
 
-/* NOTIFIKASI TOAST */
+document.getElementById('modalTambahPelanggaran')
+    .addEventListener('hidden.bs.modal', function () {
+
+        this.querySelector('form').reset();
+
+        document.getElementById('tambah_kelas').value = '';
+        document.getElementById('tambah_poin').value = 0;
+
+    });
+
+/* =====================================
+   NOTIFIKASI TOAST
+===================================== */
 
 document.addEventListener("DOMContentLoaded", function () {
 

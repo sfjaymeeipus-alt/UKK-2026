@@ -59,10 +59,11 @@ if ($data) {
 // Jika email dan password benar
 if ($password_cocok) {
 
-    // Izinkan admin dan guru
+    // Izinkan admin, guru, dan wali kelas
     if (
         $data['role'] == 'admin' ||
-        $data['role'] == 'guru'
+        $data['role'] == 'guru' ||
+        $data['role'] == 'wali kelas'
     ) {
 
         session_regenerate_id(true);
