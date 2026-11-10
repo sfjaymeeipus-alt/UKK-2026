@@ -154,10 +154,8 @@ if (isset($_POST['simpan_tambah'])) {
 
                 mysqli_stmt_close($stmt);
 
-                // Periksa dan nonaktifkan data ganda
                 periksaWaliKelasGanda($koneksi);
 
-                // Periksa status akhir data baru
                 $cekStatus = mysqli_prepare(
                     $koneksi,
                     "SELECT status_aktif
@@ -569,8 +567,7 @@ if (!$result) {
 
         <!-- SIDEBAR -->
 
-        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3"
-               style="position: sticky; top: 0; height: 100vh; overflow-y: auto; align-self: flex-start;">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 position-sticky top-0 vh-100 overflow-auto">
 
             <h5 class="fw-bold mb-1">
                 Sistem Informasi

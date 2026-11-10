@@ -1,37 +1,146 @@
+
 <?php
+
 include "middleware/auth.php";
 include "config/koneksi.php";
 
-if (
-    !isset($_SESSION['role']) ||
-    !in_array($_SESSION['role'], ['admin', 'guru'])
-) {
-    exit("Anda tidak memiliki akses");
-}
-
+$role = $_SESSION['role'] ?? '';
 $nama = $_SESSION['nama'] ?? 'Pengguna';
-$role = $_SESSION['role'];
+$user_id = (int) ($_SESSION['user_id'] ?? 0);
+
+if (
+    $role != 'admin' &&
+    $role != 'guru' &&
+    $role != 'wali kelas'
+) {
+    die("Anda tidak memiliki akses.");
+}
 
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
-/* =====================================
-   MEMBERSIHKAN NAMA KATEGORI
-   CONTOH: TERLAMBAT 1
-   MENJADI: TERLAMBAT
-===================================== */
+// ======================================
+// MENU ADMIN
+// ======================================
+
+$menuAdmin = [
+    ["Dashboard", "dashboard.php"],
+    ["Data Siswa", "data_siswa.php"],
+    ["Data Guru", "data_guru.php"],
+    ["Kelas", "data_kelas.php"],
+    ["Tahun Ajaran", "data_tahun_ajaran.php"],
+    ["Penempatan Siswa", "data_penempatan_siswa.php"],
+    ["Wali Kelas", "data_wali_kelas.php"],
+    ["Kategori Pelanggaran", "data_kategori_pelanggaran.php"],
+    ["Jenis Pelanggaran", "data_jenis_pelanggaran.php"],
+    ["Laporan", "data_laporan.php"],
+    ["About Me", "about_me.php"]
+];
+
+// ======================================
+// MENU GURU BIASA
+// ======================================
+
+$menuGuru = [
+    ["Dashboard", "dashboard.php"],
+    ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
+    ["Tindakan", "data_tindakan.php"],
+    ["Riwayat", "data_riwayat.php"],
+    ["Rekap Poin", "data_rekap_poin.php"],
+    ["About Me", "about_me.php"]
+];
+
+// ======================================
+// MENU WALI KELAS
+// ======================================
+
+$menuWali = [
+    ["Dashboard", "dashboard.php"],
+    ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
+    ["Tindakan", "data_tindakan.php"],
+    ["Riwayat", "data_riwayat.php"],
+    ["Rekap Poin", "data_rekap_poin.php"],
+    ["Laporan", "walikelas/data_laporan.php"],
+    ["About Me", "about_me.php"]
+];
+
+// ======================================
+// CEK STATUS WALI KELAS
+// ======================================
+
+$isWaliKelas = ($role == 'wali kelas');
+
+if ($role == 'guru') {
+
+    $stmtGuru = mysqli_prepare($koneksi, "
+        SELECT id
+        FROM t_guru
+        WHERE user_id = ?
+        LIMIT 1
+    ");
+
+    mysqli_stmt_bind_param($stmtGuru, "i", $user_id);
+    mysqli_stmt_execute($stmtGuru);
+
+    $hasilGuru = mysqli_stmt_get_result($stmtGuru);
+    $dataGuru = mysqli_fetch_assoc($hasilGuru);
+
+    if ($dataGuru) {
+
+        $guru_id = (int) $dataGuru['id'];
+
+        $stmtWali = mysqli_prepare($koneksi, "
+            SELECT COUNT(*) AS total
+            FROM t_wali_kelas wk
+            JOIN t_tahun_ajaran ta
+                ON wk.tahun_ajaran_id = ta.id
+            WHERE wk.guru_id = ?
+                AND wk.status_aktif = 1
+                AND ta.status_aktif = 1
+        ");
+
+        mysqli_stmt_bind_param($stmtWali, "i", $guru_id);
+        mysqli_stmt_execute($stmtWali);
+
+        $hasilWali = mysqli_stmt_get_result($stmtWali);
+        $dataWali = mysqli_fetch_assoc($hasilWali);
+
+        if ((int) ($dataWali['total'] ?? 0) > 0) {
+            $isWaliKelas = true;
+        }
+    }
+}
+
+// ======================================
+// TENTUKAN MENU BERDASARKAN HAK AKSES
+// ======================================
+
+if ($role == 'admin') {
+    $menu = $menuAdmin;
+} elseif ($isWaliKelas) {
+    $menu = $menuWali;
+} else {
+    $menu = $menuGuru;
+}
+
+$halamanAktif = basename($_SERVER['PHP_SELF']);
+
+// ======================================
+// MEMBERSIHKAN NAMA PELANGGARAN
+// CONTOH: TERLAMBAT 1 MENJADI TERLAMBAT
+// ======================================
 
 function bersihkanNamaPelanggaran($nama)
 {
     return trim(preg_replace('/\s+[0-9]+$/', '', $nama));
 }
 
-/* =====================================
-   MENGAMBIL DATA TINDAKAN
-   NAMA PELANGGARAN DARI KATEGORI
-   NAMA GURU DARI TABEL GURU
-===================================== */
+// ======================================
+// MENGAMBIL DATA TINDAKAN
+// HANYA STATUS DIPROSES DAN DITINDAKLANJUTI
+// ======================================
 
 $query = mysqli_query($koneksi, "
+
     SELECT
         ps.id,
         ps.nama_siswa,
@@ -39,20 +148,25 @@ $query = mysqli_query($koneksi, "
 
         CASE
             WHEN pk.nama IS NOT NULL THEN pk.nama
+
             WHEN ps.nama_pelanggaran IS NOT NULL
                  AND ps.nama_pelanggaran != '0'
                  AND ps.nama_pelanggaran != ''
                 THEN ps.nama_pelanggaran
+
             WHEN p.nama IS NOT NULL THEN p.nama
+
             ELSE '-'
         END AS nama_pelanggaran,
 
         CASE
             WHEN g.nama IS NOT NULL THEN g.nama
+
             WHEN ps.nama_guru IS NOT NULL
                  AND ps.nama_guru != '0'
                  AND ps.nama_guru != ''
                 THEN ps.nama_guru
+
             ELSE '-'
         END AS nama_guru,
 
@@ -76,38 +190,42 @@ $query = mysqli_query($koneksi, "
     LEFT JOIN t_guru g
         ON g.id = ps.guru_id
 
+    WHERE ps.status IN ('Diproses', 'Ditindaklanjuti')
+
     ORDER BY ps.id DESC
+
 ");
 
-if (!$query) {
-    die("Query gagal: " . mysqli_error($koneksi));
-}
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
 
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Data Tindakan - Sistem Informasi Pelanggaran Siswa</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet">
 
-    <link href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
-          rel="stylesheet">
+    <link
+        href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
+        rel="stylesheet">
+
 </head>
 
 <body class="bg-light">
 
 <div class="container-fluid">
+
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 align-self-start"
-               style="height: 100vh; overflow-y: auto;">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
@@ -122,41 +240,27 @@ if (!$query) {
 
             <nav class="nav flex-column gap-1">
 
-                <a href="dashboard.php"
-                   class="nav-link text-white rounded py-2">
-                    Dashboard
-                </a>
+                <?php foreach ($menu as $item) { ?>
 
-                <a href="data_catatan_pelanggaran.php"
-                   class="nav-link text-white rounded py-2">
-                    Catatan Pelanggaran
-                </a>
+                    <a href="<?= htmlspecialchars($item[1]) ?>"
+                       class="nav-link rounded py-2
+                       <?= $halamanAktif == basename($item[1])
+                           ? 'active bg-primary text-white'
+                           : 'text-white' ?>">
 
-                <a href="data_tindakan.php"
-                   class="nav-link active bg-primary text-white rounded py-2">
-                    Tindakan
-                </a>
+                        <?= htmlspecialchars($item[0]) ?>
 
-                <a href="data_riwayat.php"
-                   class="nav-link text-white rounded py-2">
-                    Riwayat
-                </a>
+                    </a>
 
-                <a href="data_rekap_poin.php"
-                   class="nav-link text-white rounded py-2">
-                    Rekap Poin
-                </a>
-
-                <a href="about_me.php"
-                   class="nav-link text-white rounded py-2">
-                    About Me
-                </a>
+                <?php } ?>
 
                 <hr class="border-secondary my-2">
 
                 <a href="logout.php"
                    class="nav-link text-danger rounded py-2">
+
                     Logout
+
                 </a>
 
             </nav>
@@ -171,6 +275,7 @@ if (!$query) {
                            d-flex justify-content-between align-items-center">
 
                 <div>
+
                     <h4 class="fw-bold text-dark mb-1">
                         Data Tindakan Siswa
                     </h4>
@@ -178,6 +283,7 @@ if (!$query) {
                     <small class="text-secondary">
                         Sistem Informasi Pelanggaran Siswa
                     </small>
+
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
@@ -185,11 +291,21 @@ if (!$query) {
                     <div class="text-end">
 
                         <div class="fw-bold">
-                            <?= htmlspecialchars($nama); ?>
+                            <?= htmlspecialchars($nama) ?>
                         </div>
 
                         <small class="text-secondary">
-                            <?= htmlspecialchars(ucfirst($role)); ?>
+
+                            <?php
+                            if ($role == 'admin') {
+                                echo 'Admin';
+                            } elseif ($isWaliKelas) {
+                                echo 'Wali Kelas';
+                            } else {
+                                echo 'Guru';
+                            }
+                            ?>
+
                         </small>
 
                     </div>
@@ -199,7 +315,7 @@ if (!$query) {
                                 fw-bold flex-shrink-0"
                          style="width: 42px; height: 42px;">
 
-                        <?= htmlspecialchars(strtoupper(substr($nama, 0, 1))); ?>
+                        <?= htmlspecialchars(strtoupper(substr($nama, 0, 1))) ?>
 
                     </div>
 
@@ -229,7 +345,7 @@ if (!$query) {
                         </div>
 
                         <span class="badge bg-primary fs-6">
-                            <?= mysqli_num_rows($query); ?> Data
+                            <?= mysqli_num_rows($query) ?> Data
                         </span>
 
                     </div>
@@ -279,58 +395,58 @@ if (!$query) {
                                         <tr>
 
                                             <td>
-                                                <?= $no++; ?>
+                                                <?= $no++ ?>
                                             </td>
 
                                             <td>
-                                                <?= htmlspecialchars($data['nama_siswa'] ?? '-'); ?>
+                                                <?= htmlspecialchars($data['nama_siswa'] ?? '-') ?>
                                             </td>
 
                                             <td>
-                                                <?= htmlspecialchars($data['nama_kelas'] ?? '-'); ?>
+                                                <?= htmlspecialchars($data['nama_kelas'] ?? '-') ?>
                                             </td>
 
                                             <td>
-                                                <?= htmlspecialchars($namaPelanggaran); ?>
+                                                <?= htmlspecialchars($namaPelanggaran) ?>
                                             </td>
 
                                             <td>
-                                                <?= htmlspecialchars($namaGuru); ?>
+                                                <?= htmlspecialchars($namaGuru) ?>
                                             </td>
 
                                             <td>
-                                                <?= htmlspecialchars($data['tanggal'] ?? '-'); ?>
+                                                <?= htmlspecialchars($data['tanggal'] ?? '-') ?>
                                             </td>
 
                                             <td>
-                                                <?= htmlspecialchars((string) ($data['poin'] ?? 0)); ?>
+                                                <?= htmlspecialchars((string) ($data['poin'] ?? 0)) ?>
                                             </td>
 
                                             <td>
-                                                <?= htmlspecialchars($data['keterangan'] ?? '-'); ?>
+                                                <?= htmlspecialchars($data['keterangan'] ?? '-') ?>
                                             </td>
 
                                             <td>
-                                                <?= htmlspecialchars($data['tindakan'] ?? '-'); ?>
+                                                <?= htmlspecialchars($data['tindakan'] ?? '-') ?>
                                             </td>
 
                                             <td>
 
                                                 <?php
+
                                                 $status = $data['status'] ?? '-';
                                                 $warnaStatus = 'secondary';
 
-                                                if ($status == 'Selesai') {
-                                                    $warnaStatus = 'success';
-                                                } elseif ($status == 'Diproses') {
+                                                if ($status == 'Diproses') {
                                                     $warnaStatus = 'warning text-dark';
                                                 } elseif ($status == 'Ditindaklanjuti') {
                                                     $warnaStatus = 'primary';
                                                 }
+
                                                 ?>
 
-                                                <span class="badge bg-<?= $warnaStatus; ?>">
-                                                    <?= htmlspecialchars($status); ?>
+                                                <span class="badge bg-<?= $warnaStatus ?>">
+                                                    <?= htmlspecialchars($status) ?>
                                                 </span>
 
                                             </td>
@@ -344,10 +460,14 @@ if (!$query) {
                                     ?>
 
                                         <tr>
+
                                             <td colspan="10"
                                                 class="text-center text-secondary py-4">
+
                                                 Belum ada data tindakan siswa.
+
                                             </td>
+
                                         </tr>
 
                                     <?php } ?>
@@ -365,7 +485,9 @@ if (!$query) {
 
                         <a href="dashboard.php"
                            class="btn btn-outline-secondary btn-sm">
+
                             Kembali ke Dashboard
+
                         </a>
 
                     </div>
@@ -374,7 +496,9 @@ if (!$query) {
 
                 <!-- FOOTER -->
                 <footer class="text-center text-secondary small mt-4">
+
                     Sistem Informasi Pelanggaran Siswa &copy; 2026
+
                 </footer>
 
             </section>
@@ -382,9 +506,11 @@ if (!$query) {
         </main>
 
     </div>
+
 </div>
 
 <!-- JAVASCRIPT -->
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
@@ -392,6 +518,7 @@ if (!$query) {
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
 
 <script>
+
 $(document).ready(function () {
 
     $('#tabelTindakan').DataTable({
@@ -425,10 +552,15 @@ $(document).ready(function () {
             emptyTable: "Belum ada data tindakan",
 
             paginate: {
+
                 first: "Pertama",
+
                 last: "Terakhir",
+
                 next: "Berikutnya",
+
                 previous: "Sebelumnya"
+
             }
 
         }
@@ -436,6 +568,7 @@ $(document).ready(function () {
     });
 
 });
+
 </script>
 
 </body>

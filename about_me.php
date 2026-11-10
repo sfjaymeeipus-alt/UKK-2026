@@ -12,11 +12,64 @@ $nama = $_SESSION['nama'] ?? 'Pengguna';
 $role = $_SESSION['role'];
 $user_id = (int) ($_SESSION['user_id'] ?? 0);
 
-/* =====================================
-   CEK APAKAH GURU MERUPAKAN WALI KELAS
-===================================== */
+// ======================================
+// HAK AKSES
+// ======================================
 
-$is_wali_kelas = false;
+if (!in_array($role, ['admin', 'guru', 'wali kelas'])) {
+    die("Anda tidak memiliki akses.");
+}
+
+// ======================================
+// MENU ADMIN
+// ======================================
+
+$menuAdmin = [
+    ["Dashboard", "dashboard.php"],
+    ["Data Siswa", "data_siswa.php"],
+    ["Data Guru", "data_guru.php"],
+    ["Kelas", "data_kelas.php"],
+    ["Tahun Ajaran", "data_tahun_ajaran.php"],
+    ["Penempatan Siswa", "data_penempatan_siswa.php"],
+    ["Wali Kelas", "data_wali_kelas.php"],
+    ["Kategori Pelanggaran", "data_kategori_pelanggaran.php"],
+    ["Jenis Pelanggaran", "data_jenis_pelanggaran.php"],
+    ["Laporan", "data_laporan.php"],
+    ["About Me", "about_me.php"]
+];
+
+// ======================================
+// MENU GURU
+// ======================================
+
+$menuGuru = [
+    ["Dashboard", "dashboard.php"],
+    ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
+    ["Tindakan", "data_tindakan.php"],
+    ["Riwayat", "data_riwayat.php"],
+    ["Rekap Poin", "data_rekap_poin.php"],
+    ["About Me", "about_me.php"]
+];
+
+// ======================================
+// MENU WALI KELAS
+// ======================================
+
+$menuWali = [
+    ["Dashboard", "dashboard.php"],
+    ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
+    ["Tindakan", "data_tindakan.php"],
+    ["Riwayat", "data_riwayat.php"],
+    ["Rekap Poin", "data_rekap_poin.php"],
+    ["Laporan", "walikelas/data_laporan.php"],
+    ["About Me", "about_me.php"]
+];
+
+// ======================================
+// CEK APAKAH GURU MERUPAKAN WALI KELAS
+// ======================================
+
+$isWaliKelas = ($role == 'wali kelas');
 
 if ($role == 'guru') {
 
@@ -44,10 +97,29 @@ if ($role == 'guru') {
     $result_wali = mysqli_stmt_get_result($query_wali);
     $data_wali = mysqli_fetch_assoc($result_wali);
 
-    $is_wali_kelas = ((int) $data_wali['total'] > 0);
+    $isWaliKelas = ((int) ($data_wali['total'] ?? 0) > 0);
 
     mysqli_stmt_close($query_wali);
 }
+
+// ======================================
+// TENTUKAN MENU BERDASARKAN HAK AKSES
+// ======================================
+
+if ($role == 'admin') {
+    $menu = $menuAdmin;
+} elseif ($isWaliKelas) {
+    $menu = $menuWali;
+} else {
+    $menu = $menuGuru;
+}
+
+// ======================================
+// HALAMAN AKTIF
+// ======================================
+
+$halamanAktif = basename($_SERVER['PHP_SELF']);
+
 ?>
 
 <!DOCTYPE html>
@@ -72,20 +144,18 @@ if ($role == 'guru') {
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 position-sticky top-0 align-self-start"
-               style="height: 100vh; overflow-y: auto;">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
 
-            <h5 class="fw-bold mb-1">
-                Sistem Informasi
-            </h5>
+            <div class="mb-4">
 
-            <h6 class="fw-bold">
-                Pelanggaran Siswa
-            </h6>
+                <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+                <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
-            <p class="text-secondary small mb-4">
-                SMK Muhammadiyah Kota Tasikmalaya
-            </p>
+                <small class="text-secondary">
+                    SMK Muhammadiyah Kota Tasikmalaya
+                </small>
+
+            </div>
 
             <p class="text-secondary small fw-bold mb-2">
                 MENU NAVIGASI
@@ -93,117 +163,20 @@ if ($role == 'guru') {
 
             <nav class="nav flex-column gap-1">
 
-                <!-- DASHBOARD -->
-                <a href="dashboard.php"
-                   class="nav-link text-white rounded py-2">
-                    Dashboard
-                </a>
+                <?php foreach ($menu as $item) { ?>
 
-                <?php if ($role == 'admin') { ?>
+                    <a href="<?= htmlspecialchars($item[1]); ?>"
+                       class="nav-link rounded py-2 <?= $halamanAktif == basename($item[1]) ? 'active bg-primary text-white' : 'text-white'; ?>">
 
-                    <!-- MENU ADMIN -->
+                        <?= htmlspecialchars($item[0]); ?>
 
-                    <a href="data_siswa.php"
-                       class="nav-link text-white rounded py-2">
-                        Data Siswa
-                    </a>
-
-                    <a href="data_guru.php"
-                       class="nav-link text-white rounded py-2">
-                        Data Guru
-                    </a>
-
-                    <a href="data_kelas.php"
-                       class="nav-link text-white rounded py-2">
-                        Kelas
-                    </a>
-
-                    <a href="data_tahun_ajaran.php"
-                       class="nav-link text-white rounded py-2">
-                        Tahun Ajaran
-                    </a>
-
-                    <a href="data_penempatan_siswa.php"
-                       class="nav-link text-white rounded py-2">
-                        Penempatan Siswa
-                    </a>
-
-                    <a href="data_wali_kelas.php"
-                       class="nav-link text-white rounded py-2">
-                        Wali Kelas
-                    </a>
-
-                    <a href="data_kategori_pelanggaran.php"
-                       class="nav-link text-white rounded py-2">
-                        Kategori Pelanggaran
-                    </a>
-
-                    <a href="data_jenis_pelanggaran.php"
-                       class="nav-link text-white rounded py-2">
-                        Jenis Pelanggaran
-                    </a>
-
-                    <a href="data_laporan.php"
-                       class="nav-link text-white rounded py-2">
-                        Laporan
-                    </a>
-
-                <?php } elseif ($role == 'guru' && $is_wali_kelas) { ?>
-
-                    <!-- MENU WALI KELAS -->
-
-                    <a href="walikelas/data_siswa.php"
-                       class="nav-link text-white rounded py-2">
-                        Data Siswa
-                    </a>
-
-                    <a href="walikelas/rekap_pelanggaran.php"
-                       class="nav-link text-white rounded py-2">
-                        Rekap Pelanggaran
-                    </a>
-
-                    <a href="walikelas/cetak_rekap.php"
-                       class="nav-link text-white rounded py-2">
-                        Cetak Rekap
-                    </a>
-
-                <?php } elseif ($role == 'guru') { ?>
-
-                    <!-- MENU GURU BIASA -->
-
-                    <a href="data_catatan_pelanggaran.php"
-                       class="nav-link text-white rounded py-2">
-                        Catatan Pelanggaran
-                    </a>
-
-                    <a href="data_tindakan.php"
-                       class="nav-link text-white rounded py-2">
-                        Tindakan
-                    </a>
-
-                    <a href="data_riwayat.php"
-                       class="nav-link text-white rounded py-2">
-                        Riwayat
-                    </a>
-
-                    <a href="data_rekap_poin.php"
-                       class="nav-link text-white rounded py-2">
-                        Rekap Poin
                     </a>
 
                 <?php } ?>
 
-                <!-- ABOUT ME -->
-                <a href="about_me.php"
-                   class="nav-link active bg-primary text-white rounded py-2">
-                    About Me
-                </a>
-
                 <hr class="border-secondary my-2">
 
-                <!-- LOGOUT -->
-                <a href="logout.php"
-                   class="nav-link text-danger rounded py-2">
+                <a href="logout.php" class="nav-link text-danger rounded py-2">
                     Logout
                 </a>
 
@@ -216,7 +189,7 @@ if ($role == 'guru') {
 
             <!-- HEADER -->
             <header class="bg-white border-bottom p-3 p-md-4
-                           d-flex justify-content-between align-items-center">
+                          d-flex justify-content-between align-items-center">
 
                 <div>
 
@@ -239,7 +212,17 @@ if ($role == 'guru') {
                         </div>
 
                         <small class="text-secondary">
-                            <?= $is_wali_kelas ? 'Wali Kelas' : htmlspecialchars(ucfirst($role)); ?>
+
+                            <?php
+                            if ($role == 'admin') {
+                                echo 'Admin';
+                            } elseif ($isWaliKelas) {
+                                echo 'Wali Kelas';
+                            } else {
+                                echo 'Guru';
+                            }
+                            ?>
+
                         </small>
 
                     </div>
@@ -342,7 +325,7 @@ if ($role == 'guru') {
                                         Bootstrap
                                     </span>
 
-                                     <span class="badge border text-dark bg-light p-2">
+                                    <span class="badge border text-dark bg-light p-2">
                                         CSS
                                     </span>
 
@@ -350,7 +333,9 @@ if ($role == 'guru') {
 
                                 <a href="dashboard.php"
                                    class="btn btn-primary rounded-3 mt-4 px-4">
+
                                     Kembali ke Dashboard
+
                                 </a>
 
                             </div>

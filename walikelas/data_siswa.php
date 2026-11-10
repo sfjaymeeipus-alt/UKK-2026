@@ -1,3 +1,4 @@
+
 <?php
 require_once __DIR__ . "/../middleware/auth.php";
 require_once __DIR__ . "/../config/koneksi.php";
@@ -51,7 +52,7 @@ if ((int) $akses['total'] < 1) {
     exit("Anda bukan wali kelas aktif.");
 }
 
-/* AMBIL DATA SISWA SESUAI KELAS WALI KELAS */
+/* AMBIL DATA SISWA */
 $query_siswa = mysqli_prepare($koneksi, "
     SELECT DISTINCT
         s.id,
@@ -109,8 +110,8 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
 <div class="container-fluid">
     <div class="row">
 
-        <!-- SIDEBAR TETAP DIAM -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-fixed top-0 start-0 vh-100 overflow-auto">
+        <!-- SIDEBAR SAMA DENGAN DATA GURU -->
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 position-sticky top-0 vh-100 overflow-auto">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
@@ -145,6 +146,11 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                     Cetak Rekap
                 </a>
 
+                <a href="data_laporan.php"
+                   class="nav-link text-white rounded py-2">
+                    Laporan
+                </a>
+
                 <a href="../about_me.php"
                    class="nav-link text-white rounded py-2">
                     About Me
@@ -161,28 +167,44 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
 
         </aside>
 
-        <!-- KONTEN -->
-        <main class="col-9 col-lg-10 ms-auto p-0">
+        <!-- KONTEN UTAMA SAMA DENGAN DATA GURU -->
+        <main class="col-md-9 col-lg-10 p-0">
 
             <!-- HEADER -->
-            <header class="bg-white border-bottom p-3 p-md-4 d-flex justify-content-between align-items-center">
+            <header class="bg-white border-bottom p-3 p-md-4
+                           d-flex justify-content-between align-items-center">
 
                 <div>
-                    <h4 class="fw-bold mb-1">Data Siswa</h4>
+                    <h4 class="fw-bold text-dark mb-1">
+                        Data Siswa
+                    </h4>
 
                     <small class="text-secondary">
                         Data siswa kelas yang menjadi tanggung jawab Anda
                     </small>
                 </div>
 
-                <div class="text-end">
-                    <div class="fw-bold">
-                        <?= htmlspecialchars($nama) ?>
+                <div class="d-flex align-items-center gap-2">
+
+                    <div class="text-end">
+                        <div class="fw-bold">
+                            <?= htmlspecialchars($nama); ?>
+                        </div>
+
+                        <small class="text-secondary">
+                            Wali Kelas
+                        </small>
                     </div>
 
-                    <small class="text-secondary">
-                        Wali Kelas
-                    </small>
+                    <div class="bg-primary-subtle text-primary rounded-circle
+                                d-flex justify-content-center align-items-center
+                                fw-bold flex-shrink-0"
+                         style="width: 42px; height: 42px;">
+
+                        <?= strtoupper(substr($nama, 0, 1)); ?>
+
+                    </div>
+
                 </div>
 
             </header>
@@ -190,18 +212,25 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                <div class="card border-0 shadow-sm">
+                <div class="card border-0 shadow-sm rounded-3">
 
-                    <div class="card-body p-3 p-md-4">
+                    <div class="card-header bg-white p-3 p-md-4">
 
-                        <h5 class="fw-bold mb-3">
+                        <h5 class="fw-bold mb-1">
                             Daftar Siswa
                         </h5>
 
+                        <small class="text-secondary">
+                            Informasi siswa pada kelas yang Anda ampu.
+                        </small>
+
+                    </div>
+
+                    <div class="card-body">
+
                         <div class="table-responsive">
 
-                            <!-- TABEL BIASA -->
-                            <table class="table table-bordered table-striped align-middle">
+                            <table class="table table-bordered table-hover align-middle mb-0">
 
                                 <thead class="table-dark">
 
@@ -230,35 +259,35 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                                             <tr>
 
                                                 <td>
-                                                    <?= $no++ ?>
+                                                    <?= $no++; ?>
                                                 </td>
 
                                                 <td>
-                                                    <?= htmlspecialchars($siswa['nis'] ?? '') ?>
+                                                    <?= htmlspecialchars($siswa['nis'] ?? ''); ?>
                                                 </td>
 
                                                 <td>
-                                                    <?= htmlspecialchars($siswa['nisn'] ?? '') ?>
+                                                    <?= htmlspecialchars($siswa['nisn'] ?? ''); ?>
                                                 </td>
 
                                                 <td>
-                                                    <?= htmlspecialchars($siswa['nama'] ?? '') ?>
+                                                    <?= htmlspecialchars($siswa['nama'] ?? ''); ?>
                                                 </td>
 
                                                 <td>
-                                                    <?= htmlspecialchars($siswa['jenis_kelamin'] ?? '') ?>
+                                                    <?= htmlspecialchars($siswa['jenis_kelamin'] ?? ''); ?>
                                                 </td>
 
                                                 <td>
-                                                    <?= htmlspecialchars($siswa['tanggal_lahir'] ?? '') ?>
+                                                    <?= htmlspecialchars($siswa['tanggal_lahir'] ?? ''); ?>
                                                 </td>
 
                                                 <td>
-                                                    <?= htmlspecialchars($siswa['nama_kelas'] ?? '') ?>
+                                                    <?= htmlspecialchars($siswa['nama_kelas'] ?? ''); ?>
                                                 </td>
 
                                                 <td>
-                                                    <?= htmlspecialchars($siswa['tahun_ajaran'] ?? '') ?>
+                                                    <?= htmlspecialchars($siswa['tahun_ajaran'] ?? ''); ?>
                                                 </td>
 
                                                 <td>
@@ -286,6 +315,16 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                             </table>
 
                         </div>
+
+                    </div>
+
+                    <!-- BAGIAN BAWAH -->
+                    <div class="card-footer bg-white p-3">
+
+                        <a href="../dashboard.php"
+                           class="btn btn-outline-secondary btn-sm">
+                            Kembali ke Dashboard
+                        </a>
 
                     </div>
 

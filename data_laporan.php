@@ -1,58 +1,297 @@
+
 <?php
 
 include "middleware/auth.php";
 include "config/koneksi.php";
 
-if ($_SESSION['role'] != 'admin') {
+$role = $_SESSION['role'] ?? '';
+$nama = $_SESSION['nama'] ?? 'Pengguna';
+$user_id = (int) ($_SESSION['user_id'] ?? 0);
+
+// ======================================
+// HAK AKSES ADMIN DAN GURU
+// ======================================
+
+if (!in_array($role, ['admin', 'guru'])) {
     echo "Anda tidak memiliki akses";
     exit;
 }
 
-$nama = $_SESSION['nama'];
+// ======================================
+// DATA GURU
+// ======================================
+
+$guru_id = 0;
+$isWaliKelas = false;
+$daftarKelas = [];
+$kelasWali = [];
+$tahunAjaranWali = [];
+
+if ($role == 'guru') {
+
+    $stmtGuru = mysqli_prepare($koneksi, "
+        SELECT id, nama
+        FROM t_guru
+        WHERE user_id = ?
+        LIMIT 1
+    ");
+
+    if (!$stmtGuru) {
+        die("Gagal mengambil data guru.");
+    }
+
+    mysqli_stmt_bind_param($stmtGuru, "i", $user_id);
+    mysqli_stmt_execute($stmtGuru);
+
+    $hasilGuru = mysqli_stmt_get_result($stmtGuru);
+    $dataGuru = mysqli_fetch_assoc($hasilGuru);
+
+    mysqli_stmt_close($stmtGuru);
+
+    if (!$dataGuru) {
+        die("Data guru untuk akun ini tidak ditemukan.");
+    }
+
+    $guru_id = (int) $dataGuru['id'];
+
+    // ======================================
+    // CEK PENUGASAN WALI KELAS AKTIF
+    // ======================================
+
+    $stmtKelas = mysqli_prepare($koneksi, "
+        SELECT
+            wk.kelas_id,
+            wk.tahun_ajaran_id
+        FROM t_wali_kelas wk
+        JOIN t_tahun_ajaran ta
+            ON wk.tahun_ajaran_id = ta.id
+        WHERE wk.guru_id = ?
+            AND wk.status_aktif = 1
+            AND ta.status_aktif = 1
+    ");
+
+    if (!$stmtKelas) {
+        die("Gagal mengambil penugasan wali kelas.");
+    }
+
+    mysqli_stmt_bind_param($stmtKelas, "i", $guru_id);
+    mysqli_stmt_execute($stmtKelas);
+
+    $hasilKelas = mysqli_stmt_get_result($stmtKelas);
+
+    while ($baris = mysqli_fetch_assoc($hasilKelas)) {
+        $daftarKelas[] = $baris;
+
+        $kelasWali[] = (int) $baris['kelas_id'];
+        $tahunAjaranWali[] = (int) $baris['tahun_ajaran_id'];
+    }
+
+    mysqli_stmt_close($stmtKelas);
+
+    if (count($daftarKelas) > 0) {
+        $isWaliKelas = true;
+    }
+}
+
+// ======================================
+// MENU SIDEBAR SESUAI DASHBOARD
+// ======================================
+
+$menuAdmin = [
+    ['Dashboard', 'dashboard.php'],
+    ['Data Siswa', 'data_siswa.php'],
+    ['Data Guru', 'data_guru.php'],
+    ['Kelas', 'data_kelas.php'],
+    ['Tahun Ajaran', 'data_tahun_ajaran.php'],
+    ['Penempatan Siswa', 'data_penempatan_siswa.php'],
+    ['Wali Kelas', 'data_wali_kelas.php'],
+    ['Kategori Pelanggaran', 'data_kategori_pelanggaran.php'],
+    ['Jenis Pelanggaran', 'data_jenis_pelanggaran.php'],
+    ['Laporan', 'data_laporan.php'],
+    ['About Me', 'about_me.php']
+];
+
+$menuGuru = [
+    ['Dashboard', 'dashboard.php'],
+    ['Catatan Pelanggaran', 'data_catatan_pelanggaran.php'],
+    ['Tindakan', 'data_tindakan.php'],
+    ['Riwayat', 'data_riwayat.php'],
+    ['Rekap Poin', 'data_rekap_poin.php'],
+    ['About Me', 'about_me.php']
+];
+
+$menuWali = [
+    ['Dashboard', 'dashboard.php'],
+    ['Catatan Pelanggaran', 'data_catatan_pelanggaran.php'],
+    ['Tindakan', 'data_tindakan.php'],
+    ['Riwayat', 'data_riwayat.php'],
+    ['Rekap Poin', 'data_rekap_poin.php'],
+    ['Laporan', 'walikelas/data_laporan.php'],
+    ['About Me', 'about_me.php']
+];
+
+if ($role == 'admin') {
+    $menu = $menuAdmin;
+} elseif ($isWaliKelas) {
+    $menu = $menuWali;
+} else {
+    $menu = $menuGuru;
+}
+
+$halamanAktif = basename($_SERVER['PHP_SELF']);
+
+// ======================================
+// KONDISI LAPORAN BERDASARKAN ROLE
+// ======================================
+
+$kondisiLaporan = "";
+$parameter = [];
+$tipeParameter = "";
+
+if ($role == 'admin') {
+
+    $kondisiLaporan = "1=1";
+
+} elseif ($isWaliKelas) {
+
+    $kondisi = [];
+
+    foreach ($daftarKelas as $kelas) {
+
+        $kondisi[] = "(kelas_id = ? AND tahun_ajaran_id = ?)";
+
+        $parameter[] = (int) $kelas['kelas_id'];
+        $parameter[] = (int) $kelas['tahun_ajaran_id'];
+
+        $tipeParameter .= "ii";
+    }
+
+    $kondisiLaporan = "(" . implode(" OR ", $kondisi) . ")";
+
+} else {
+
+    $kondisiLaporan = "guru_id = ?";
+
+    $parameter[] = $guru_id;
+    $tipeParameter = "i";
+}
+
+// ======================================
+// FUNGSI QUERY LAPORAN
+// ======================================
+
+function queryLaporan($koneksi, $sql, $tipe = "", $parameter = [])
+{
+    $stmt = mysqli_prepare($koneksi, $sql);
+
+    if (!$stmt) {
+        return false;
+    }
+
+    if (!empty($parameter)) {
+        mysqli_stmt_bind_param($stmt, $tipe, ...$parameter);
+    }
+
+    mysqli_stmt_execute($stmt);
+
+    $hasil = mysqli_stmt_get_result($stmt);
+
+    return $hasil;
+}
+
+// ======================================
+// STATISTIK LAPORAN
+// ======================================
 
 $total_selesai = 0;
 $total_proses = 0;
 $total_poin = 0;
 $total_pelanggaran = 0;
 
-$query_statistik = mysqli_query($koneksi, "
+$query_statistik = queryLaporan(
+    $koneksi,
+    "
     SELECT
         COUNT(*) AS total_pelanggaran,
         COALESCE(SUM(poin), 0) AS total_poin,
         SUM(CASE WHEN status = 'Selesai' THEN 1 ELSE 0 END) AS total_selesai,
-        SUM(CASE WHEN status != 'Selesai' OR status IS NULL THEN 1 ELSE 0 END) AS total_proses
+        SUM(CASE
+            WHEN status != 'Selesai' OR status IS NULL
+            THEN 1 ELSE 0
+        END) AS total_proses
     FROM t_pelanggaran_siswa
-");
+    WHERE $kondisiLaporan
+    ",
+    $tipeParameter,
+    $parameter
+);
 
 if ($query_statistik) {
+
     $statistik = mysqli_fetch_assoc($query_statistik);
 
-    $total_selesai = (int) $statistik['total_selesai'];
-    $total_proses = (int) $statistik['total_proses'];
-    $total_poin = (int) $statistik['total_poin'];
-    $total_pelanggaran = (int) $statistik['total_pelanggaran'];
+    $total_selesai = (int) ($statistik['total_selesai'] ?? 0);
+    $total_proses = (int) ($statistik['total_proses'] ?? 0);
+    $total_poin = (int) ($statistik['total_poin'] ?? 0);
+    $total_pelanggaran = (int) ($statistik['total_pelanggaran'] ?? 0);
 }
 
-$siswa = mysqli_query($koneksi, "
-    SELECT DISTINCT siswa_id, nama_siswa
+// ======================================
+// DAFTAR SISWA
+// ======================================
+
+$sqlSiswa = "
+    SELECT DISTINCT
+        siswa_id,
+        nama_siswa
     FROM t_pelanggaran_siswa
     WHERE siswa_id IS NOT NULL
+        AND $kondisiLaporan
     ORDER BY nama_siswa ASC
-");
+";
+
+$siswa = queryLaporan(
+    $koneksi,
+    $sqlSiswa,
+    $tipeParameter,
+    $parameter
+);
 
 $siswa_id = "";
 $laporan = false;
 
+// ======================================
+// TAMPILKAN LAPORAN BERDASARKAN SISWA
+// ======================================
+
 if (isset($_POST['tampilkan'])) {
 
-    $siswa_id = (int) $_POST['siswa_id'];
+    $siswa_id = (int) ($_POST['siswa_id'] ?? 0);
 
-    $laporan = mysqli_query($koneksi, "
-        SELECT *
-        FROM t_pelanggaran_siswa
-        WHERE siswa_id = $siswa_id
-        ORDER BY tanggal DESC
-    ");
+    if ($siswa_id > 0) {
+
+        $sqlLaporan = "
+            SELECT *
+            FROM t_pelanggaran_siswa
+            WHERE siswa_id = ?
+                AND $kondisiLaporan
+            ORDER BY tanggal DESC
+        ";
+
+        $parameterLaporan = array_merge(
+            [$siswa_id],
+            $parameter
+        );
+
+        $tipeLaporan = "i" . $tipeParameter;
+
+        $laporan = queryLaporan(
+            $koneksi,
+            $sqlLaporan,
+            $tipeLaporan,
+            $parameterLaporan
+        );
+    }
 }
 
 ?>
@@ -79,14 +318,18 @@ if (isset($_POST['tampilkan'])) {
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
 
-            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
-            <h6 class="fw-bold">Pelanggaran Siswa</h6>
+            <div class="mb-4">
 
-            <p class="text-secondary small mb-4">
-                SMK Muhammadiyah Kota Tasikmalaya
-            </p>
+                <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+                <h6 class="fw-bold">Pelanggaran Siswa</h6>
+
+                <small class="text-secondary">
+                    SMK Muhammadiyah Kota Tasikmalaya
+                </small>
+
+            </div>
 
             <p class="text-secondary small fw-bold mb-2">
                 MENU NAVIGASI
@@ -94,50 +337,16 @@ if (isset($_POST['tampilkan'])) {
 
             <nav class="nav flex-column gap-1">
 
-                <a href="dashboard.php" class="nav-link text-white rounded py-2">
-                    Dashboard
-                </a>
+                <?php foreach ($menu as $item) { ?>
 
-                <a href="data_siswa.php" class="nav-link text-white rounded py-2">
-                    Data Siswa
-                </a>
+                    <a href="<?= htmlspecialchars($item[1]); ?>"
+                       class="nav-link rounded py-2 <?= $halamanAktif == basename($item[1]) ? 'active bg-primary text-white' : 'text-white'; ?>">
 
-                <a href="data_guru.php" class="nav-link text-white rounded py-2">
-                    Data Guru
-                </a>
+                        <?= htmlspecialchars($item[0]); ?>
 
-                <a href="data_kelas.php" class="nav-link text-white rounded py-2">
-                    Kelas
-                </a>
+                    </a>
 
-                <a href="data_tahun_ajaran.php" class="nav-link text-white rounded py-2">
-                    Tahun Ajaran
-                </a>
-
-                <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">
-                    Penempatan Siswa
-                </a>
-
-                <a href="data_wali_kelas.php" class="nav-link text-white rounded py-2">
-                    Wali Kelas
-                </a>
-
-                <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">
-                    Kategori Pelanggaran
-                </a>
-
-                <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">
-                    Jenis Pelanggaran
-                </a>
-
-                <a href="data_laporan.php"
-                   class="nav-link active bg-primary text-white rounded py-2">
-                    Laporan
-                </a>
-
-                <a href="about_me.php" class="nav-link text-white rounded py-2">
-                    About Me
-                </a>
+                <?php } ?>
 
                 <hr class="border-secondary my-2">
 
@@ -173,7 +382,13 @@ if (isset($_POST['tampilkan'])) {
                             <?= htmlspecialchars($nama) ?>
                         </div>
 
-                        <small class="text-secondary">Admin</small>
+                        <small class="text-secondary">
+                            <?= htmlspecialchars(
+                                $role == 'admin'
+                                    ? 'Admin'
+                                    : ($isWaliKelas ? 'Wali Kelas' : 'Guru')
+                            ); ?>
+                        </small>
                     </div>
 
                     <div class="bg-primary-subtle text-primary rounded-circle
@@ -281,7 +496,6 @@ if (isset($_POST['tampilkan'])) {
                         </p>
                     </div>
 
-                    <!-- TOMBOL KEMBALI KE DASHBOARD -->
                     <a href="dashboard.php" class="btn btn-secondary">
                         Kembali ke Dashboard
                     </a>
@@ -436,7 +650,6 @@ if (isset($_POST['tampilkan'])) {
                         </div>
 
                     </div>
-                    
 
                 <?php } ?>
 

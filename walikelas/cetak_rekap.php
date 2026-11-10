@@ -292,6 +292,11 @@ mysqli_stmt_close($query_rekap);
                     Cetak Rekap
                 </a>
 
+                <a href="data_laporan.php"
+                       class="nav-link text-white rounded py-2">
+                        Laporan
+                    </a>
+
                 <a href="../about_me.php"
                    class="nav-link text-white rounded py-2">
                     About Me

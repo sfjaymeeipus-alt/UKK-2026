@@ -277,6 +277,10 @@ $daftar_rekap = mysqli_stmt_get_result($query_rekap);
                    class="nav-link text-white rounded py-2">
                     Cetak Rekap
                 </a>
+                <a href="data_laporan.php"
+                       class="nav-link text-white rounded py-2">
+                        Laporan
+                    </a>
 
                 <a href="../about_me.php"
                    class="nav-link text-white rounded py-2">

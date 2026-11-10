@@ -1,10 +1,11 @@
+
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
 
 if (
     !isset($_SESSION['role']) ||
-    !in_array($_SESSION['role'], ['admin', 'guru'])
+    !in_array($_SESSION['role'], ['admin', 'guru', 'wali kelas'])
 ) {
     echo "Anda tidak memiliki akses";
     exit;
@@ -12,6 +13,121 @@ if (
 
 $role = $_SESSION['role'];
 $nama = $_SESSION['nama'] ?? 'Pengguna';
+$user_id = (int) ($_SESSION['user_id'] ?? 0);
+
+// ======================================
+// CEK STATUS WALI KELAS
+// ======================================
+
+$isWaliKelas = ($role == 'wali kelas');
+
+if ($role == 'guru') {
+
+    $stmtGuru = mysqli_prepare($koneksi, "
+        SELECT id
+        FROM t_guru
+        WHERE user_id = ?
+        LIMIT 1
+    ");
+
+    mysqli_stmt_bind_param($stmtGuru, "i", $user_id);
+    mysqli_stmt_execute($stmtGuru);
+
+    $hasilGuru = mysqli_stmt_get_result($stmtGuru);
+    $dataGuru = mysqli_fetch_assoc($hasilGuru);
+
+    if ($dataGuru) {
+
+        $guru_id = (int) $dataGuru['id'];
+
+        $stmtWali = mysqli_prepare($koneksi, "
+            SELECT COUNT(*) AS total
+            FROM t_wali_kelas wk
+            JOIN t_tahun_ajaran ta
+                ON wk.tahun_ajaran_id = ta.id
+            WHERE wk.guru_id = ?
+              AND wk.status_aktif = 1
+              AND ta.status_aktif = 1
+        ");
+
+        mysqli_stmt_bind_param($stmtWali, "i", $guru_id);
+        mysqli_stmt_execute($stmtWali);
+
+        $hasilWali = mysqli_stmt_get_result($stmtWali);
+        $dataWali = mysqli_fetch_assoc($hasilWali);
+
+        if ((int) ($dataWali['total'] ?? 0) > 0) {
+            $isWaliKelas = true;
+        }
+
+        mysqli_stmt_close($stmtWali);
+    }
+
+    mysqli_stmt_close($stmtGuru);
+}
+
+// ======================================
+// MENU ADMIN
+// ======================================
+
+$menuAdmin = [
+    ['Dashboard', 'dashboard.php'],
+    ['Data Siswa', 'data_siswa.php'],
+    ['Data Guru', 'data_guru.php'],
+    ['Kelas', 'data_kelas.php'],
+    ['Tahun Ajaran', 'data_tahun_ajaran.php'],
+    ['Penempatan Siswa', 'data_penempatan_siswa.php'],
+    ['Wali Kelas', 'data_wali_kelas.php'],
+    ['Kategori Pelanggaran', 'data_kategori_pelanggaran.php'],
+    ['Jenis Pelanggaran', 'data_jenis_pelanggaran.php'],
+    ['Laporan', 'data_laporan.php'],
+    ['About Me', 'about_me.php']
+];
+
+// ======================================
+// MENU GURU
+// ======================================
+
+$menuGuru = [
+    ['Dashboard', 'dashboard.php'],
+    ['Catatan Pelanggaran', 'data_catatan_pelanggaran.php'],
+    ['Tindakan', 'data_tindakan.php'],
+    ['Riwayat', 'data_riwayat.php'],
+    ['Rekap Poin', 'data_rekap_poin.php'],
+    ['About Me', 'about_me.php']
+];
+
+// ======================================
+// MENU WALI KELAS
+// ======================================
+
+$menuWali = [
+    ['Dashboard', 'dashboard.php'],
+    ['Catatan Pelanggaran', 'data_catatan_pelanggaran.php'],
+    ['Tindakan', 'data_tindakan.php'],
+    ['Riwayat', 'data_riwayat.php'],
+    ['Rekap Poin', 'data_rekap_poin.php'],
+    ['Laporan', 'walikelas/data_laporan.php'],
+    ['About Me', 'about_me.php']
+];
+
+// ======================================
+// PILIH MENU BERDASARKAN ROLE
+// ======================================
+
+if ($role == 'admin') {
+    $menu = $menuAdmin;
+} elseif ($isWaliKelas) {
+    $menu = $menuWali;
+} else {
+    $menu = $menuGuru;
+}
+
+$halamanAktif = basename($_SERVER['PHP_SELF']);
+
+// ======================================
+// QUERY REKAP POIN
+// ======================================
 
 $query = "
     SELECT
@@ -55,14 +171,18 @@ if (!$result) {
     <div class="row">
 
         <!-- SIDEBAR -->
-         <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
-            
-            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
-            <h6 class="fw-bold">Pelanggaran Siswa</h6>
+        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
 
-            <p class="text-secondary small mb-4">
-                SMK Muhammadiyah Kota Tasikmalaya
-            </p>
+            <div class="mb-4">
+
+                <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+                <h6 class="fw-bold">Pelanggaran Siswa</h6>
+
+                <small class="text-secondary">
+                    SMK Muhammadiyah Kota Tasikmalaya
+                </small>
+
+            </div>
 
             <p class="text-secondary small fw-bold mb-2">
                 MENU NAVIGASI
@@ -70,35 +190,16 @@ if (!$result) {
 
             <nav class="nav flex-column gap-1">
 
-                <a href="dashboard.php"
-                   class="nav-link text-white rounded py-2">
-                    Dashboard
-                </a>
+                <?php foreach ($menu as $item) { ?>
 
-                <a href="data_catatan_pelanggaran.php"
-                   class="nav-link text-white rounded py-2">
-                    Catatan Pelanggaran
-                </a>
+                    <a href="<?= htmlspecialchars($item[1]); ?>"
+                       class="nav-link rounded py-2 <?= $halamanAktif == basename($item[1]) ? 'active bg-primary text-white' : 'text-white'; ?>">
 
-                <a href="data_tindakan.php"
-                   class="nav-link text-white rounded py-2">
-                    Tindakan
-                </a>
+                        <?= htmlspecialchars($item[0]); ?>
 
-                <a href="data_riwayat.php"
-                   class="nav-link text-white rounded py-2">
-                    Riwayat
-                </a>
+                    </a>
 
-                <a href="data_rekap_poin.php"
-                   class="nav-link active bg-primary text-white rounded py-2">
-                    Rekap Poin
-                </a>
-
-                <a href="about_me.php"
-                   class="nav-link text-white rounded py-2">
-                    About Me
-                </a>
+                <?php } ?>
 
                 <hr class="border-secondary my-2">
 
@@ -136,7 +237,11 @@ if (!$result) {
                         </div>
 
                         <small class="text-secondary">
-                            <?= htmlspecialchars(ucfirst($role)); ?>
+                            <?= htmlspecialchars(
+                                $role == 'admin'
+                                    ? 'Admin'
+                                    : ($isWaliKelas ? 'Wali Kelas' : 'Guru')
+                            ); ?>
                         </small>
                     </div>
 

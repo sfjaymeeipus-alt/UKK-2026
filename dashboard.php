@@ -51,9 +51,11 @@ $menuGuru = [
 
 $menuWali = [
     ["Dashboard", "dashboard.php"],
-    ["Data Siswa", "walikelas/data_siswa.php"],
-    ["Rekap Pelanggaran", "walikelas/rekap_pelanggaran.php"],
-    ["Cetak Rekap", "walikelas/cetak_rekap.php"],
+    ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
+    ["Tindakan", "data_tindakan.php"],
+    ["Riwayat", "data_riwayat.php"],
+    ["Rekap Poin", "data_rekap_poin.php"],
+    ["Laporan", "walikelas/data_laporan.php"],
     ["About Me", "about_me.php"]
 ];
 

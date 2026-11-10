@@ -1,3 +1,4 @@
+
 <?php
 
 session_start();
@@ -45,12 +46,12 @@ $password_cocok = false;
 
 if ($data) {
 
-    // Password yang disimpan menggunakan password_hash()
+    // Password menggunakan password_hash()
     if (password_verify($password, $data['password'])) {
         $password_cocok = true;
     }
 
-    // Mendukung akun lama yang password-nya masih teks biasa
+    // Mendukung password lama berupa teks biasa
     elseif ($password === $data['password']) {
         $password_cocok = true;
     }
@@ -59,11 +60,10 @@ if ($data) {
 // Jika email dan password benar
 if ($password_cocok) {
 
-    // Izinkan admin, guru, dan wali kelas
+    // Hanya izinkan admin dan guru
     if (
         $data['role'] == 'admin' ||
-        $data['role'] == 'guru' ||
-        $data['role'] == 'wali kelas'
+        $data['role'] == 'guru'
     ) {
 
         session_regenerate_id(true);

@@ -564,6 +564,11 @@ $query = mysqli_query($koneksi, "
                     Rekap Poin
                 </a>
 
+                <a href="data_laporan.php" class="nav-link text-white rounded py-2">
+                    Laporan
+                </a>
+               
+
                 <a href="about_me.php" class="nav-link text-white rounded py-2">
                     About Me
                 </a>
