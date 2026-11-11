@@ -58,7 +58,7 @@ $menuGuru = [
 $menuWali = [
     ["Dashboard", "dashboard.php"],
     ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
-    ["Tindakan", "data_tindakan.php"],
+    ["Data Siswa", "walikelas/data_siswa.php"],
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
     ["Laporan", "walikelas/data_laporan.php"],
@@ -143,46 +143,38 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
 
     <div class="row">
 
-        <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
+      <!-- SIDEBAR -->
+<aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
 
-            <div class="mb-4">
+    <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+    <h6 class="fw-bold">Pelanggaran Siswa</h6>
+    <p class="text-secondary small mb-4">SMK Muhammadiyah Kota Tasikmalaya</p>
 
-                <h5 class="fw-bold mb-1">Sistem Informasi</h5>
-                <h6 class="fw-bold">Pelanggaran Siswa</h6>
+    <p class="text-secondary small fw-bold mb-2">MENU NAVIGASI</p>
 
-                <small class="text-secondary">
-                    SMK Muhammadiyah Kota Tasikmalaya
-                </small>
+    <nav class="nav flex-column gap-1">
 
-            </div>
+        <?php foreach ($menu as $item) { ?>
 
-            <p class="text-secondary small fw-bold mb-2">
-                MENU NAVIGASI
-            </p>
+            <a href="<?= htmlspecialchars($item[1]); ?>"
+               class="nav-link rounded py-2 <?= $halamanAktif == basename($item[1]) ? 'active bg-primary text-white' : 'text-white'; ?>">
 
-            <nav class="nav flex-column gap-1">
+                <?= htmlspecialchars($item[0]); ?>
 
-                <?php foreach ($menu as $item) { ?>
+            </a>
 
-                    <a href="<?= htmlspecialchars($item[1]); ?>"
-                       class="nav-link rounded py-2 <?= $halamanAktif == basename($item[1]) ? 'active bg-primary text-white' : 'text-white'; ?>">
+        <?php } ?>
 
-                        <?= htmlspecialchars($item[0]); ?>
+        
 
-                    </a>
+        <hr class="border-secondary my-2">
 
-                <?php } ?>
+        <a href="logout.php" class="nav-link text-danger rounded py-2">
+            Logout
+        </a>
 
-                <hr class="border-secondary my-2">
-
-                <a href="logout.php" class="nav-link text-danger rounded py-2">
-                    Logout
-                </a>
-
-            </nav>
-
-        </aside>
+    </nav>
+</aside>
 
         <!-- KONTEN UTAMA -->
         <main class="col-md-9 col-lg-10 p-0">

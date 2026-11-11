@@ -273,41 +273,46 @@ mysqli_stmt_close($query_rekap);
             <nav class="nav flex-column gap-1">
 
                 <a href="../dashboard.php"
-                   class="nav-link text-white rounded py-2">
-                    Dashboard
-                </a>
+           class="nav-link text-white rounded py-2">
+            Dashboard
+        </a>
 
-                <a href="data_siswa.php"
-                   class="nav-link text-white rounded py-2">
-                    Data Siswa
-                </a>
+        <a href="data_catatan_pelanggaran.php"
+           class="nav-link text-white rounded py-2">
+            Catatan Pelanggaran
+        </a>
 
-                <a href="rekap_pelanggaran.php"
-                   class="nav-link text-white rounded py-2">
-                    Rekap Pelanggaran
-                </a>
+        <a href="data_siswa.php"
+            class="nav-link text-white rounded py-2">
+            Data Siswa
+        </a>
 
-                <a href="cetak_rekap.php"
-                   class="nav-link active bg-primary text-white rounded py-2">
-                    Cetak Rekap
-                </a>
+        <a href="../data_riwayat.php"
+           class="nav-link text-white rounded py-2">
+            Riwayat
+        </a>
 
-                <a href="data_laporan.php"
-                       class="nav-link text-white rounded py-2">
-                        Laporan
-                    </a>
+        <a href="cetak_rekap.php"
+           class="nav-link active bg-primary text-white rounded py-2">
+            Rekap Poin
+        </a>
 
-                <a href="../about_me.php"
-                   class="nav-link text-white rounded py-2">
-                    About Me
-                </a>
+        <a href="data_laporan.php"
+            class="nav-link text-white rounded py-2">
+            Laporan
+        </a>
 
-                <hr class="border-secondary my-2">
+        <a href="../about_me.php"
+           class="nav-link text-white rounded py-2">
+            About Me
+        </a>
 
-                <a href="../logout.php"
-                   class="nav-link text-danger rounded py-2">
-                    Logout
-                </a>
+        <hr class="border-secondary my-2">
+
+        <a href="../logout.php"
+           class="nav-link text-danger rounded py-2">
+            Logout
+        </a>
 
             </nav>
 

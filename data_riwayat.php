@@ -54,7 +54,7 @@ $menuGuru = [
 $menuWali = [
     ["Dashboard", "dashboard.php"],
     ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
-    ["Tindakan", "data_tindakan.php"],
+    ["Data Siswa", "walikelas/data_siswa.php"],
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
     ["Laporan", "walikelas/data_laporan.php"],
@@ -158,16 +158,24 @@ $query = "
         ON ps.guru_id = g.id
 
     WHERE ps.status = 'Selesai'
-
-    ORDER BY ps.id ASC
 ";
+
+if ($isWaliKelas) {
+    $query .= " AND ps.guru_id = (
+        SELECT id
+        FROM t_guru
+        WHERE user_id = $user_id
+        LIMIT 1
+    )";
+}
+
+$query .= " ORDER BY ps.id ASC";
 
 $result = mysqli_query($koneksi, $query);
 
 if (!$result) {
     die("Query gagal: " . mysqli_error($koneksi));
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -199,7 +207,7 @@ if (!$result) {
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 position-sticky top-0 vh-100 overflow-auto">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
@@ -214,15 +222,20 @@ if (!$result) {
 
             <nav class="nav flex-column gap-1">
 
-                <?php foreach ($menu as $item) { ?>
+                <?php foreach ($menu as $item) {
 
-                    <a href="<?= htmlspecialchars($item[1]) ?>"
-                       class="nav-link rounded py-2
-                       <?= $halamanAktif == basename($item[1])
-                           ? 'active bg-primary text-white'
-                           : 'text-white' ?>">
+                    $link = $item[1];
+                    $namaMenu = $item[0];
 
-                        <?= htmlspecialchars($item[0]) ?>
+                    $halamanLink = basename($link);
+                    $aktif = ($halamanAktif == $halamanLink);
+
+                ?>
+
+                    <a href="<?= htmlspecialchars($link); ?>"
+                       class="nav-link <?= $aktif ? 'active bg-primary text-white' : 'text-white'; ?> rounded py-2">
+
+                        <?= htmlspecialchars($namaMenu); ?>
 
                     </a>
 

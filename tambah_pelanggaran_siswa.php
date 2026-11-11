@@ -1,3 +1,4 @@
+
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -6,14 +7,37 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'guru') {
     exit("Anda tidak memiliki akses");
 }
 
+$user_id = (int) ($_SESSION['user_id'] ?? 0);
 $nama = $_SESSION['nama'] ?? 'Pengguna';
+
+// AMBIL NAMA GURU SESUAI AKUN LOGIN
+$stmt_guru = mysqli_prepare($koneksi, "
+    SELECT nama
+    FROM t_guru
+    WHERE user_id = ?
+    LIMIT 1
+");
+
+mysqli_stmt_bind_param($stmt_guru, "i", $user_id);
+mysqli_stmt_execute($stmt_guru);
+
+$result_guru = mysqli_stmt_get_result($stmt_guru);
+$data_guru = mysqli_fetch_assoc($result_guru);
+
+$nama_guru = $data_guru['nama'] ?? $nama;
+
+mysqli_stmt_close($stmt_guru);
+
 $error = '';
 
 if (isset($_POST['simpan'])) {
     $nama_siswa = trim($_POST['nama_siswa'] ?? '');
     $nama_kelas = trim($_POST['nama_kelas'] ?? '');
     $nama_pelanggaran = trim($_POST['nama_pelanggaran'] ?? '');
-    $nama_guru = trim($_POST['nama_guru'] ?? $nama);
+
+    // GURU PENCATAT OTOMATIS SESUAI AKUN LOGIN
+    $nama_guru = $data_guru['nama'] ?? $nama;
+
     $tanggal = $_POST['tanggal'] ?? '';
     $keterangan = trim($_POST['keterangan'] ?? '');
     $poin = filter_var($_POST['poin'] ?? null, FILTER_VALIDATE_INT);
@@ -186,7 +210,7 @@ if (isset($_POST['simpan'])) {
                 <div class="d-flex align-items-center gap-2">
                     <div class="text-end">
                         <div class="fw-semibold">
-                            <?= htmlspecialchars($nama); ?>
+                            <?= htmlspecialchars($nama_guru); ?>
                         </div>
                         <small class="text-secondary">Guru</small>
                     </div>
@@ -195,7 +219,7 @@ if (isset($_POST['simpan'])) {
                                 d-flex justify-content-center align-items-center
                                 fw-bold flex-shrink-0"
                          style="width: 42px; height: 42px;">
-                        <?= strtoupper(substr($nama, 0, 1)); ?>
+                        <?= strtoupper(substr($nama_guru, 0, 1)); ?>
                     </div>
                 </div>
 
@@ -253,13 +277,12 @@ if (isset($_POST['simpan'])) {
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Nama Guru</label>
+                                <label class="form-label">Guru Pencatat</label>
                                 <input
                                     type="text"
-                                    name="nama_guru"
                                     class="form-control"
-                                    value="<?= htmlspecialchars($_POST['nama_guru'] ?? $nama); ?>"
-                                    required>
+                                    value="<?= htmlspecialchars($nama_guru); ?>"
+                                    readonly>
                             </div>
 
                             <div class="mb-3">

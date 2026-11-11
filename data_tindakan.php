@@ -1,4 +1,3 @@
-
 <?php
 
 include "middleware/auth.php";
@@ -56,7 +55,7 @@ $menuGuru = [
 $menuWali = [
     ["Dashboard", "dashboard.php"],
     ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
-    ["Tindakan", "data_tindakan.php"],
+    ["Data Siswa", "data_siswa.php"],
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
     ["Laporan", "walikelas/data_laporan.php"],

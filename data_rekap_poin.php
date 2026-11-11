@@ -1,19 +1,20 @@
 
 <?php
+
 include "middleware/auth.php";
 include "config/koneksi.php";
 
-if (
-    !isset($_SESSION['role']) ||
-    !in_array($_SESSION['role'], ['admin', 'guru', 'wali kelas'])
-) {
-    echo "Anda tidak memiliki akses";
-    exit;
-}
-
-$role = $_SESSION['role'];
+$role = $_SESSION['role'] ?? '';
 $nama = $_SESSION['nama'] ?? 'Pengguna';
 $user_id = (int) ($_SESSION['user_id'] ?? 0);
+
+if (
+    $role != 'admin' &&
+    $role != 'guru' &&
+    $role != 'wali kelas'
+) {
+    die("Anda tidak memiliki akses.");
+}
 
 // ======================================
 // CEK STATUS WALI KELAS
@@ -46,8 +47,8 @@ if ($role == 'guru') {
             JOIN t_tahun_ajaran ta
                 ON wk.tahun_ajaran_id = ta.id
             WHERE wk.guru_id = ?
-              AND wk.status_aktif = 1
-              AND ta.status_aktif = 1
+                AND wk.status_aktif = 1
+                AND ta.status_aktif = 1
         ");
 
         mysqli_stmt_bind_param($stmtWali, "i", $guru_id);
@@ -59,74 +60,13 @@ if ($role == 'guru') {
         if ((int) ($dataWali['total'] ?? 0) > 0) {
             $isWaliKelas = true;
         }
-
-        mysqli_stmt_close($stmtWali);
     }
-
-    mysqli_stmt_close($stmtGuru);
-}
-
-// ======================================
-// MENU ADMIN
-// ======================================
-
-$menuAdmin = [
-    ['Dashboard', 'dashboard.php'],
-    ['Data Siswa', 'data_siswa.php'],
-    ['Data Guru', 'data_guru.php'],
-    ['Kelas', 'data_kelas.php'],
-    ['Tahun Ajaran', 'data_tahun_ajaran.php'],
-    ['Penempatan Siswa', 'data_penempatan_siswa.php'],
-    ['Wali Kelas', 'data_wali_kelas.php'],
-    ['Kategori Pelanggaran', 'data_kategori_pelanggaran.php'],
-    ['Jenis Pelanggaran', 'data_jenis_pelanggaran.php'],
-    ['Laporan', 'data_laporan.php'],
-    ['About Me', 'about_me.php']
-];
-
-// ======================================
-// MENU GURU
-// ======================================
-
-$menuGuru = [
-    ['Dashboard', 'dashboard.php'],
-    ['Catatan Pelanggaran', 'data_catatan_pelanggaran.php'],
-    ['Tindakan', 'data_tindakan.php'],
-    ['Riwayat', 'data_riwayat.php'],
-    ['Rekap Poin', 'data_rekap_poin.php'],
-    ['About Me', 'about_me.php']
-];
-
-// ======================================
-// MENU WALI KELAS
-// ======================================
-
-$menuWali = [
-    ['Dashboard', 'dashboard.php'],
-    ['Catatan Pelanggaran', 'data_catatan_pelanggaran.php'],
-    ['Tindakan', 'data_tindakan.php'],
-    ['Riwayat', 'data_riwayat.php'],
-    ['Rekap Poin', 'data_rekap_poin.php'],
-    ['Laporan', 'walikelas/data_laporan.php'],
-    ['About Me', 'about_me.php']
-];
-
-// ======================================
-// PILIH MENU BERDASARKAN ROLE
-// ======================================
-
-if ($role == 'admin') {
-    $menu = $menuAdmin;
-} elseif ($isWaliKelas) {
-    $menu = $menuWali;
-} else {
-    $menu = $menuGuru;
 }
 
 $halamanAktif = basename($_SERVER['PHP_SELF']);
 
 // ======================================
-// QUERY REKAP POIN
+// QUERY REKAP POIN SEMUA KELAS
 // ======================================
 
 $query = "
@@ -136,6 +76,10 @@ $query = "
         COUNT(id) AS jumlah_pelanggaran,
         SUM(COALESCE(poin, 0)) AS total_poin
     FROM t_pelanggaran_siswa
+    WHERE nama_siswa IS NOT NULL
+      AND nama_siswa != ''
+      AND nama_kelas IS NOT NULL
+      AND nama_kelas != ''
     GROUP BY nama_siswa, nama_kelas
     ORDER BY total_poin DESC, nama_siswa ASC
 ";
@@ -145,6 +89,7 @@ $result = mysqli_query($koneksi, $query);
 if (!$result) {
     die("Query gagal: " . mysqli_error($koneksi));
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -168,21 +113,18 @@ if (!$result) {
 <body class="bg-light">
 
 <div class="container-fluid">
+
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 position-sticky top-0 vh-100 overflow-auto">
 
-            <div class="mb-4">
+            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+            <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
-                <h5 class="fw-bold mb-1">Sistem Informasi</h5>
-                <h6 class="fw-bold">Pelanggaran Siswa</h6>
-
-                <small class="text-secondary">
-                    SMK Muhammadiyah Kota Tasikmalaya
-                </small>
-
-            </div>
+            <p class="text-secondary small mb-4">
+                SMK Muhammadiyah Kota Tasikmalaya
+            </p>
 
             <p class="text-secondary small fw-bold mb-2">
                 MENU NAVIGASI
@@ -190,13 +132,130 @@ if (!$result) {
 
             <nav class="nav flex-column gap-1">
 
-                <?php foreach ($menu as $item) { ?>
+                <?php if ($role == 'admin') { ?>
 
-                    <a href="<?= htmlspecialchars($item[1]); ?>"
-                       class="nav-link rounded py-2 <?= $halamanAktif == basename($item[1]) ? 'active bg-primary text-white' : 'text-white'; ?>">
+                    <a href="dashboard.php"
+                       class="nav-link text-white rounded py-2">
+                        Dashboard
+                    </a>
 
-                        <?= htmlspecialchars($item[0]); ?>
+                    <a href="data_siswa.php"
+                       class="nav-link text-white rounded py-2">
+                        Data Siswa
+                    </a>
 
+                    <a href="data_guru.php"
+                       class="nav-link text-white rounded py-2">
+                        Data Guru
+                    </a>
+
+                    <a href="data_kelas.php"
+                       class="nav-link text-white rounded py-2">
+                        Kelas
+                    </a>
+
+                    <a href="data_tahun_ajaran.php"
+                       class="nav-link text-white rounded py-2">
+                        Tahun Ajaran
+                    </a>
+
+                    <a href="data_penempatan_siswa.php"
+                       class="nav-link text-white rounded py-2">
+                        Penempatan Siswa
+                    </a>
+
+                    <a href="data_wali_kelas.php"
+                       class="nav-link text-white rounded py-2">
+                        Wali Kelas
+                    </a>
+
+                    <a href="data_kategori_pelanggaran.php"
+                       class="nav-link text-white rounded py-2">
+                        Kategori Pelanggaran
+                    </a>
+
+                    <a href="data_jenis_pelanggaran.php"
+                       class="nav-link text-white rounded py-2">
+                        Jenis Pelanggaran
+                    </a>
+
+                    <a href="data_laporan.php"
+                       class="nav-link text-white rounded py-2">
+                        Laporan
+                    </a>
+
+                    <a href="about_me.php"
+                       class="nav-link text-white rounded py-2">
+                        About Me
+                    </a>
+
+                <?php } elseif ($isWaliKelas) { ?>
+
+                    <a href="dashboard.php"
+                       class="nav-link text-white rounded py-2">
+                        Dashboard
+                    </a>
+
+                    <a href="data_catatan_pelanggaran.php"
+                       class="nav-link text-white rounded py-2">
+                        Catatan Pelanggaran
+                    </a>
+
+                    <a href="walikelas/data_siswa.php"
+                       class="nav-link text-white rounded py-2">
+                        Data Siswa
+                    </a>
+
+                    <a href="data_riwayat.php"
+                       class="nav-link text-white rounded py-2">
+                        Riwayat
+                    </a>
+
+                    <a href="data_rekap_poin.php"
+                       class="nav-link active bg-primary text-white rounded py-2">
+                        Rekap Poin
+                    </a>
+
+                    <a href="walikelas/data_laporan.php"
+                       class="nav-link text-white rounded py-2">
+                        Laporan
+                    </a>
+
+                    <a href="about_me.php"
+                       class="nav-link text-white rounded py-2">
+                        About Me
+                    </a>
+
+                <?php } else { ?>
+
+                    <a href="dashboard.php"
+                       class="nav-link text-white rounded py-2">
+                        Dashboard
+                    </a>
+
+                    <a href="data_catatan_pelanggaran.php"
+                       class="nav-link text-white rounded py-2">
+                        Catatan Pelanggaran
+                    </a>
+
+                    <a href="data_tindakan.php"
+                       class="nav-link text-white rounded py-2">
+                        Tindakan
+                    </a>
+
+                    <a href="data_riwayat.php"
+                       class="nav-link text-white rounded py-2">
+                        Riwayat
+                    </a>
+
+                    <a href="data_rekap_poin.php"
+                       class="nav-link active bg-primary text-white rounded py-2">
+                        Rekap Poin
+                    </a>
+
+                    <a href="about_me.php"
+                       class="nav-link text-white rounded py-2">
+                        About Me
                     </a>
 
                 <?php } ?>
@@ -220,6 +279,7 @@ if (!$result) {
                            d-flex justify-content-between align-items-center">
 
                 <div>
+
                     <h4 class="fw-bold text-dark mb-1">
                         Rekap Poin
                     </h4>
@@ -227,29 +287,40 @@ if (!$result) {
                     <small class="text-secondary">
                         Sistem Informasi Pelanggaran Siswa
                     </small>
+
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
 
                     <div class="text-end">
+
                         <div class="fw-bold">
                             <?= htmlspecialchars($nama); ?>
                         </div>
 
                         <small class="text-secondary">
-                            <?= htmlspecialchars(
-                                $role == 'admin'
-                                    ? 'Admin'
-                                    : ($isWaliKelas ? 'Wali Kelas' : 'Guru')
-                            ); ?>
+
+                            <?php
+                            if ($role == 'admin') {
+                                echo 'Admin';
+                            } elseif ($isWaliKelas) {
+                                echo 'Wali Kelas';
+                            } else {
+                                echo 'Guru';
+                            }
+                            ?>
+
                         </small>
+
                     </div>
 
                     <div class="bg-primary-subtle text-primary rounded-circle
                                 d-flex justify-content-center align-items-center
                                 fw-bold flex-shrink-0"
                          style="width: 42px; height: 42px;">
+
                         <?= strtoupper(substr($nama, 0, 1)); ?>
+
                     </div>
 
                 </div>
@@ -265,6 +336,7 @@ if (!$result) {
                     <div class="card-header bg-white p-3 p-md-4">
 
                         <div>
+
                             <h5 class="fw-bold mb-1">
                                 Daftar Rekap Poin
                             </h5>
@@ -272,6 +344,7 @@ if (!$result) {
                             <small class="text-secondary">
                                 Ringkasan jumlah pelanggaran dan total poin siswa.
                             </small>
+
                         </div>
 
                     </div>
@@ -286,6 +359,7 @@ if (!$result) {
                                           align-middle mb-0">
 
                                 <thead class="table-dark">
+
                                     <tr>
                                         <th>No</th>
                                         <th>Nama Siswa</th>
@@ -293,18 +367,24 @@ if (!$result) {
                                         <th>Jumlah Pelanggaran</th>
                                         <th>Total Poin</th>
                                     </tr>
+
                                 </thead>
 
                                 <tbody>
+
                                     <?php
                                     $no = 1;
 
                                     if (mysqli_num_rows($result) > 0) {
+
                                         while ($data = mysqli_fetch_assoc($result)) {
                                     ?>
 
                                         <tr>
-                                            <td><?= $no++; ?></td>
+
+                                            <td>
+                                                <?= $no++; ?>
+                                            </td>
 
                                             <td>
                                                 <?= htmlspecialchars($data['nama_siswa'] ?? ''); ?>
@@ -319,14 +399,18 @@ if (!$result) {
                                             </td>
 
                                             <td>
+
                                                 <span class="badge bg-primary">
                                                     <?= (int) $data['total_poin']; ?> poin
                                                 </span>
+
                                             </td>
+
                                         </tr>
 
                                     <?php
                                         }
+
                                     }
                                     ?>
 
@@ -343,7 +427,9 @@ if (!$result) {
 
                         <a href="dashboard.php"
                            class="btn btn-outline-secondary btn-sm">
+
                             Kembali ke Dashboard
+
                         </a>
 
                     </div>
@@ -352,7 +438,9 @@ if (!$result) {
 
                 <!-- FOOTER -->
                 <footer class="text-center text-secondary small mt-4">
+
                     Sistem Informasi Pelanggaran Siswa &copy; 2026
+
                 </footer>
 
             </section>
@@ -360,6 +448,7 @@ if (!$result) {
         </main>
 
     </div>
+
 </div>
 
 <!-- jQuery -->
@@ -373,37 +462,57 @@ if (!$result) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
+
 $(document).ready(function () {
 
     $('#tabelRekapPoin').DataTable({
 
         pageLength: 10,
+
         lengthMenu: [5, 10, 25, 50, 100],
+
         ordering: true,
+
         searching: true,
+
         paging: true,
+
         info: true,
 
         language: {
+
             search: "Cari data:",
+
             lengthMenu: "Tampilkan _MENU_ data",
+
             info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+
             infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+
             infoFiltered: "(difilter dari _MAX_ total data)",
+
             zeroRecords: "Data rekap poin tidak ditemukan",
+
             emptyTable: "Belum ada data rekap poin",
 
             paginate: {
+
                 first: "Pertama",
+
                 last: "Terakhir",
+
                 next: "Berikutnya",
+
                 previous: "Sebelumnya"
+
             }
+
         }
 
     });
 
 });
+
 </script>
 
 </body>

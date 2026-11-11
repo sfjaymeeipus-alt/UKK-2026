@@ -110,7 +110,7 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
 <div class="container-fluid">
     <div class="row">
 
-        <!-- SIDEBAR SAMA DENGAN DATA GURU -->
+        <!-- SIDEBAR -->
         <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 position-sticky top-0 vh-100 overflow-auto">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
@@ -131,19 +131,24 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                     Dashboard
                 </a>
 
+                <a href="../data_catatan_pelanggaran.php"
+                    class="nav-link text-white rounded py-2">
+                    Catatan Pelanggaran
+                </a>
+
                 <a href="data_siswa.php"
                    class="nav-link active bg-primary text-white rounded py-2">
                     Data Siswa
                 </a>
 
-                <a href="rekap_pelanggaran.php"
+                <a href="../data_riwayat.php"
                    class="nav-link text-white rounded py-2">
-                    Rekap Pelanggaran
+                    Riwayat
                 </a>
 
                 <a href="cetak_rekap.php"
                    class="nav-link text-white rounded py-2">
-                    Cetak Rekap
+                    Rekap Poin
                 </a>
 
                 <a href="data_laporan.php"

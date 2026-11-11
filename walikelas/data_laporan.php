@@ -1,8 +1,10 @@
 
 <?php
 
-include "../middleware/auth.php";
-include "../config/koneksi.php";
+require_once "../middleware/auth.php";
+require_once "../config/koneksi.php";
+
+global $koneksi;
 
 $role = $_SESSION['role'] ?? '';
 $nama = $_SESSION['nama'] ?? 'Pengguna';
@@ -237,13 +239,39 @@ while ($row = mysqli_fetch_assoc($resultSiswa)) {
 }
 
 // ======================================
-// PROSES FILTER LAPORAN SISWA
+// PROSES DATA LAPORAN
 // ======================================
 
 $detailLaporan = [];
 $siswaTerpilih = 0;
 
-if (isset($_POST['tampilkan'])) {
+// WALI KELAS LANGSUNG MENAMPILKAN DATA
+
+if ($role == 'guru' && $isWaliKelas) {
+
+    $sqlDetail = "
+        SELECT
+            ps.*
+        FROM t_pelanggaran_siswa ps
+        WHERE $kondisiLaporan
+        AND ps.status = 'Selesai'
+        ORDER BY ps.tanggal DESC
+    ";
+
+    $resultDetail = queryLaporan(
+        $koneksi,
+        $sqlDetail,
+        $tipeParameter,
+        $parameter
+    );
+
+    while ($row = mysqli_fetch_assoc($resultDetail)) {
+        $detailLaporan[] = $row;
+    }
+
+// ADMIN DAN GURU BIASA TETAP MENGGUNAKAN FILTER
+
+} elseif (isset($_POST['tampilkan'])) {
 
     $siswaTerpilih = (int) ($_POST['siswa_id'] ?? 0);
 
@@ -255,10 +283,12 @@ if (isset($_POST['tampilkan'])) {
             FROM t_pelanggaran_siswa ps
             WHERE ps.siswa_id = ?
             AND $kondisiLaporan
+            AND ps.status = 'Selesai'
             ORDER BY ps.tanggal DESC
         ";
 
         $tipeDetail = "i" . $tipeParameter;
+
         $parameterDetail = array_merge(
             [$siswaTerpilih],
             $parameter
@@ -293,6 +323,12 @@ if (isset($_POST['tampilkan'])) {
         rel="stylesheet"
     >
 
+    <!-- DATATABLES -->
+    <link
+        href="https://cdn.datatables.net/2.3.4/css/dataTables.dataTables.min.css"
+        rel="stylesheet"
+    >
+
     <style>
         body {
             background-color: #f5f7fb;
@@ -322,6 +358,75 @@ if (isset($_POST['tampilkan'])) {
         .table th {
             white-space: nowrap;
         }
+
+        /* ======================================
+           TAMPILAN DATATABLES
+        ====================================== */
+
+        #tabelLaporan {
+            width: 100% !important;
+            border-collapse: collapse;
+        }
+
+        #tabelLaporan thead th {
+            background-color: #1556cf !important;
+            color: white !important;
+            text-align: center;
+            vertical-align: middle;
+            font-weight: 600;
+            padding: 12px;
+            border-color: #1556cf !important;
+        }
+
+        #tabelLaporan tbody td {
+            padding: 11px;
+            vertical-align: middle;
+        }
+
+        #tabelLaporan tbody tr:nth-child(even) {
+            background-color: #f2f6ff;
+        }
+
+        #tabelLaporan tbody tr:hover {
+            background-color: #e4edff !important;
+        }
+
+        #tabelLaporan tfoot td {
+            background-color: #eaf1ff;
+            font-weight: bold;
+            padding: 12px;
+        }
+
+        .dataTables_wrapper {
+            width: 100%;
+        }
+
+        .dt-search input,
+        .dt-length select {
+            border: 1px solid #ced4da !important;
+            border-radius: 6px !important;
+            padding: 6px 10px !important;
+        }
+
+        .dt-search input:focus,
+        .dt-length select:focus {
+            border-color: #1556cf !important;
+            outline: none;
+        }
+
+        .dt-paging .dt-paging-button.current {
+            background: #1556cf !important;
+            color: white !important;
+            border: 1px solid #1556cf !important;
+            border-radius: 5px !important;
+        }
+
+        .dt-paging .dt-paging-button:hover {
+            background: #dce8ff !important;
+            color: #1556cf !important;
+            border: 1px solid #dce8ff !important;
+            border-radius: 5px !important;
+        }
     </style>
 </head>
 
@@ -331,23 +436,14 @@ if (isset($_POST['tampilkan'])) {
     <div class="row">
 
         <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 position-sticky top-0 vh-100 overflow-auto">
 
-            <div class="mb-4">
+            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+            <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
-                <h5 class="fw-bold mb-1">
-                    Sistem Informasi
-                </h5>
-
-                <h6 class="fw-bold">
-                    Pelanggaran Siswa
-                </h6>
-
-                <small class="text-secondary">
-                    SMK Muhammadiyah Kota Tasikmalaya
-                </small>
-
-            </div>
+            <p class="text-secondary small mb-4">
+                SMK Muhammadiyah Kota Tasikmalaya
+            </p>
 
             <p class="text-secondary small fw-bold mb-2">
                 MENU NAVIGASI
@@ -355,23 +451,45 @@ if (isset($_POST['tampilkan'])) {
 
             <nav class="nav flex-column gap-1">
 
-                <?php foreach ($menu as $item) { ?>
+                <a href="../dashboard.php"
+                   class="nav-link text-white rounded py-2">
+                    Dashboard
+                </a>
 
-                    <a
-                        href="<?= htmlspecialchars($item[1]); ?>"
-                        class="nav-link rounded py-2 <?= $halamanAktif == basename($item[1]) ? 'active bg-primary text-white' : 'text-white'; ?>"
-                    >
-                        <?= htmlspecialchars($item[0]); ?>
-                    </a>
+                <a href="../data_catatan_pelanggaran.php"
+                   class="nav-link text-white rounded py-2">
+                    Catatan Pelanggaran
+                </a>
 
-                <?php } ?>
+                <a href="data_siswa.php"
+                   class="nav-link text-white rounded py-2">
+                    Data Siswa
+                </a>
+
+                <a href="../data_riwayat.php"
+                   class="nav-link text-white rounded py-2">
+                    Riwayat
+                </a>
+
+                <a href="../data_rekap_poin.php"
+                   class="nav-link text-white rounded py-2">
+                    Rekap Poin
+                </a>
+
+                <a href="data_laporan.php"
+                   class="nav-link active bg-primary text-white rounded py-2">
+                    Laporan
+                </a>
+
+                <a href="../about_me.php"
+                   class="nav-link text-white rounded py-2">
+                    About Me
+                </a>
 
                 <hr class="border-secondary my-2">
 
-                <a
-                    href="../logout.php"
-                    class="nav-link text-danger rounded py-2"
-                >
+                <a href="../logout.php"
+                   class="nav-link text-danger rounded py-2">
                     Logout
                 </a>
 
@@ -395,11 +513,13 @@ if (isset($_POST['tampilkan'])) {
                 </div>
 
                 <div class="text-end">
+
                     <div class="fw-semibold">
                         <?= htmlspecialchars($nama); ?>
                     </div>
 
                     <small class="text-muted">
+
                         <?php
                         if ($role == 'admin') {
                             echo "Administrator";
@@ -409,7 +529,9 @@ if (isset($_POST['tampilkan'])) {
                             echo "Guru";
                         }
                         ?>
+
                     </small>
+
                 </div>
 
             </div>
@@ -417,6 +539,7 @@ if (isset($_POST['tampilkan'])) {
             <?php if ($role == 'guru' && $isWaliKelas) { ?>
 
                 <div class="alert alert-primary">
+
                     <strong>Kelas yang diampu:</strong>
 
                     <?php
@@ -428,6 +551,7 @@ if (isset($_POST['tampilkan'])) {
 
                     echo implode(", ", $namaKelas);
                     ?>
+
                 </div>
 
             <?php } ?>
@@ -494,73 +618,77 @@ if (isset($_POST['tampilkan'])) {
             </div>
 
             <!-- FILTER SISWA -->
-            <div class="card border-0 shadow-sm mb-4">
+            <?php if (!($role == 'guru' && $isWaliKelas)) { ?>
 
-                <div class="card-body">
+                <div class="card border-0 shadow-sm mb-4">
 
-                    <h5 class="fw-bold mb-3">
-                        Pilih Siswa
-                    </h5>
+                    <div class="card-body">
 
-                    <form method="POST">
+                        <h5 class="fw-bold mb-3">
+                            Pilih Siswa
+                        </h5>
 
-                        <div class="row align-items-end">
+                        <form method="POST">
 
-                            <div class="col-md-8 mb-3 mb-md-0">
+                            <div class="row align-items-end">
 
-                                <label class="form-label">
-                                    Nama Siswa
-                                </label>
+                                <div class="col-md-8 mb-3 mb-md-0">
 
-                                <select
-                                    name="siswa_id"
-                                    class="form-select"
-                                    required
-                                >
+                                    <label class="form-label">
+                                        Nama Siswa
+                                    </label>
 
-                                    <option value="">
-                                        -- Pilih Siswa --
-                                    </option>
+                                    <select
+                                        name="siswa_id"
+                                        class="form-select"
+                                        required
+                                    >
 
-                                    <?php foreach ($daftarSiswa as $siswa) { ?>
-
-                                        <option
-                                            value="<?= (int) $siswa['siswa_id']; ?>"
-                                            <?= $siswaTerpilih == $siswa['siswa_id'] ? 'selected' : ''; ?>
-                                        >
-                                            <?= htmlspecialchars($siswa['nama_siswa']); ?>
-                                            -
-                                            <?= htmlspecialchars($siswa['nama_kelas'] ?? '-'); ?>
+                                        <option value="">
+                                            -- Pilih Siswa --
                                         </option>
 
-                                    <?php } ?>
+                                        <?php foreach ($daftarSiswa as $siswa) { ?>
 
-                                </select>
+                                            <option
+                                                value="<?= (int) $siswa['siswa_id']; ?>"
+                                                <?= $siswaTerpilih == $siswa['siswa_id'] ? 'selected' : ''; ?>
+                                            >
+                                                <?= htmlspecialchars($siswa['nama_siswa']); ?>
+                                                -
+                                                <?= htmlspecialchars($siswa['nama_kelas'] ?? '-'); ?>
+                                            </option>
+
+                                        <?php } ?>
+
+                                    </select>
+
+                                </div>
+
+                                <div class="col-md-4">
+
+                                    <button
+                                        type="submit"
+                                        name="tampilkan"
+                                        class="btn btn-primary w-100"
+                                    >
+                                        Tampilkan Laporan
+                                    </button>
+
+                                </div>
 
                             </div>
 
-                            <div class="col-md-4">
+                        </form>
 
-                                <button
-                                    type="submit"
-                                    name="tampilkan"
-                                    class="btn btn-primary w-100"
-                                >
-                                    Tampilkan Laporan
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </form>
+                    </div>
 
                 </div>
 
-            </div>
+            <?php } ?>
 
             <!-- HASIL LAPORAN -->
-            <?php if (isset($_POST['tampilkan'])) { ?>
+            <?php if (($role == 'guru' && $isWaliKelas) || isset($_POST['tampilkan'])) { ?>
 
                 <div class="card border-0 shadow-sm">
 
@@ -586,9 +714,9 @@ if (isset($_POST['tampilkan'])) {
 
                             <div class="table-responsive">
 
-                                <table class="table table-bordered table-striped align-middle">
+                                <table id="tabelLaporan" class="table table-bordered table-striped align-middle">
 
-                                    <thead class="table-dark">
+                                    <thead class="table-primary">
 
                                         <tr>
                                             <th>No</th>
@@ -639,7 +767,9 @@ if (isset($_POST['tampilkan'])) {
                                                 </td>
 
                                                 <td>
-                                                    <?= !empty($data['tanggal']) ? date('d-m-Y', strtotime($data['tanggal'])) : '-'; ?>
+                                                    <?= !empty($data['tanggal'])
+                                                        ? date('d-m-Y', strtotime($data['tanggal']))
+                                                        : '-'; ?>
                                                 </td>
 
                                                 <td>
@@ -681,6 +811,7 @@ if (isset($_POST['tampilkan'])) {
                                     <tfoot>
 
                                         <tr class="table-light fw-bold">
+
                                             <td colspan="7" class="text-end">
                                                 Total Poin
                                             </td>
@@ -688,6 +819,7 @@ if (isset($_POST['tampilkan'])) {
                                             <td colspan="3">
                                                 <?= $totalPoinSiswa; ?>
                                             </td>
+
                                         </tr>
 
                                     </tfoot>
@@ -699,7 +831,17 @@ if (isset($_POST['tampilkan'])) {
                         <?php } else { ?>
 
                             <div class="alert alert-warning mb-0">
-                                Tidak ada data pelanggaran untuk siswa yang dipilih.
+
+                                <?php if ($role == 'guru' && $isWaliKelas) { ?>
+
+                                    Tidak ada data pelanggaran untuk kelas yang diampu.
+
+                                <?php } else { ?>
+
+                                    Tidak ada data pelanggaran untuk siswa yang dipilih.
+
+                                <?php } ?>
+
                             </div>
 
                         <?php } ?>
@@ -723,6 +865,44 @@ if (isset($_POST['tampilkan'])) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- JQUERY -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<!-- DATATABLES -->
+<script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
+
+<script>
+$(document).ready(function () {
+
+    if ($('#tabelLaporan').length) {
+
+        $('#tabelLaporan').DataTable({
+            pageLength: 10,
+            lengthMenu: [5, 10, 25, 50, 100],
+
+            language: {
+                lengthMenu: "Tampilkan _MENU_ data",
+                search: "Cari data:",
+                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+                infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+                infoFiltered: "(disaring dari _MAX_ total data)",
+                zeroRecords: "Data tidak ditemukan",
+                emptyTable: "Tidak ada data tersedia",
+
+                paginate: {
+                    first: "Pertama",
+                    previous: "Sebelumnya",
+                    next: "Berikutnya",
+                    last: "Terakhir"
+                }
+            }
+        });
+
+    }
+
+});
+</script>
 
 </body>
 </html>
