@@ -1,0 +1,18 @@
+REVISI : Pa Ari
+
+1. Edit siswa kolom jenis kelamin tidak muncul
+2. Ditambah penempatan harus ada kolom cari (kolom pilih siswa)
+3. Tahun ajaran nya harus yg aktif saja ( di tambah penempatan)
+4. di login guru biasa pas di tambah catatan kalau ada tindakan gak usah ada lagi data tindakan (x)
+5. di cetak laporan hanya pelanggaran nya saja janagn bgian hlman
+
+
+REVISI : Pa Aldi
+1. di bagian penempatan siswa kalau sudah di data siswa nya gak aktif berarti di penempatan juga udah gk aktif
+2. 
+
+
+
+
+REVISI : Pa Ansor
+1. ketika tambah data nomor urut bertambah di tengah tidak melanjutkan setelahnya
