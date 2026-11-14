@@ -248,7 +248,7 @@ if (isset($_POST['update'])) {
                                        required>
                             </div>
 
-                            <div class="mb-3">
+                            <div class="mb-4">
                                 <label class="form-label fw-semibold">Jenis Kelamin</label>
                                 <select name="jenis_kelamin"
                                         class="form-select"

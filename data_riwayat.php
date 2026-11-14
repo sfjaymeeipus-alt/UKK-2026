@@ -41,7 +41,7 @@ $menuAdmin = [
 $menuGuru = [
     ["Dashboard", "dashboard.php"],
     ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
-    ["Tindakan", "data_tindakan.php"],
+   
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
     ["About Me", "about_me.php"]

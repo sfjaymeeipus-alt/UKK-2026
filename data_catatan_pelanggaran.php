@@ -653,11 +653,7 @@ $daftarTindakan = [
 
             <?php } else { ?>
 
-                <a href="data_tindakan.php"
-                   class="nav-link text-white rounded py-2">
-                    Tindakan
-                </a>
-
+               
             <?php } ?>
 
             <a href="data_riwayat.php"

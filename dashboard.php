@@ -39,7 +39,7 @@ $menuAdmin = [
 $menuGuru = [
     ["Dashboard", "dashboard.php"],
     ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
-    ["Tindakan", "data_tindakan.php"],
+    
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
     ["About Me", "about_me.php"]
@@ -100,12 +100,7 @@ $kartuAdmin = [
     ["Data Siswa", "Mengelola informasi data siswa.", "data_siswa.php", $totalSiswa],
     ["Data Guru", "Mengelola informasi data guru.", "data_guru.php", $totalGuru],
     ["Data Kelas", "Mengelola data kelas siswa.", "data_kelas.php", $totalKelas],
-    ["Tahun Ajaran", "Mengelola periode tahun ajaran.", "data_tahun_ajaran.php", $totalTahunAjaran],
-    ["Penempatan Siswa", "Mengelola penempatan siswa ke kelas.", "data_penempatan_siswa.php", $totalPenempatan],
-    ["Wali Kelas", "Mengelola informasi wali kelas.", "data_wali_kelas.php", $totalWaliKelas],
-    ["Kategori Pelanggaran", "Mengelola kategori pelanggaran siswa.", "data_kategori_pelanggaran.php", $totalKategori],
-    ["Jenis Pelanggaran", "Mengelola jenis pelanggaran siswa.", "data_jenis_pelanggaran.php", $totalJenisPelanggaran],
-    ["Laporan", "Melihat laporan pelanggaran.", "data_laporan.php", $totalLaporan]
+    
 ];
 
 // ======================================
@@ -493,9 +488,7 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
 
                                     <div class="card-body p-4">
 
-                                        <p class="text-primary fw-bold small mb-3">
-                                            MENU <?= str_pad($nomor, 2, "0", STR_PAD_LEFT) ?>
-                                        </p>
+                                       
 
                                         <h5 class="card-title fw-bold">
                                             <?= htmlspecialchars($item[0]) ?>
@@ -825,6 +818,7 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
                     </div>
 
                 <?php } ?>
+                <br> <br> <br> <br> <br> <br> <br> <br> <br> <br>
 
                 <!-- FOOTER -->
                 <footer class="text-center text-secondary small mt-4">

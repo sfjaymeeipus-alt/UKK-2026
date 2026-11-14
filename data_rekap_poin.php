@@ -238,10 +238,7 @@ if (!$result) {
                         Catatan Pelanggaran
                     </a>
 
-                    <a href="data_tindakan.php"
-                       class="nav-link text-white rounded py-2">
-                        Tindakan
-                    </a>
+                  
 
                     <a href="data_riwayat.php"
                        class="nav-link text-white rounded py-2">
