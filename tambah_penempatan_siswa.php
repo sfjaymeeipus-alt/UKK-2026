@@ -1,3 +1,4 @@
+
 <?php
 
 include "middleware/auth.php";
@@ -11,7 +12,7 @@ if ($_SESSION['role'] != 'admin') {
 $nama = $_SESSION['nama'];
 $pesan = "";
 
-/* Mengambil data siswa */
+/* DATA SISWA */
 $query_siswa = mysqli_query(
     $koneksi,
     "SELECT id, nis, nama FROM t_siswa ORDER BY nama ASC"
@@ -21,7 +22,7 @@ if (!$query_siswa) {
     die("Query siswa gagal: " . mysqli_error($koneksi));
 }
 
-/* Mengambil data kelas */
+/* DATA KELAS */
 $query_kelas = mysqli_query(
     $koneksi,
     "SELECT id, nama FROM t_kelas ORDER BY nama ASC"
@@ -31,65 +32,120 @@ if (!$query_kelas) {
     die("Query kelas gagal: " . mysqli_error($koneksi));
 }
 
-/* Mengambil data tahun ajaran */
+/* TAHUN AJARAN AKTIF SAJA */
 $query_tahun = mysqli_query(
     $koneksi,
-    "SELECT id, nama FROM t_tahun_ajaran ORDER BY id DESC"
+    "SELECT id, nama
+     FROM t_tahun_ajaran
+     WHERE status_aktif = 1
+     ORDER BY id DESC"
 );
 
 if (!$query_tahun) {
     die("Query tahun ajaran gagal: " . mysqli_error($koneksi));
 }
 
-/* Menyimpan penempatan siswa */
+/* SIMPAN PENEMPATAN SISWA */
 if (isset($_POST['simpan'])) {
 
     $siswa_id = (int) $_POST['siswa_id'];
     $kelas_id = (int) $_POST['kelas_id'];
     $tahun_ajaran_id = (int) $_POST['tahun_ajaran_id'];
 
-    $tanggal_mulai = mysqli_real_escape_string(
-        $koneksi,
-        $_POST['tanggal_mulai']
-    );
+    $tanggal_mulai = $_POST['tanggal_mulai'];
 
     $tanggal_selesai = !empty($_POST['tanggal_selesai'])
-        ? "'" . mysqli_real_escape_string($koneksi, $_POST['tanggal_selesai']) . "'"
-        : "NULL";
+        ? $_POST['tanggal_selesai']
+        : null;
 
     $status_aktif = (int) $_POST['status_aktif'];
 
-    $query = "
-        INSERT INTO t_kelas_siswa
-        (
-            siswa_id,
-            kelas_id,
-            tahun_ajaran_id,
-            tanggal_mulai,
-            tanggal_selesai,
-            status_aktif
-        )
-        VALUES
-        (
-            $siswa_id,
-            $kelas_id,
-            $tahun_ajaran_id,
-            '$tanggal_mulai',
-            $tanggal_selesai,
-            $status_aktif
-        )
-    ";
+    if (
+        $siswa_id <= 0 ||
+        $kelas_id <= 0 ||
+        $tahun_ajaran_id <= 0 ||
+        empty($tanggal_mulai)
+    ) {
 
-    if (mysqli_query($koneksi, $query)) {
-
-        header("Location: data_penempatan_siswa.php");
-        exit;
+        $pesan = "Periksa kembali data yang diisi.";
 
     } else {
 
-        $pesan = "Gagal menyimpan data: " . mysqli_error($koneksi);
+        /* PASTIKAN TAHUN AJARAN MASIH AKTIF */
+        $cek_tahun = mysqli_prepare(
+            $koneksi,
+            "SELECT id FROM t_tahun_ajaran
+             WHERE id = ? AND status_aktif = 1"
+        );
+
+        mysqli_stmt_bind_param(
+            $cek_tahun,
+            "i",
+            $tahun_ajaran_id
+        );
+
+        mysqli_stmt_execute($cek_tahun);
+
+        $hasil_tahun = mysqli_stmt_get_result($cek_tahun);
+
+        if (mysqli_num_rows($hasil_tahun) == 0) {
+
+            $pesan = "Tahun ajaran yang dipilih tidak aktif.";
+
+        } else {
+
+            $stmt = mysqli_prepare(
+                $koneksi,
+                "INSERT INTO t_kelas_siswa
+                (
+                    siswa_id,
+                    kelas_id,
+                    tahun_ajaran_id,
+                    tanggal_mulai,
+                    tanggal_selesai,
+                    status_aktif
+                )
+                VALUES (?, ?, ?, ?, ?, ?)"
+            );
+
+            if ($stmt) {
+
+                mysqli_stmt_bind_param(
+                    $stmt,
+                    "iiissi",
+                    $siswa_id,
+                    $kelas_id,
+                    $tahun_ajaran_id,
+                    $tanggal_mulai,
+                    $tanggal_selesai,
+                    $status_aktif
+                );
+
+                if (mysqli_stmt_execute($stmt)) {
+
+                    header("Location: data_penempatan_siswa.php");
+                    exit;
+
+                } else {
+
+                    $pesan = "Gagal menyimpan data: " . mysqli_stmt_error($stmt);
+
+                }
+
+                mysqli_stmt_close($stmt);
+
+            } else {
+
+                $pesan = "Query gagal: " . mysqli_error($koneksi);
+
+            }
+
+        }
+
+        mysqli_stmt_close($cek_tahun);
 
     }
+
 }
 
 ?>
@@ -100,25 +156,50 @@ if (isset($_POST['simpan'])) {
 <head>
 
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Tambah Penempatan Siswa</title>
 
+    <!-- BOOTSTRAP -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet">
+
+    <!-- SELECT2 -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+        rel="stylesheet">
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+        rel="stylesheet">
+
+    <style>
+
+        .select2-container {
+            width: 100% !important;
+        }
+
+        .select2-container--bootstrap-5 .select2-selection {
+            min-height: 38px;
+        }
+
+    </style>
 
 </head>
 
 <body class="bg-light">
 
 <div class="container-fluid">
+
     <div class="row">
 
-      <!-- SIDEBAR -->
+        <!-- SIDEBAR -->
         <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
 
             <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+
             <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
             <p class="text-secondary small mb-4">
@@ -197,14 +278,16 @@ if (isset($_POST['simpan'])) {
 
         </aside>
 
-
-        <!-- KONTEN TAMBAH PENEMPATAN SISWA -->
+        <!-- KONTEN -->
         <main class="col-md-9 col-lg-10 p-4">
 
             <div class="card shadow-sm">
+
                 <div class="card-body">
 
-                    <h2 class="mb-3">Tambah Penempatan Siswa</h2>
+                    <h2 class="mb-3">
+                        Tambah Penempatan Siswa
+                    </h2>
 
                     <p class="text-muted">
                         Isi formulir berikut untuk menempatkan siswa
@@ -221,7 +304,9 @@ if (isset($_POST['simpan'])) {
 
                     <form method="POST" action="">
 
+                        <!-- SISWA -->
                         <div class="mb-3">
+
                             <label for="siswa_id" class="form-label">
                                 Pilih Siswa
                             </label>
@@ -232,20 +317,23 @@ if (isset($_POST['simpan'])) {
                                 class="form-select"
                                 required>
 
-                                <option value="">-- Pilih Siswa --</option>
+                                <option value=""></option>
 
                                 <?php while ($siswa = mysqli_fetch_assoc($query_siswa)) { ?>
 
-                                    <option value="<?= $siswa['id']; ?>">
+                                    <option value="<?= (int) $siswa['id']; ?>">
                                         <?= htmlspecialchars($siswa['nis'] . ' - ' . $siswa['nama']); ?>
                                     </option>
 
                                 <?php } ?>
 
                             </select>
+
                         </div>
 
+                        <!-- KELAS -->
                         <div class="mb-3">
+
                             <label for="kelas_id" class="form-label">
                                 Pilih Kelas
                             </label>
@@ -256,22 +344,25 @@ if (isset($_POST['simpan'])) {
                                 class="form-select"
                                 required>
 
-                                <option value="">-- Pilih Kelas --</option>
+                                <option value=""></option>
 
                                 <?php while ($kelas = mysqli_fetch_assoc($query_kelas)) { ?>
 
-                                    <option value="<?= $kelas['id']; ?>">
+                                    <option value="<?= (int) $kelas['id']; ?>">
                                         <?= htmlspecialchars($kelas['nama']); ?>
                                     </option>
 
                                 <?php } ?>
 
                             </select>
+
                         </div>
 
+                        <!-- TAHUN AJARAN -->
                         <div class="mb-3">
+
                             <label for="tahun_ajaran_id" class="form-label">
-                                Tahun Ajaran
+                                Tahun Ajaran Aktif
                             </label>
 
                             <select
@@ -280,20 +371,25 @@ if (isset($_POST['simpan'])) {
                                 class="form-select"
                                 required>
 
-                                <option value="">-- Pilih Tahun Ajaran --</option>
+                                <option value="">
+                                    -- Pilih Tahun Ajaran Aktif --
+                                </option>
 
                                 <?php while ($tahun = mysqli_fetch_assoc($query_tahun)) { ?>
 
-                                    <option value="<?= $tahun['id']; ?>">
+                                    <option value="<?= (int) $tahun['id']; ?>">
                                         <?= htmlspecialchars($tahun['nama']); ?>
                                     </option>
 
                                 <?php } ?>
 
                             </select>
+
                         </div>
 
+                        <!-- TANGGAL MULAI -->
                         <div class="mb-3">
+
                             <label for="tanggal_mulai" class="form-label">
                                 Tanggal Mulai
                             </label>
@@ -304,9 +400,12 @@ if (isset($_POST['simpan'])) {
                                 id="tanggal_mulai"
                                 class="form-control"
                                 required>
+
                         </div>
 
+                        <!-- TANGGAL SELESAI -->
                         <div class="mb-3">
+
                             <label for="tanggal_selesai" class="form-label">
                                 Tanggal Selesai
                             </label>
@@ -316,9 +415,12 @@ if (isset($_POST['simpan'])) {
                                 name="tanggal_selesai"
                                 id="tanggal_selesai"
                                 class="form-control">
+
                         </div>
 
+                        <!-- STATUS -->
                         <div class="mb-3">
+
                             <label for="status_aktif" class="form-label">
                                 Status
                             </label>
@@ -330,9 +432,11 @@ if (isset($_POST['simpan'])) {
                                 required>
 
                                 <option value="1">Aktif</option>
+
                                 <option value="0">Tidak Aktif</option>
 
                             </select>
+
                         </div>
 
                         <button
@@ -351,12 +455,57 @@ if (isset($_POST['simpan'])) {
                     </form>
 
                 </div>
+
             </div>
 
         </main>
 
     </div>
+
 </div>
+
+<!-- JAVASCRIPT -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+
+$(document).ready(function () {
+
+    $('#siswa_id').select2({
+
+        theme: 'bootstrap-5',
+
+        width: '100%',
+
+        placeholder: 'Ketik NIS atau nama siswa...',
+
+        allowClear: true,
+
+        minimumResultsForSearch: 0
+
+    });
+
+    $('#kelas_id').select2({
+
+        theme: 'bootstrap-5',
+
+        width: '100%',
+
+        placeholder: 'Ketik nama kelas...',
+
+        allowClear: true,
+
+        minimumResultsForSearch: 0
+
+    });
+
+});
+
+</script>
 
 </body>
 </html>

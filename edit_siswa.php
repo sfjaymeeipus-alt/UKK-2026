@@ -1,3 +1,4 @@
+
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -26,35 +27,62 @@ if (!$data) {
 
 $error = "";
 
+// Menyesuaikan nilai jenis kelamin dari database
+function formatJenisKelamin($nilai)
+{
+    $nilai = strtoupper(trim($nilai));
+
+    if ($nilai == 'L' || $nilai == 'LAKI-LAKI') {
+        return 'L';
+    } elseif ($nilai == 'P' || $nilai == 'PEREMPUAN') {
+        return 'P';
+    }
+
+    return '';
+}
+
+$jenis_kelamin_db = formatJenisKelamin($data['jenis_kelamin'] ?? '');
+
 if (isset($_POST['update'])) {
+
     $nis = mysqli_real_escape_string($koneksi, $_POST['nis']);
     $nisn = mysqli_real_escape_string($koneksi, $_POST['nisn']);
     $nama_siswa = mysqli_real_escape_string($koneksi, $_POST['nama']);
-    $jenis_kelamin = mysqli_real_escape_string($koneksi, $_POST['jenis_kelamin']);
+
+    $jenis_kelamin = mysqli_real_escape_string(
+        $koneksi,
+        formatJenisKelamin($_POST['jenis_kelamin'] ?? '')
+    );
+
     $tanggal_lahir = mysqli_real_escape_string($koneksi, $_POST['tanggal_lahir']);
     $alamat = mysqli_real_escape_string($koneksi, $_POST['alamat']);
     $status_aktif = (int) $_POST['status_aktif'];
 
-    $update = mysqli_query($koneksi, "
-        UPDATE t_siswa SET
-            nis = '$nis',
-            nisn = '$nisn',
-            nama = '$nama_siswa',
-            jenis_kelamin = '$jenis_kelamin',
-            tanggal_lahir = '$tanggal_lahir',
-            alamat = '$alamat',
-            status_aktif = '$status_aktif'
-        WHERE id = $id
-    ");
-
-    if ($update) {
-        header("Location: data_siswa.php");
-        exit;
+    if ($jenis_kelamin == '') {
+        $error = "Jenis kelamin harus dipilih.";
     } else {
-        $error = "Gagal mengubah data: " . mysqli_error($koneksi);
+
+        $update = mysqli_query($koneksi, "
+            UPDATE t_siswa SET
+                nis = '$nis',
+                nisn = '$nisn',
+                nama = '$nama_siswa',
+                jenis_kelamin = '$jenis_kelamin',
+                tanggal_lahir = '$tanggal_lahir',
+                alamat = '$alamat',
+                status_aktif = '$status_aktif'
+            WHERE id = $id
+        ");
+
+        if ($update) {
+            header("Location: data_siswa.php");
+            exit;
+        } else {
+            $error = "Gagal mengubah data: " . mysqli_error($koneksi);
+        }
     }
 
-    // Menampilkan kembali nilai yang baru dimasukkan
+    // Menampilkan kembali nilai yang dimasukkan
     $data['nis'] = $nis;
     $data['nisn'] = $nisn;
     $data['nama'] = $nama_siswa;
@@ -62,6 +90,8 @@ if (isset($_POST['update'])) {
     $data['tanggal_lahir'] = $tanggal_lahir;
     $data['alamat'] = $alamat;
     $data['status_aktif'] = $status_aktif;
+
+    $jenis_kelamin_db = $jenis_kelamin;
 }
 ?>
 
@@ -83,80 +113,81 @@ if (isset($_POST['update'])) {
 <div class="container-fluid">
     <div class="row">
 
-<!-- SIDEBAR -->
-<aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
+        <!-- SIDEBAR -->
+        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3">
 
-    <h5 class="fw-bold mb-1">Sistem Informasi</h5>
-    <h6 class="fw-bold">Pelanggaran Siswa</h6>
+            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+            <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
-    <p class="text-secondary small mb-4">
-        SMK Muhammadiyah Kota Tasikmalaya
-    </p>
+            <p class="text-secondary small mb-4">
+                SMK Muhammadiyah Kota Tasikmalaya
+            </p>
 
-    <p class="text-secondary small fw-bold mb-2">
-        MENU NAVIGASI
-    </p>
+            <p class="text-secondary small fw-bold mb-2">
+                MENU NAVIGASI
+            </p>
 
-    <nav class="nav flex-column gap-1">
+            <nav class="nav flex-column gap-1">
 
-        <a href="dashboard.php" class="nav-link text-white rounded py-2">
-            Dashboard
-        </a>
+                <a href="dashboard.php" class="nav-link text-white rounded py-2">
+                    Dashboard
+                </a>
 
-        <a href="data_siswa.php"
-           class="nav-link active bg-primary text-white rounded py-2">
-            Data Siswa
-        </a>
+                <a href="data_siswa.php"
+                   class="nav-link active bg-primary text-white rounded py-2">
+                    Data Siswa
+                </a>
 
-        <a href="data_guru.php" class="nav-link text-white rounded py-2">
-            Data Guru
-        </a>
+                <a href="data_guru.php" class="nav-link text-white rounded py-2">
+                    Data Guru
+                </a>
 
-        <a href="data_kelas.php" class="nav-link text-white rounded py-2">
-            Kelas
-        </a>
+                <a href="data_kelas.php" class="nav-link text-white rounded py-2">
+                    Kelas
+                </a>
 
-        <a href="data_tahun_ajaran.php" class="nav-link text-white rounded py-2">
-            Tahun Ajaran
-        </a>
+                <a href="data_tahun_ajaran.php" class="nav-link text-white rounded py-2">
+                    Tahun Ajaran
+                </a>
 
-        <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">
-            Penempatan Siswa
-        </a>
+                <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">
+                    Penempatan Siswa
+                </a>
 
-        <a href="data_wali_kelas.php" class="nav-link text-white rounded py-2">
-            Wali Kelas
-        </a>
+                <a href="data_wali_kelas.php" class="nav-link text-white rounded py-2">
+                    Wali Kelas
+                </a>
 
-        <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">
-            Kategori Pelanggaran
-        </a>
+                <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">
+                    Kategori Pelanggaran
+                </a>
 
-        <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">
-            Jenis Pelanggaran
-        </a>
+                <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">
+                    Jenis Pelanggaran
+                </a>
 
-        <a href="data_laporan.php" class="nav-link text-white rounded py-2">
-            Laporan
-        </a>
+                <a href="data_laporan.php" class="nav-link text-white rounded py-2">
+                    Laporan
+                </a>
 
-        <a href="about_me.php" class="nav-link text-white rounded py-2">
-            About Me
-        </a>
+                <a href="about_me.php" class="nav-link text-white rounded py-2">
+                    About Me
+                </a>
 
-        <hr class="border-secondary my-2">
+                <hr class="border-secondary my-2">
 
-        <a href="logout.php" class="nav-link text-danger rounded py-2">
-            Logout
-        </a>
+                <a href="logout.php" class="nav-link text-danger rounded py-2">
+                    Logout
+                </a>
 
-    </nav>
+            </nav>
 
-</aside>
+        </aside>
+
         <!-- KONTEN UTAMA -->
         <main class="col-md-9 col-lg-10 p-0">
 
-            <!-- HEADER SAMA DENGAN DATA SISWA -->
+            <!-- HEADER -->
             <header class="bg-white border-bottom p-3 p-md-4
                           d-flex justify-content-between align-items-center">
 
@@ -248,20 +279,23 @@ if (isset($_POST['update'])) {
                                        required>
                             </div>
 
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <label class="form-label fw-semibold">Jenis Kelamin</label>
+
                                 <select name="jenis_kelamin"
                                         class="form-select"
                                         required>
+
                                     <option value="L"
-                                        <?= ($data['jenis_kelamin'] ?? '') == 'L' ? 'selected' : ''; ?>>
+                                        <?= $jenis_kelamin_db == 'L' ? 'selected' : ''; ?>>
                                         Laki-laki
                                     </option>
 
                                     <option value="P"
-                                        <?= ($data['jenis_kelamin'] ?? '') == 'P' ? 'selected' : ''; ?>>
+                                        <?= $jenis_kelamin_db == 'P' ? 'selected' : ''; ?>>
                                         Perempuan
                                     </option>
+
                                 </select>
                             </div>
 
@@ -284,9 +318,11 @@ if (isset($_POST['update'])) {
 
                             <div class="mb-4">
                                 <label class="form-label fw-semibold">Status</label>
+
                                 <select name="status_aktif"
                                         class="form-select"
                                         required>
+
                                     <option value="1"
                                         <?= ($data['status_aktif'] ?? '') == 1 ? 'selected' : ''; ?>>
                                         Aktif
@@ -296,6 +332,7 @@ if (isset($_POST['update'])) {
                                         <?= ($data['status_aktif'] ?? '') == 0 ? 'selected' : ''; ?>>
                                         Tidak Aktif
                                     </option>
+
                                 </select>
                             </div>
 

@@ -8,14 +8,13 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $role = $_SESSION['role'] ?? '';
 $nama = $_SESSION['nama'] ?? 'Pengguna';
-$user_id = (int) ($_SESSION['user_id'] ?? 0);
 
 if ($role != 'admin') {
     exit("Anda tidak memiliki akses.");
 }
 
 // ======================================
-// FUNGSI QUERY LAPORAN
+// FUNGSI QUERY
 // ======================================
 
 function queryLaporan($koneksi, $sql, $tipe = "", $parameter = [])
@@ -26,7 +25,6 @@ function queryLaporan($koneksi, $sql, $tipe = "", $parameter = [])
         $bind = [$stmt, $tipe];
 
         foreach ($parameter as $key => $value) {
-            $parameter[$key] = $value;
             $bind[] = &$parameter[$key];
         }
 
@@ -41,7 +39,7 @@ function queryLaporan($koneksi, $sql, $tipe = "", $parameter = [])
 }
 
 // ======================================
-// MENU SIDEBAR ADMIN
+// MENU SIDEBAR
 // ======================================
 
 $menu = [
@@ -61,15 +59,57 @@ $menu = [
 $halamanAktif = basename($_SERVER['PHP_SELF']);
 
 // ======================================
-// ADMIN MELIHAT SELURUH DATA
+// FILTER LAPORAN
 // ======================================
 
-$kondisiLaporan = "1=1";
-$tipeParameter = "";
+$kelasTerpilih = $_GET['kelas'] ?? '';
+$statusTerpilih = $_GET['status'] ?? '';
+$tanggalAwal = $_GET['tanggal_awal'] ?? '';
+$tanggalAkhir = $_GET['tanggal_akhir'] ?? '';
+
+$where = [];
+$tipe = "";
 $parameter = [];
 
+if ($kelasTerpilih != '') {
+    $where[] = "ps.nama_kelas = ?";
+    $tipe .= "s";
+    $parameter[] = $kelasTerpilih;
+}
+
+if ($statusTerpilih == 'selesai') {
+    $where[] = "ps.status = ?";
+    $tipe .= "s";
+    $parameter[] = "Selesai";
+
+} elseif ($statusTerpilih == 'proses') {
+    $where[] = "(ps.status != 'Selesai' OR ps.status IS NULL)";
+}
+
+if (
+    $tanggalAwal != '' &&
+    preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggalAwal)
+) {
+    $where[] = "ps.tanggal >= ?";
+    $tipe .= "s";
+    $parameter[] = $tanggalAwal;
+}
+
+if (
+    $tanggalAkhir != '' &&
+    preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggalAkhir)
+) {
+    $where[] = "ps.tanggal <= ?";
+    $tipe .= "s";
+    $parameter[] = $tanggalAkhir;
+}
+
+$kondisi = !empty($where)
+    ? " WHERE " . implode(" AND ", $where)
+    : "";
+
 // ======================================
-// STATISTIK LAPORAN
+// STATISTIK
 // ======================================
 
 $sqlStatistik = "
@@ -85,71 +125,104 @@ $sqlStatistik = "
             ELSE 0
         END) AS total_proses
     FROM t_pelanggaran_siswa
-    WHERE $kondisiLaporan
 ";
 
-$resultStatistik = queryLaporan(
-    $koneksi,
-    $sqlStatistik,
-    $tipeParameter,
-    $parameter
-);
-
+$resultStatistik = queryLaporan($koneksi, $sqlStatistik);
 $statistik = mysqli_fetch_assoc($resultStatistik);
 
 // ======================================
-// DATA SISWA UNTUK DROPDOWN
+// DATA KELAS
 // ======================================
 
-$sqlSiswa = "
-    SELECT DISTINCT
-        ps.siswa_id,
-        ps.nama_siswa,
-        ps.nama_kelas
-    FROM t_pelanggaran_siswa ps
-    WHERE ps.siswa_id IS NOT NULL
-    ORDER BY ps.nama_siswa ASC
+$sqlKelas = "
+    SELECT DISTINCT nama_kelas
+    FROM t_pelanggaran_siswa
+    WHERE nama_kelas IS NOT NULL
+      AND nama_kelas != ''
+    ORDER BY nama_kelas ASC
 ";
 
-$resultSiswa = queryLaporan($koneksi, $sqlSiswa);
+$resultKelas = queryLaporan($koneksi, $sqlKelas);
 
-$daftarSiswa = [];
+$daftarKelas = [];
 
-while ($row = mysqli_fetch_assoc($resultSiswa)) {
-    $daftarSiswa[] = $row;
+while ($row = mysqli_fetch_assoc($resultKelas)) {
+    $daftarKelas[] = $row['nama_kelas'];
 }
 
 // ======================================
-// PROSES FILTER LAPORAN SISWA
+// DATA LAPORAN
 // ======================================
 
+$sqlDetail = "
+    SELECT
+        ps.*,
+        s.nis,
+
+        COALESCE(
+            NULLIF(NULLIF(TRIM(p.nama), ''), '0'),
+            NULLIF(NULLIF(TRIM(pk.nama), ''), '0'),
+            NULLIF(NULLIF(TRIM(ps.nama_pelanggaran), ''), '0'),
+            '-'
+        ) AS nama_pelanggaran_tampil
+
+    FROM t_pelanggaran_siswa ps
+
+    LEFT JOIN t_siswa s
+        ON ps.siswa_id = s.id
+
+    LEFT JOIN t_pelanggaran p
+        ON p.id = ps.pelanggaran_id
+
+    LEFT JOIN t_pelanggaran_kategori pk
+        ON pk.id = ps.pelanggaran_kategori_id
+
+    $kondisi
+
+    ORDER BY ps.tanggal DESC, ps.id DESC
+";
+
+$resultDetail = queryLaporan(
+    $koneksi,
+    $sqlDetail,
+    $tipe,
+    $parameter
+);
+
 $detailLaporan = [];
-$siswaTerpilih = 0;
 
-if (isset($_POST['tampilkan'])) {
+while ($row = mysqli_fetch_assoc($resultDetail)) {
+    $detailLaporan[] = $row;
+}
 
-    $siswaTerpilih = (int) ($_POST['siswa_id'] ?? 0);
+// ======================================
+// INFORMASI PERIODE
+// ======================================
 
-    if ($siswaTerpilih > 0) {
+$infoPeriode = 'Semua tanggal';
 
-        $sqlDetail = "
-            SELECT *
-            FROM t_pelanggaran_siswa
-            WHERE siswa_id = ?
-            ORDER BY tanggal DESC
-        ";
+if ($tanggalAwal != '' && $tanggalAkhir != '') {
 
-        $resultDetail = queryLaporan(
-            $koneksi,
-            $sqlDetail,
-            "i",
-            [$siswaTerpilih]
-        );
+    $infoPeriode = date('d-m-Y', strtotime($tanggalAwal))
+        . ' sampai ' . date('d-m-Y', strtotime($tanggalAkhir));
 
-        while ($row = mysqli_fetch_assoc($resultDetail)) {
-            $detailLaporan[] = $row;
-        }
-    }
+} elseif ($tanggalAwal != '') {
+
+    $infoPeriode = 'Mulai ' . date('d-m-Y', strtotime($tanggalAwal));
+
+} elseif ($tanggalAkhir != '') {
+
+    $infoPeriode = 'Sampai ' . date('d-m-Y', strtotime($tanggalAkhir));
+}
+
+// ======================================
+// TOTAL POIN
+// ======================================
+
+$totalPoinSiswa = 0;
+
+foreach ($detailLaporan as $data) {
+    $totalPoinSiswa += (int) ($data['poin'] ?? 0);
 }
 
 ?>
@@ -162,7 +235,7 @@ if (isset($_POST['tampilkan'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Laporan Pelanggaran</title>
+    <title>Laporan Pelanggaran Siswa</title>
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -171,54 +244,133 @@ if (isset($_POST['tampilkan'])) {
 
     <style>
 
-        body {
-            background-color: #f5f7fb;
-        }
-
-        .sidebar {
-            min-height: 100vh;
-        }
-
-        .sidebar .nav-link {
-            color: white;
-        }
-
-        .sidebar .nav-link:hover {
-            background-color: #343a40;
-        }
-
-        .card-statistik {
-            border: none;
-            border-radius: 12px;
-        }
-
-        .isi-halaman {
-            padding: 25px;
-        }
-
-        .table th {
-            white-space: nowrap;
-        }
+        /* ==================================
+           CETAK LAPORAN
+        ================================== */
 
         @media print {
 
-            .sidebar,
-            .btn,
-            form,
-            footer {
-                display: none !important;
+            @page {
+                size: A4 landscape;
+                margin: 5mm;
             }
 
-            main {
-                width: 100% !important;
-            }
-
+            html,
             body {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
                 background: white !important;
             }
 
-            .card {
+            body * {
+                visibility: hidden !important;
+            }
+
+            #areaCetak,
+            #areaCetak * {
+                visibility: visible !important;
+            }
+
+            #areaCetak {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
                 box-shadow: none !important;
+                background: white !important;
+
+                /* Memperkecil tampilan cetak */
+                zoom: 0.85;
+            }
+
+            /* Hilangkan tombol */
+
+            #areaCetak button {
+                display: none !important;
+            }
+
+            /* Hilangkan pencarian dan pagination */
+
+            #areaCetak .row {
+                display: none !important;
+            }
+
+            #areaCetak #infoData,
+            #areaCetak #pagination {
+                display: none !important;
+            }
+
+            /* Judul */
+
+            #areaCetak h5 {
+                font-size: 12px !important;
+                margin-bottom: 4px !important;
+                color: black !important;
+            }
+
+            #areaCetak p {
+                font-size: 8px !important;
+                margin-bottom: 5px !important;
+                color: black !important;
+            }
+
+            /* Tabel */
+
+            #areaCetak .table-responsive {
+                overflow: visible !important;
+            }
+
+            #areaCetak table {
+                width: 100% !important;
+                font-size: 7px !important;
+                margin: 0 !important;
+                border-collapse: collapse !important;
+                table-layout: auto !important;
+            }
+
+            #areaCetak th,
+            #areaCetak td {
+                padding: 3px 4px !important;
+                border: 1px solid black !important;
+                color: black !important;
+                line-height: 1.1 !important;
+                vertical-align: middle !important;
+            }
+
+            #areaCetak thead th {
+                background: #e5e5e5 !important;
+                font-weight: bold !important;
+            }
+
+            #areaCetak tfoot td {
+                font-weight: bold !important;
+                background: #eeeeee !important;
+            }
+
+            #areaCetak tr {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            #areaCetak thead {
+                display: table-header-group !important;
+            }
+
+            #areaCetak tfoot {
+                display: table-row-group !important;
+            }
+
+            /* Hilangkan efek warna bootstrap */
+
+            #areaCetak .badge {
+                color: black !important;
+                background: white !important;
+                border: 1px solid black !important;
+                font-size: 7px !important;
             }
 
         }
@@ -265,19 +417,14 @@ if (isset($_POST['tampilkan'])) {
                         href="<?= htmlspecialchars($item[1]); ?>"
                         class="nav-link rounded py-2 <?= $halamanAktif == basename($item[1]) ? 'active bg-primary text-white' : 'text-white'; ?>"
                     >
-
                         <?= htmlspecialchars($item[0]); ?>
-
                     </a>
 
                 <?php } ?>
 
                 <hr class="border-secondary my-2">
 
-                <a
-                    href="logout.php"
-                    class="nav-link text-danger rounded py-2"
-                >
+                <a href="logout.php" class="nav-link text-danger rounded py-2">
                     Logout
                 </a>
 
@@ -287,7 +434,7 @@ if (isset($_POST['tampilkan'])) {
 
         <!-- KONTEN UTAMA -->
 
-        <main class="col-md-9 col-lg-10 isi-halaman">
+        <main class="col-md-9 col-lg-10 p-4">
 
             <!-- HEADER -->
 
@@ -296,7 +443,7 @@ if (isset($_POST['tampilkan'])) {
                 <div>
 
                     <h3 class="fw-bold mb-1">
-                        Laporan Pelanggaran
+                        Laporan Pelanggaran Siswa
                     </h3>
 
                     <p class="text-muted mb-0">
@@ -319,13 +466,31 @@ if (isset($_POST['tampilkan'])) {
 
             </div>
 
+            <!-- INFORMASI KELAS -->
+
+            <div class="card border-0 shadow-sm mb-4">
+
+                <div class="card-body">
+
+                    <small class="text-muted">
+                        Kelas Laporan
+                    </small>
+
+                    <h5 class="fw-bold mb-0">
+                        <?= htmlspecialchars($kelasTerpilih ?: 'Semua Kelas'); ?>
+                    </h5>
+
+                </div>
+
+            </div>
+
             <!-- STATISTIK -->
 
             <div class="row g-3 mb-4">
 
                 <div class="col-md-3">
 
-                    <div class="card card-statistik shadow-sm">
+                    <div class="card border-0 shadow-sm">
 
                         <div class="card-body">
 
@@ -333,8 +498,8 @@ if (isset($_POST['tampilkan'])) {
                                 Total Pelanggaran
                             </p>
 
-                            <h3 class="fw-bold mb-0">
-                                <?= number_format((int) ($statistik['total_pelanggaran'] ?? 0), 0, ',', '.'); ?>
+                            <h3 class="fw-bold text-primary mb-0">
+                                <?= number_format((int) $statistik['total_pelanggaran'], 0, ',', '.'); ?>
                             </h3>
 
                         </div>
@@ -345,7 +510,7 @@ if (isset($_POST['tampilkan'])) {
 
                 <div class="col-md-3">
 
-                    <div class="card card-statistik shadow-sm">
+                    <div class="card border-0 shadow-sm">
 
                         <div class="card-body">
 
@@ -353,8 +518,8 @@ if (isset($_POST['tampilkan'])) {
                                 Total Poin
                             </p>
 
-                            <h3 class="fw-bold mb-0">
-                                <?= number_format((int) ($statistik['total_poin'] ?? 0), 0, ',', '.'); ?>
+                            <h3 class="fw-bold text-info mb-0">
+                                <?= number_format((int) $statistik['total_poin'], 0, ',', '.'); ?>
                             </h3>
 
                         </div>
@@ -365,16 +530,16 @@ if (isset($_POST['tampilkan'])) {
 
                 <div class="col-md-3">
 
-                    <div class="card card-statistik shadow-sm">
+                    <div class="card border-0 shadow-sm">
 
                         <div class="card-body">
 
                             <p class="text-muted mb-2">
-                                Pelanggaran Selesai
+                                Selesai
                             </p>
 
-                            <h3 class="fw-bold mb-0">
-                                <?= number_format((int) ($statistik['total_selesai'] ?? 0), 0, ',', '.'); ?>
+                            <h3 class="fw-bold text-success mb-0">
+                                <?= number_format((int) $statistik['total_selesai'], 0, ',', '.'); ?>
                             </h3>
 
                         </div>
@@ -385,16 +550,16 @@ if (isset($_POST['tampilkan'])) {
 
                 <div class="col-md-3">
 
-                    <div class="card card-statistik shadow-sm">
+                    <div class="card border-0 shadow-sm">
 
                         <div class="card-body">
 
                             <p class="text-muted mb-2">
-                                Dalam Proses
+                                Diproses
                             </p>
 
-                            <h3 class="fw-bold mb-0">
-                                <?= number_format((int) ($statistik['total_proses'] ?? 0), 0, ',', '.'); ?>
+                            <h3 class="fw-bold text-warning mb-0">
+                                <?= number_format((int) $statistik['total_proses'], 0, ',', '.'); ?>
                             </h3>
 
                         </div>
@@ -405,47 +570,39 @@ if (isset($_POST['tampilkan'])) {
 
             </div>
 
-            <!-- FILTER SISWA -->
+            <!-- FILTER -->
 
             <div class="card border-0 shadow-sm mb-4">
 
                 <div class="card-body">
 
                     <h5 class="fw-bold mb-3">
-                        Pilih Siswa
+                        Filter Laporan
                     </h5>
 
-                    <form method="POST">
+                    <form method="GET">
 
-                        <div class="row align-items-end">
+                        <div class="row g-3">
 
-                            <div class="col-md-8 mb-3 mb-md-0">
+                            <div class="col-md-3">
 
                                 <label class="form-label">
-                                    Nama Siswa
+                                    Pilih Kelas
                                 </label>
 
-                                <select
-                                    name="siswa_id"
-                                    class="form-select"
-                                    required
-                                >
+                                <select name="kelas" class="form-select">
 
                                     <option value="">
-                                        -- Pilih Siswa --
+                                        Semua Kelas
                                     </option>
 
-                                    <?php foreach ($daftarSiswa as $siswa) { ?>
+                                    <?php foreach ($daftarKelas as $kelas) { ?>
 
                                         <option
-                                            value="<?= (int) $siswa['siswa_id']; ?>"
-                                            <?= $siswaTerpilih == $siswa['siswa_id'] ? 'selected' : ''; ?>
+                                            value="<?= htmlspecialchars($kelas); ?>"
+                                            <?= $kelasTerpilih == $kelas ? 'selected' : ''; ?>
                                         >
-
-                                            <?= htmlspecialchars($siswa['nama_siswa']); ?>
-                                            -
-                                            <?= htmlspecialchars($siswa['nama_kelas'] ?? '-'); ?>
-
+                                            <?= htmlspecialchars($kelas); ?>
                                         </option>
 
                                     <?php } ?>
@@ -454,17 +611,71 @@ if (isset($_POST['tampilkan'])) {
 
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-3">
 
-                                <button
-                                    type="submit"
-                                    name="tampilkan"
-                                    class="btn btn-primary w-100"
-                                >
-                                    Tampilkan Laporan
-                                </button>
+                                <label class="form-label">
+                                    Status Pelanggaran
+                                </label>
+
+                                <select name="status" class="form-select">
+
+                                    <option value="">
+                                        Semua Status
+                                    </option>
+
+                                    <option value="selesai" <?= $statusTerpilih == 'selesai' ? 'selected' : ''; ?>>
+                                        Selesai
+                                    </option>
+
+                                    <option value="proses" <?= $statusTerpilih == 'proses' ? 'selected' : ''; ?>>
+                                        Dalam Proses
+                                    </option>
+
+                                </select>
 
                             </div>
+
+                            <div class="col-md-3">
+
+                                <label class="form-label">
+                                    Tanggal Awal
+                                </label>
+
+                                <input
+                                    type="date"
+                                    name="tanggal_awal"
+                                    class="form-control"
+                                    value="<?= htmlspecialchars($tanggalAwal); ?>"
+                                >
+
+                            </div>
+
+                            <div class="col-md-3">
+
+                                <label class="form-label">
+                                    Tanggal Akhir
+                                </label>
+
+                                <input
+                                    type="date"
+                                    name="tanggal_akhir"
+                                    class="form-control"
+                                    value="<?= htmlspecialchars($tanggalAkhir); ?>"
+                                >
+
+                            </div>
+
+                        </div>
+
+                        <div class="mt-3">
+
+                            <button type="submit" class="btn btn-primary">
+                                Terapkan Filter
+                            </button>
+
+                            <a href="data_laporan.php" class="btn btn-secondary">
+                                Reset
+                            </a>
 
                         </div>
 
@@ -474,159 +685,230 @@ if (isset($_POST['tampilkan'])) {
 
             </div>
 
-            <!-- HASIL LAPORAN -->
+            <!-- AREA CETAK -->
 
-            <?php if (isset($_POST['tampilkan'])) { ?>
+            <div class="card border-0 shadow-sm" id="areaCetak">
 
-                <div class="card border-0 shadow-sm">
+                <div class="card-body">
 
-                    <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
 
-                        <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">
+                            Data Laporan Pelanggaran
+                        </h5>
 
-                            <h5 class="fw-bold mb-0">
-                                Detail Laporan Pelanggaran
-                            </h5>
+                        <button
+                            type="button"
+                            onclick="window.print()"
+                            class="btn btn-outline-primary"
+                        >
+                            Cetak Laporan
+                        </button>
 
-                            <button
-                                type="button"
-                                onclick="window.print()"
-                                class="btn btn-outline-primary btn-sm"
-                            >
-                                Cetak Laporan
-                            </button>
+                    </div>
+
+                    <!-- INFORMASI LAPORAN -->
+
+                    <p class="text-muted mb-3">
+
+                        Kelas:
+                        <?= htmlspecialchars($kelasTerpilih ?: 'Semua Kelas'); ?>
+
+                        <br>
+
+                        Periode:
+                        <?= htmlspecialchars($infoPeriode); ?>
+
+                    </p>
+
+                    <!-- PENCARIAN -->
+
+                    <div class="row mb-3">
+
+                        <div class="col-md-6 mb-2">
+
+                            <label class="form-label">
+                                Tampilkan data
+                            </label>
+
+                            <select id="jumlahData" class="form-select">
+
+                                <option value="10">10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="all">Semua</option>
+
+                            </select>
 
                         </div>
 
-                        <?php if (count($detailLaporan) > 0) { ?>
+                        <div class="col-md-6 mb-2">
 
-                            <div class="table-responsive">
+                            <label class="form-label">
+                                Cari
+                            </label>
 
-                                <table class="table table-bordered table-striped align-middle">
+                            <input
+                                type="search"
+                                id="cariData"
+                                class="form-control"
+                                placeholder="Cari laporan..."
+                            >
 
-                                    <thead class="table-dark">
+                        </div>
 
-                                        <tr>
-                                            <th>No</th>
-                                            <th>Nama Siswa</th>
-                                            <th>Kelas</th>
-                                            <th>Pelanggaran</th>
-                                            <th>Guru</th>
-                                            <th>Tanggal</th>
-                                            <th>Keterangan</th>
-                                            <th>Poin</th>
-                                            <th>Tindakan</th>
-                                            <th>Status</th>
-                                        </tr>
+                    </div>
 
-                                    </thead>
+                    <!-- TABEL -->
 
-                                    <tbody>
+                    <div class="table-responsive">
 
-                                        <?php
-                                        $no = 1;
-                                        $totalPoinSiswa = 0;
-                                        ?>
+                        <table
+                            class="table table-bordered table-striped table-hover align-middle"
+                            id="tabelLaporan"
+                        >
 
-                                        <?php foreach ($detailLaporan as $data) { ?>
+                            <thead class="table-dark">
 
-                                            <?php
-                                            $totalPoinSiswa += (int) ($data['poin'] ?? 0);
-                                            ?>
+                                <tr>
 
-                                            <tr>
+                                    <th>No</th>
+                                    <th>Tanggal</th>
+                                    <th>NIS</th>
+                                    <th>Nama Siswa</th>
+                                    <th>Kelas</th>
+                                    <th>Jenis Pelanggaran</th>
+                                    <th>Poin</th>
+                                    <th>Keterangan</th>
+                                    <th>Tindakan</th>
+                                    <th>Status</th>
 
-                                                <td><?= $no++; ?></td>
+                                </tr>
 
-                                                <td>
-                                                    <?= htmlspecialchars($data['nama_siswa'] ?? '-'); ?>
-                                                </td>
+                            </thead>
 
-                                                <td>
-                                                    <?= htmlspecialchars($data['nama_kelas'] ?? '-'); ?>
-                                                </td>
+                            <tbody>
 
-                                                <td>
-                                                    <?= htmlspecialchars($data['nama_pelanggaran'] ?? '-'); ?>
-                                                </td>
+                                <?php
+                                $no = 1;
+                                ?>
 
-                                                <td>
-                                                    <?= htmlspecialchars($data['nama_guru'] ?? '-'); ?>
-                                                </td>
+                                <?php foreach ($detailLaporan as $data) { ?>
 
-                                                <td>
-                                                    <?= !empty($data['tanggal']) ? date('d-m-Y', strtotime($data['tanggal'])) : '-'; ?>
-                                                </td>
+                                    <tr>
 
-                                                <td>
-                                                    <?= htmlspecialchars($data['keterangan'] ?? '-'); ?>
-                                                </td>
+                                        <td>
+                                            <?= $no++; ?>
+                                        </td>
 
-                                                <td>
-                                                    <?= (int) ($data['poin'] ?? 0); ?>
-                                                </td>
+                                        <td>
+                                            <?= !empty($data['tanggal'])
+                                                ? date('d-m-Y', strtotime($data['tanggal']))
+                                                : '-'; ?>
+                                        </td>
 
-                                                <td>
-                                                    <?= htmlspecialchars($data['tindakan'] ?? '-'); ?>
-                                                </td>
+                                        <td>
+                                            <?= htmlspecialchars($data['nis'] ?? '-'); ?>
+                                        </td>
 
-                                                <td>
+                                        <td>
+                                            <?= htmlspecialchars($data['nama_siswa'] ?? '-'); ?>
+                                        </td>
 
-                                                    <?php if (($data['status'] ?? '') == 'Selesai') { ?>
+                                        <td>
+                                            <?= htmlspecialchars($data['nama_kelas'] ?? '-'); ?>
+                                        </td>
 
-                                                        <span class="badge bg-success">
-                                                            Selesai
-                                                        </span>
+                                        <td>
+                                            <?= htmlspecialchars($data['nama_pelanggaran_tampil'] ?? '-'); ?>
+                                        </td>
 
-                                                    <?php } else { ?>
+                                        <td>
+                                            <?= (int) ($data['poin'] ?? 0); ?>
+                                        </td>
 
-                                                        <span class="badge bg-warning text-dark">
-                                                            <?= htmlspecialchars($data['status'] ?? 'Diproses'); ?>
-                                                        </span>
+                                        <td>
+                                            <?= htmlspecialchars($data['keterangan'] ?? '-'); ?>
+                                        </td>
 
-                                                    <?php } ?>
+                                        <td>
+                                            <?= htmlspecialchars($data['tindakan'] ?? '-'); ?>
+                                        </td>
 
-                                                </td>
+                                        <td>
 
-                                            </tr>
+                                            <?php if (($data['status'] ?? '') == 'Selesai') { ?>
 
-                                        <?php } ?>
+                                                <span class="badge bg-success">
+                                                    Selesai
+                                                </span>
 
-                                    </tbody>
+                                            <?php } else { ?>
 
-                                    <tfoot>
+                                                <span class="badge bg-warning text-dark">
+                                                    <?= htmlspecialchars($data['status'] ?: 'Dalam Proses'); ?>
+                                                </span>
 
-                                        <tr class="table-light fw-bold">
+                                            <?php } ?>
 
-                                            <td colspan="7" class="text-end">
-                                                Total Poin
-                                            </td>
+                                        </td>
 
-                                            <td colspan="3">
-                                                <?= $totalPoinSiswa; ?>
-                                            </td>
+                                    </tr>
 
-                                        </tr>
+                                <?php } ?>
 
-                                    </tfoot>
+                                <?php if (count($detailLaporan) == 0) { ?>
 
-                                </table>
+                                    <tr>
 
-                            </div>
+                                        <td colspan="10" class="text-center">
+                                            Tidak ada data laporan pelanggaran.
+                                        </td>
 
-                        <?php } else { ?>
+                                    </tr>
 
-                            <div class="alert alert-warning mb-0">
-                                Tidak ada data pelanggaran untuk siswa yang dipilih.
-                            </div>
+                                <?php } ?>
 
-                        <?php } ?>
+                            </tbody>
+
+                            <tfoot>
+
+                                <tr class="table-light fw-bold">
+
+                                    <td colspan="6" class="text-end">
+                                        Total Poin
+                                    </td>
+
+                                    <td>
+                                        <?= number_format($totalPoinSiswa, 0, ',', '.'); ?>
+                                    </td>
+
+                                    <td colspan="3"></td>
+
+                                </tr>
+
+                            </tfoot>
+
+                        </table>
+
+                    </div>
+
+                    <!-- INFO DATA -->
+
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+
+                        <small id="infoData" class="text-muted"></small>
+
+                        <nav id="pagination">
+                            <ul class="pagination pagination-sm mb-0" id="daftarPagination"></ul>
+                        </nav>
 
                     </div>
 
                 </div>
 
-            <?php } ?>
+            </div>
 
             <!-- FOOTER -->
 
@@ -645,7 +927,143 @@ if (isset($_POST['tampilkan'])) {
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+
+// ======================================
+// PENCARIAN DAN PAGINATION
+// ======================================
+
+const tabel = document.getElementById('tabelLaporan');
+const jumlahData = document.getElementById('jumlahData');
+const cariData = document.getElementById('cariData');
+const infoData = document.getElementById('infoData');
+const pagination = document.getElementById('daftarPagination');
+
+let halamanSekarang = 1;
+
+function tampilkanData() {
+
+    const semuaBaris = Array.from(
+        tabel.querySelectorAll('tbody tr')
+    ).filter(function(baris) {
+        return baris.cells.length > 1;
+    });
+
+    const kataKunci = cariData.value.toLowerCase();
+
+    const barisFilter = semuaBaris.filter(function(baris) {
+        return baris.innerText.toLowerCase().includes(kataKunci);
+    });
+
+    const batasData = jumlahData.value === 'all'
+        ? barisFilter.length
+        : parseInt(jumlahData.value);
+
+    const totalData = barisFilter.length;
+
+    const totalHalaman = Math.max(
+        1,
+        Math.ceil(totalData / Math.max(batasData, 1))
+    );
+
+    if (halamanSekarang > totalHalaman) {
+        halamanSekarang = totalHalaman;
+    }
+
+    semuaBaris.forEach(function(baris) {
+        baris.style.display = 'none';
+    });
+
+    const mulai = (halamanSekarang - 1) * batasData;
+
+    const akhir = jumlahData.value === 'all'
+        ? totalData
+        : mulai + batasData;
+
+    barisFilter.slice(mulai, akhir).forEach(function(baris) {
+        baris.style.display = '';
+    });
+
+    if (totalData === 0) {
+
+        infoData.innerText = 'Tidak ada data yang ditemukan.';
+
+    } else {
+
+        infoData.innerText =
+            'Menampilkan ' +
+            (mulai + 1) +
+            ' sampai ' +
+            Math.min(akhir, totalData) +
+            ' dari ' +
+            totalData +
+            ' data';
+
+    }
+
+    pagination.innerHTML = '';
+
+    for (let i = 1; i <= totalHalaman; i++) {
+
+        const li = document.createElement('li');
+
+        li.className = 'page-item ' +
+            (i === halamanSekarang ? 'active' : '');
+
+        const tombol = document.createElement('button');
+
+        tombol.className = 'page-link';
+        tombol.innerText = i;
+
+        tombol.onclick = function() {
+            halamanSekarang = i;
+            tampilkanData();
+        };
+
+        li.appendChild(tombol);
+        pagination.appendChild(li);
+
+    }
+
+}
+
+jumlahData.addEventListener('change', function() {
+    halamanSekarang = 1;
+    tampilkanData();
+});
+
+cariData.addEventListener('input', function() {
+    halamanSekarang = 1;
+    tampilkanData();
+});
+
+// ======================================
+// PERSIAPAN CETAK
+// ======================================
+
+// Tampilkan seluruh data saat mencetak.
+
+window.addEventListener('beforeprint', function() {
+
+    const semuaBaris = tabel.querySelectorAll('tbody tr');
+
+    semuaBaris.forEach(function(baris) {
+        baris.style.display = 'table-row';
+    });
+
+});
+
+// Kembalikan pagination setelah mencetak.
+
+window.addEventListener('afterprint', function() {
+    tampilkanData();
+});
+
+// Jalankan pertama kali.
+
+tampilkanData();
+
+</script>
 
 </body>
 </html>

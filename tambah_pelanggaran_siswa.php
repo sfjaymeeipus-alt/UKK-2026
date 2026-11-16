@@ -31,6 +31,7 @@ mysqli_stmt_close($stmt_guru);
 $error = '';
 
 if (isset($_POST['simpan'])) {
+
     $nama_siswa = trim($_POST['nama_siswa'] ?? '');
     $nama_kelas = trim($_POST['nama_kelas'] ?? '');
     $nama_pelanggaran = trim($_POST['nama_pelanggaran'] ?? '');
@@ -41,7 +42,10 @@ if (isset($_POST['simpan'])) {
     $tanggal = $_POST['tanggal'] ?? '';
     $keterangan = trim($_POST['keterangan'] ?? '');
     $poin = filter_var($_POST['poin'] ?? null, FILTER_VALIDATE_INT);
-    $tindakan = trim($_POST['tindakan'] ?? '');
+
+    // TINDAKAN DIKOSONGKAN KARENA DIKELOLA DI HALAMAN TINDAKAN
+    $tindakan = '';
+
     $status = $_POST['status'] ?? 'Belum Ditindaklanjuti';
 
     $daftar_status = [
@@ -58,7 +62,7 @@ if (isset($_POST['simpan'])) {
         $tanggal == '' ||
         $keterangan == ''
     ) {
-        $error = "Semua data wajib diisi kecuali tindakan.";
+        $error = "Semua data wajib diisi.";
     } elseif (
         $poin === false ||
         $poin === null ||
@@ -68,6 +72,7 @@ if (isset($_POST['simpan'])) {
     } elseif (!in_array($status, $daftar_status, true)) {
         $error = "Status pelanggaran tidak valid.";
     } else {
+
         $stmt = mysqli_prepare($koneksi, "
             INSERT INTO t_pelanggaran_siswa
             (
@@ -85,6 +90,7 @@ if (isset($_POST['simpan'])) {
         ");
 
         if ($stmt) {
+
             mysqli_stmt_bind_param(
                 $stmt,
                 "ssssssiss",
@@ -109,6 +115,7 @@ if (isset($_POST['simpan'])) {
             }
 
             mysqli_stmt_close($stmt);
+
         } else {
             $error = "Gagal menyiapkan query: " .
                 mysqli_error($koneksi);
@@ -119,6 +126,7 @@ if (isset($_POST['simpan'])) {
 
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -202,16 +210,19 @@ if (isset($_POST['simpan'])) {
                     <h5 class="fw-bold mb-1">
                         Tambah Catatan Pelanggaran
                     </h5>
+
                     <p class="text-secondary small mb-0">
                         Formulir pencatatan pelanggaran siswa.
                     </p>
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
+
                     <div class="text-end">
                         <div class="fw-semibold">
                             <?= htmlspecialchars($nama_guru); ?>
                         </div>
+
                         <small class="text-secondary">Guru</small>
                     </div>
 
@@ -219,8 +230,11 @@ if (isset($_POST['simpan'])) {
                                 d-flex justify-content-center align-items-center
                                 fw-bold flex-shrink-0"
                          style="width: 42px; height: 42px;">
+
                         <?= strtoupper(substr($nama_guru, 0, 1)); ?>
+
                     </div>
+
                 </div>
 
             </header>
@@ -231,23 +245,28 @@ if (isset($_POST['simpan'])) {
                 <div class="card border-0 shadow-sm">
 
                     <div class="card-header bg-white p-3">
+
                         <h6 class="fw-bold mb-0">
                             Form Tambah Catatan Pelanggaran
                         </h6>
+
                     </div>
 
                     <div class="card-body p-4">
 
                         <?php if ($error != '') { ?>
+
                             <div class="alert alert-danger">
                                 <?= htmlspecialchars($error); ?>
                             </div>
+
                         <?php } ?>
 
                         <form method="POST">
 
                             <div class="mb-3">
                                 <label class="form-label">Nama Siswa</label>
+
                                 <input
                                     type="text"
                                     name="nama_siswa"
@@ -258,6 +277,7 @@ if (isset($_POST['simpan'])) {
 
                             <div class="mb-3">
                                 <label class="form-label">Kelas</label>
+
                                 <input
                                     type="text"
                                     name="nama_kelas"
@@ -268,6 +288,7 @@ if (isset($_POST['simpan'])) {
 
                             <div class="mb-3">
                                 <label class="form-label">Nama Pelanggaran</label>
+
                                 <input
                                     type="text"
                                     name="nama_pelanggaran"
@@ -278,6 +299,7 @@ if (isset($_POST['simpan'])) {
 
                             <div class="mb-3">
                                 <label class="form-label">Guru Pencatat</label>
+
                                 <input
                                     type="text"
                                     class="form-control"
@@ -287,6 +309,7 @@ if (isset($_POST['simpan'])) {
 
                             <div class="mb-3">
                                 <label class="form-label">Tanggal Pelanggaran</label>
+
                                 <input
                                     type="date"
                                     name="tanggal"
@@ -297,6 +320,7 @@ if (isset($_POST['simpan'])) {
 
                             <div class="mb-3">
                                 <label class="form-label">Keterangan</label>
+
                                 <textarea
                                     name="keterangan"
                                     class="form-control"
@@ -304,8 +328,9 @@ if (isset($_POST['simpan'])) {
                                     required><?= htmlspecialchars($_POST['keterangan'] ?? ''); ?></textarea>
                             </div>
 
-                            <div class="mb-3">
+                            <div class="mb-4">
                                 <label class="form-label">Poin</label>
+
                                 <input
                                     type="number"
                                     name="poin"
@@ -316,41 +341,33 @@ if (isset($_POST['simpan'])) {
                                     required>
                             </div>
 
-                            <div class="mb-3">
-                                <label class="form-label">Tindakan</label>
-                                <textarea
-                                    name="tindakan"
-                                    class="form-control"
-                                    rows="2"
-                                    placeholder="Masukkan tindakan jika ada"><?= htmlspecialchars($_POST['tindakan'] ?? ''); ?></textarea>
-                            </div>
-
                             <div class="mb-4">
                                 <label class="form-label">Status</label>
 
                                 <?php
-                                $daftar_status = [
-                                    'Belum Ditindaklanjuti',
-                                    'Diproses',
-                                    'Selesai'
-                                ];
-
                                 $status_pilihan = $_POST['status']
                                     ?? 'Belum Ditindaklanjuti';
                                 ?>
 
                                 <select name="status" class="form-select" required>
+
                                     <?php foreach ($daftar_status as $item) { ?>
+
                                         <option
                                             value="<?= htmlspecialchars($item); ?>"
                                             <?= $status_pilihan == $item ? 'selected' : ''; ?>>
+
                                             <?= htmlspecialchars($item); ?>
+
                                         </option>
+
                                     <?php } ?>
+
                                 </select>
                             </div>
 
                             <div class="d-flex flex-wrap gap-2">
+
                                 <button
                                     type="submit"
                                     name="simpan"
@@ -363,6 +380,7 @@ if (isset($_POST['simpan'])) {
                                     class="btn btn-secondary">
                                     Kembali
                                 </a>
+
                             </div>
 
                         </form>

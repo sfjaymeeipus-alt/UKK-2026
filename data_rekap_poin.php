@@ -116,157 +116,139 @@ if (!$result) {
 
     <div class="row">
 
-        <!-- SIDEBAR -->
-        <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 position-sticky top-0 vh-100 overflow-auto">
+       <!-- SIDEBAR -->
+<aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 position-sticky top-0 vh-100 overflow-auto">
 
-            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
-            <h6 class="fw-bold">Pelanggaran Siswa</h6>
+    <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+    <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
-            <p class="text-secondary small mb-4">
-                SMK Muhammadiyah Kota Tasikmalaya
-            </p>
+    <p class="text-secondary small mb-4">
+        SMK Muhammadiyah Kota Tasikmalaya
+    </p>
 
-            <p class="text-secondary small fw-bold mb-2">
-                MENU NAVIGASI
-            </p>
+    <p class="text-secondary small fw-bold mb-2">
+        MENU NAVIGASI
+    </p>
 
-            <nav class="nav flex-column gap-1">
+    <nav class="nav flex-column gap-1">
 
-                <?php if ($role == 'admin') { ?>
+        <?php if ($role == 'admin') { ?>
 
-                    <a href="dashboard.php"
-                       class="nav-link text-white rounded py-2">
-                        Dashboard
-                    </a>
+            <a href="dashboard.php" class="nav-link text-white rounded py-2">
+                Dashboard
+            </a>
 
-                    <a href="data_siswa.php"
-                       class="nav-link text-white rounded py-2">
-                        Data Siswa
-                    </a>
+            <a href="data_siswa.php" class="nav-link text-white rounded py-2">
+                Data Siswa
+            </a>
 
-                    <a href="data_guru.php"
-                       class="nav-link text-white rounded py-2">
-                        Data Guru
-                    </a>
+            <a href="data_guru.php" class="nav-link text-white rounded py-2">
+                Data Guru
+            </a>
 
-                    <a href="data_kelas.php"
-                       class="nav-link text-white rounded py-2">
-                        Kelas
-                    </a>
+            <a href="data_kelas.php" class="nav-link text-white rounded py-2">
+                Kelas
+            </a>
 
-                    <a href="data_tahun_ajaran.php"
-                       class="nav-link text-white rounded py-2">
-                        Tahun Ajaran
-                    </a>
+            <a href="data_tahun_ajaran.php" class="nav-link text-white rounded py-2">
+                Tahun Ajaran
+            </a>
 
-                    <a href="data_penempatan_siswa.php"
-                       class="nav-link text-white rounded py-2">
-                        Penempatan Siswa
-                    </a>
+            <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">
+                Penempatan Siswa
+            </a>
 
-                    <a href="data_wali_kelas.php"
-                       class="nav-link text-white rounded py-2">
-                        Wali Kelas
-                    </a>
+            <a href="data_wali_kelas.php" class="nav-link text-white rounded py-2">
+                Wali Kelas
+            </a>
 
-                    <a href="data_kategori_pelanggaran.php"
-                       class="nav-link text-white rounded py-2">
-                        Kategori Pelanggaran
-                    </a>
+            <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">
+                Kategori Pelanggaran
+            </a>
 
-                    <a href="data_jenis_pelanggaran.php"
-                       class="nav-link text-white rounded py-2">
-                        Jenis Pelanggaran
-                    </a>
+            <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">
+                Jenis Pelanggaran
+            </a>
 
-                    <a href="data_laporan.php"
-                       class="nav-link text-white rounded py-2">
-                        Laporan
-                    </a>
+            <a href="data_laporan.php" class="nav-link text-white rounded py-2">
+                Laporan
+            </a>
 
-                    <a href="about_me.php"
-                       class="nav-link text-white rounded py-2">
-                        About Me
-                    </a>
+            <a href="about_me.php" class="nav-link text-white rounded py-2">
+                About Me
+            </a>
 
-                <?php } elseif ($isWaliKelas) { ?>
+        <?php } elseif ($isWaliKelas) { ?>
 
-                    <a href="dashboard.php"
-                       class="nav-link text-white rounded py-2">
-                        Dashboard
-                    </a>
+            <a href="dashboard.php" class="nav-link text-white rounded py-2">
+                Dashboard
+            </a>
 
-                    <a href="data_catatan_pelanggaran.php"
-                       class="nav-link text-white rounded py-2">
-                        Catatan Pelanggaran
-                    </a>
+            <a href="data_catatan_pelanggaran.php" class="nav-link text-white rounded py-2">
+                Catatan Pelanggaran
+            </a>
 
-                    <a href="walikelas/data_siswa.php"
-                       class="nav-link text-white rounded py-2">
-                        Data Siswa
-                    </a>
+            <a href="data_tindakan.php" class="nav-link text-white rounded py-2">
+                Tindakan
+            </a>
 
-                    <a href="data_riwayat.php"
-                       class="nav-link text-white rounded py-2">
-                        Riwayat
-                    </a>
+            <a href="walikelas/data_siswa.php" class="nav-link text-white rounded py-2">
+                Data Siswa
+            </a>
 
-                    <a href="data_rekap_poin.php"
-                       class="nav-link active bg-primary text-white rounded py-2">
-                        Rekap Poin
-                    </a>
+            <a href="data_riwayat.php" class="nav-link text-white rounded py-2">
+                Riwayat
+            </a>
 
-                    <a href="walikelas/data_laporan.php"
-                       class="nav-link text-white rounded py-2">
-                        Laporan
-                    </a>
+            <a href="data_rekap_poin.php" class="nav-link active bg-primary text-white rounded py-2">
+                Rekap Poin
+            </a>
 
-                    <a href="about_me.php"
-                       class="nav-link text-white rounded py-2">
-                        About Me
-                    </a>
+            <a href="walikelas/data_laporan.php" class="nav-link text-white rounded py-2">
+                Laporan
+            </a>
 
-                <?php } else { ?>
+            <a href="about_me.php" class="nav-link text-white rounded py-2">
+                About Me
+            </a>
 
-                    <a href="dashboard.php"
-                       class="nav-link text-white rounded py-2">
-                        Dashboard
-                    </a>
+        <?php } else { ?>
 
-                    <a href="data_catatan_pelanggaran.php"
-                       class="nav-link text-white rounded py-2">
-                        Catatan Pelanggaran
-                    </a>
+            <a href="dashboard.php" class="nav-link text-white rounded py-2">
+                Dashboard
+            </a>
 
-                  
+            <a href="data_catatan_pelanggaran.php" class="nav-link text-white rounded py-2">
+                Catatan Pelanggaran
+            </a>
 
-                    <a href="data_riwayat.php"
-                       class="nav-link text-white rounded py-2">
-                        Riwayat
-                    </a>
+            <a href="data_tindakan.php" class="nav-link text-white rounded py-2">
+                Tindakan
+            </a>
 
-                    <a href="data_rekap_poin.php"
-                       class="nav-link active bg-primary text-white rounded py-2">
-                        Rekap Poin
-                    </a>
+            <a href="data_riwayat.php" class="nav-link text-white rounded py-2">
+                Riwayat
+            </a>
 
-                    <a href="about_me.php"
-                       class="nav-link text-white rounded py-2">
-                        About Me
-                    </a>
+            <a href="data_rekap_poin.php" class="nav-link active bg-primary text-white rounded py-2">
+                Rekap Poin
+            </a>
 
-                <?php } ?>
+            <a href="about_me.php" class="nav-link text-white rounded py-2">
+                About Me
+            </a>
 
-                <hr class="border-secondary my-2">
+        <?php } ?>
 
-                <a href="logout.php"
-                   class="nav-link text-danger rounded py-2">
-                    Logout
-                </a>
+        <hr class="border-secondary my-2">
 
-            </nav>
+        <a href="logout.php" class="nav-link text-danger rounded py-2">
+            Logout
+        </a>
 
-        </aside>
+    </nav>
+
+</aside>
 
         <!-- KONTEN UTAMA -->
         <main class="col-md-9 col-lg-10 p-0">

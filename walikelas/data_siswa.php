@@ -100,7 +100,6 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
 
     <title>Data Siswa - Wali Kelas</title>
 
-    <!-- BOOTSTRAP -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet">
 </head>
@@ -132,14 +131,22 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                 </a>
 
                 <a href="../data_catatan_pelanggaran.php"
-                    class="nav-link text-white rounded py-2">
+                   class="nav-link text-white rounded py-2">
                     Catatan Pelanggaran
+                </a>
+ <!-- MENU DATA TINDAKAN -->
+                <a href="../data_tindakan.php"
+                   class="nav-link text-white rounded py-2">
+                Tindakan
                 </a>
 
                 <a href="data_siswa.php"
                    class="nav-link active bg-primary text-white rounded py-2">
                     Data Siswa
                 </a>
+
+              
+                
 
                 <a href="../data_riwayat.php"
                    class="nav-link text-white rounded py-2">
@@ -172,7 +179,7 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
 
         </aside>
 
-        <!-- KONTEN UTAMA SAMA DENGAN DATA GURU -->
+        <!-- KONTEN UTAMA -->
         <main class="col-md-9 col-lg-10 p-0">
 
             <!-- HEADER -->
@@ -238,7 +245,6 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                             <table class="table table-bordered table-hover align-middle mb-0">
 
                                 <thead class="table-dark">
-
                                     <tr>
                                         <th>No</th>
                                         <th>NIS</th>
@@ -250,7 +256,6 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                                         <th>Tahun Ajaran</th>
                                         <th>Status</th>
                                     </tr>
-
                                 </thead>
 
                                 <tbody>
@@ -262,10 +267,7 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                                         <?php while ($siswa = mysqli_fetch_assoc($daftar_siswa)) { ?>
 
                                             <tr>
-
-                                                <td>
-                                                    <?= $no++; ?>
-                                                </td>
+                                                <td><?= $no++; ?></td>
 
                                                 <td>
                                                     <?= htmlspecialchars($siswa['nis'] ?? ''); ?>
@@ -300,7 +302,6 @@ $daftar_siswa = mysqli_stmt_get_result($query_siswa);
                                                         Terdaftar
                                                     </span>
                                                 </td>
-
                                             </tr>
 
                                         <?php } ?>

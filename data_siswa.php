@@ -16,7 +16,16 @@ if (isset($_POST['simpan_edit'])) {
     $nis = trim($_POST['nis']);
     $nisn = trim($_POST['nisn']);
     $nama_siswa = trim($_POST['nama']);
-    $jenis_kelamin = trim($_POST['jenis_kelamin']);
+
+    // Menyesuaikan nilai jenis kelamin
+    $jenis_kelamin = strtoupper(trim($_POST['jenis_kelamin']));
+
+    if ($jenis_kelamin == 'LAKI-LAKI') {
+        $jenis_kelamin = 'L';
+    } elseif ($jenis_kelamin == 'PEREMPUAN') {
+        $jenis_kelamin = 'P';
+    }
+
     $tanggal_lahir = trim($_POST['tanggal_lahir']);
     $alamat = trim($_POST['alamat']);
     $status_aktif = (int) $_POST['status_aktif'];
@@ -28,6 +37,11 @@ if (isset($_POST['simpan_edit'])) {
     ) {
 
         $_SESSION['pesan_hapus'] = "Semua data siswa wajib diisi.";
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } elseif (!in_array($jenis_kelamin, ['L', 'P'])) {
+
+        $_SESSION['pesan_hapus'] = "Jenis kelamin tidak valid.";
         $_SESSION['jenis_pesan'] = "danger";
 
     } else {
@@ -90,12 +104,66 @@ if (isset($_POST['simpan_edit'])) {
 
                 if (mysqli_stmt_execute($update)) {
 
-                    $_SESSION['pesan_hapus'] = "Data siswa berhasil diperbarui.";
-                    $_SESSION['jenis_pesan'] = "success";
+                    // JIKA SISWA TIDAK AKTIF,
+                    // MAKA PENEMPATANNYA JUGA DINONAKTIFKAN
+                    if ($status_aktif == 0) {
+
+                        $nonaktifkan = mysqli_prepare(
+                            $koneksi,
+                            "UPDATE t_kelas_siswa
+                             SET status_aktif = 0
+                             WHERE siswa_id = ?"
+                        );
+
+                        if ($nonaktifkan) {
+
+                            mysqli_stmt_bind_param(
+                                $nonaktifkan,
+                                "i",
+                                $id
+                            );
+
+                            if (mysqli_stmt_execute($nonaktifkan)) {
+
+                                $_SESSION['pesan_hapus'] =
+                                    "Data siswa berhasil diperbarui dan penempatannya otomatis dinonaktifkan.";
+
+                                $_SESSION['jenis_pesan'] = "success";
+
+                            } else {
+
+                                $_SESSION['pesan_hapus'] =
+                                    "Status siswa berhasil diperbarui, tetapi penempatan gagal dinonaktifkan.";
+
+                                $_SESSION['jenis_pesan'] = "danger";
+
+                            }
+
+                            mysqli_stmt_close($nonaktifkan);
+
+                        } else {
+
+                            $_SESSION['pesan_hapus'] =
+                                "Status siswa berhasil diperbarui, tetapi query penempatan gagal diproses.";
+
+                            $_SESSION['jenis_pesan'] = "danger";
+
+                        }
+
+                    } else {
+
+                        $_SESSION['pesan_hapus'] =
+                            "Data siswa berhasil diperbarui.";
+
+                        $_SESSION['jenis_pesan'] = "success";
+
+                    }
 
                 } else {
 
-                    $_SESSION['pesan_hapus'] = "Gagal mengubah data siswa.";
+                    $_SESSION['pesan_hapus'] =
+                        "Gagal mengubah data siswa.";
+
                     $_SESSION['jenis_pesan'] = "danger";
                 }
 
@@ -771,11 +839,11 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
                                     Pilih Jenis Kelamin
                                 </option>
 
-                                <option value="Laki-laki">
+                                <option value="L">
                                     Laki-laki
                                 </option>
 
-                                <option value="Perempuan">
+                                <option value="P">
                                     Perempuan
                                 </option>
 
@@ -966,8 +1034,25 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
             document.getElementById('edit_nama').value =
                 this.getAttribute('data-nama');
 
-            document.getElementById('edit_jk').value =
-                this.getAttribute('data-jk');
+            // MENGAMBIL JENIS KELAMIN DARI DATABASE
+            let jenisKelamin = this.getAttribute('data-jk');
+
+            jenisKelamin = jenisKelamin.trim().toUpperCase();
+
+            // MENYESUAIKAN NILAI DATABASE DENGAN DROPDOWN
+            if (jenisKelamin == 'L' || jenisKelamin == 'LAKI-LAKI') {
+
+                document.getElementById('edit_jk').value = 'L';
+
+            } else if (jenisKelamin == 'P' || jenisKelamin == 'PEREMPUAN') {
+
+                document.getElementById('edit_jk').value = 'P';
+
+            } else {
+
+                document.getElementById('edit_jk').value = '';
+
+            }
 
             document.getElementById('edit_tanggal').value =
                 this.getAttribute('data-tanggal');

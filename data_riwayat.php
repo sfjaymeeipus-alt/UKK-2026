@@ -16,6 +16,7 @@ if (
     die("Anda tidak memiliki akses.");
 }
 
+
 // ======================================
 // MENU ADMIN
 // ======================================
@@ -30,22 +31,25 @@ $menuAdmin = [
     ["Wali Kelas", "data_wali_kelas.php"],
     ["Kategori Pelanggaran", "data_kategori_pelanggaran.php"],
     ["Jenis Pelanggaran", "data_jenis_pelanggaran.php"],
+    ["Data Tindakan", "data_tindakan.php"],
     ["Laporan", "data_laporan.php"],
     ["About Me", "about_me.php"]
 ];
 
+
 // ======================================
-// MENU GURU BIASA
+// MENU GURU
 // ======================================
 
 $menuGuru = [
     ["Dashboard", "dashboard.php"],
     ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
-   
+    ["Tindakan", "data_tindakan.php"],
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
     ["About Me", "about_me.php"]
 ];
+
 
 // ======================================
 // MENU WALI KELAS
@@ -54,18 +58,22 @@ $menuGuru = [
 $menuWali = [
     ["Dashboard", "dashboard.php"],
     ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
+     ["Tindakan", "data_tindakan.php"],
     ["Data Siswa", "walikelas/data_siswa.php"],
+   
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
     ["Laporan", "walikelas/data_laporan.php"],
     ["About Me", "about_me.php"]
 ];
 
+
 // ======================================
 // CEK STATUS WALI KELAS
 // ======================================
 
 $isWaliKelas = ($role == 'wali kelas');
+$guruLoginId = 0;
 
 if ($role == 'guru') {
 
@@ -84,7 +92,7 @@ if ($role == 'guru') {
 
     if ($dataGuru) {
 
-        $guru_id = (int) $dataGuru['id'];
+        $guruLoginId = (int) $dataGuru['id'];
 
         $stmtWali = mysqli_prepare($koneksi, "
             SELECT COUNT(*) AS total
@@ -96,7 +104,7 @@ if ($role == 'guru') {
                 AND ta.status_aktif = 1
         ");
 
-        mysqli_stmt_bind_param($stmtWali, "i", $guru_id);
+        mysqli_stmt_bind_param($stmtWali, "i", $guruLoginId);
         mysqli_stmt_execute($stmtWali);
 
         $hasilWali = mysqli_stmt_get_result($stmtWali);
@@ -107,6 +115,32 @@ if ($role == 'guru') {
         }
     }
 }
+
+
+// ======================================
+// CARI GURU LOGIN
+// ======================================
+
+if ($role == 'wali kelas') {
+
+    $stmtGuru = mysqli_prepare($koneksi, "
+        SELECT id
+        FROM t_guru
+        WHERE user_id = ?
+        LIMIT 1
+    ");
+
+    mysqli_stmt_bind_param($stmtGuru, "i", $user_id);
+    mysqli_stmt_execute($stmtGuru);
+
+    $hasilGuru = mysqli_stmt_get_result($stmtGuru);
+    $dataGuru = mysqli_fetch_assoc($hasilGuru);
+
+    if ($dataGuru) {
+        $guruLoginId = (int) $dataGuru['id'];
+    }
+}
+
 
 // ======================================
 // TENTUKAN MENU
@@ -122,13 +156,52 @@ if ($role == 'admin') {
 
 $halamanAktif = basename($_SERVER['PHP_SELF']);
 
+
+// ======================================
+// CEK KOLOM DATABASE
+// ======================================
+
+function cekKolom($koneksi, $tabel, $kolom)
+{
+    $hasil = mysqli_query($koneksi, "SHOW COLUMNS FROM `$tabel`");
+
+    if (!$hasil) {
+        return false;
+    }
+
+    while ($data = mysqli_fetch_assoc($hasil)) {
+        if ($data['Field'] == $kolom) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+
 // ======================================
 // QUERY RIWAYAT PELANGGARAN
-// HANYA STATUS SELESAI
 // ======================================
 
-$query = "
+$kolomTambahan = [
+    'poin' => cekKolom($koneksi, 't_pelanggaran_siswa', 'poin'),
+    'keterangan' => cekKolom($koneksi, 't_pelanggaran_siswa', 'keterangan'),
+    'tindakan' => cekKolom($koneksi, 't_pelanggaran_siswa', 'tindakan')
+];
 
+$selectTambahan = "";
+
+foreach ($kolomTambahan as $kolom => $tersedia) {
+
+    if ($tersedia) {
+        $selectTambahan .= ", ps.`$kolom`";
+    } else {
+        $selectTambahan .= ", '-' AS `$kolom`";
+    }
+}
+
+
+$query = "
     SELECT
         ps.id,
         ps.nama_siswa,
@@ -141,13 +214,14 @@ $query = "
         ) AS nama_pelanggaran,
 
         COALESCE(
+            NULLIF(NULLIF(TRIM(g.nama), ''), '0'),
             NULLIF(NULLIF(TRIM(ps.nama_guru), ''), '0'),
-            g.nama,
             '-'
         ) AS nama_guru,
 
         ps.tanggal,
         ps.status
+        $selectTambahan
 
     FROM t_pelanggaran_siswa ps
 
@@ -160,14 +234,23 @@ $query = "
     WHERE ps.status = 'Selesai'
 ";
 
-if ($isWaliKelas) {
-    $query .= " AND ps.guru_id = (
-        SELECT id
-        FROM t_guru
-        WHERE user_id = $user_id
-        LIMIT 1
-    )";
+
+// ======================================
+// FILTER GURU YANG LOGIN
+// ======================================
+
+if ($role != 'admin') {
+
+    if ($guruLoginId > 0) {
+
+        $query .= " AND ps.guru_id = " . (int) $guruLoginId;
+
+    } else {
+
+        $query .= " AND 1 = 0";
+    }
 }
+
 
 $query .= " ORDER BY ps.id ASC";
 
@@ -176,6 +259,7 @@ $result = mysqli_query($koneksi, $query);
 if (!$result) {
     die("Query gagal: " . mysqli_error($koneksi));
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -188,12 +272,10 @@ if (!$result) {
 
     <title>Riwayat - Sistem Informasi Pelanggaran Siswa</title>
 
-    <!-- Bootstrap 5 -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet">
 
-    <!-- DataTables Bootstrap 5 -->
     <link
         href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
         rel="stylesheet">
@@ -254,6 +336,7 @@ if (!$result) {
 
         </aside>
 
+
         <!-- KONTEN UTAMA -->
         <main class="col-md-9 col-lg-10 p-0">
 
@@ -310,10 +393,10 @@ if (!$result) {
 
             </header>
 
+
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                <!-- KARTU TABEL -->
                 <div class="card border-0 shadow-sm rounded-3">
 
                     <div class="card-header bg-white p-3 p-md-4">
@@ -332,6 +415,7 @@ if (!$result) {
 
                     </div>
 
+
                     <!-- TABEL RIWAYAT -->
                     <div class="card-body">
 
@@ -344,13 +428,18 @@ if (!$result) {
                                 <thead class="table-dark">
 
                                     <tr>
+
                                         <th>No</th>
                                         <th>Nama Siswa</th>
                                         <th>Kelas</th>
-                                        <th>Jenis Pelanggaran</th>
-                                        <th>Guru</th>
+                                        <th>Nama Pelanggaran</th>
+                                        <th>Guru Pencatat</th>
                                         <th>Tanggal</th>
+                                        <th>Poin</th>
+                                        <th>Keterangan</th>
+                                        <th>Tindakan</th>
                                         <th>Status</th>
+
                                     </tr>
 
                                 </thead>
@@ -358,6 +447,7 @@ if (!$result) {
                                 <tbody>
 
                                     <?php
+
                                     $no = 1;
 
                                     if (mysqli_num_rows($result) > 0) {
@@ -365,6 +455,7 @@ if (!$result) {
                                         while ($data = mysqli_fetch_assoc($result)) {
 
                                             $status = $data['status'] ?? '';
+
                                             $warnaStatus = 'secondary';
 
                                             if ($status == 'Selesai') {
@@ -374,6 +465,7 @@ if (!$result) {
                                             } elseif ($status == 'Ditindaklanjuti') {
                                                 $warnaStatus = 'primary';
                                             }
+
                                     ?>
 
                                         <tr>
@@ -403,9 +495,23 @@ if (!$result) {
                                             </td>
 
                                             <td>
+                                                <?= htmlspecialchars($data['poin'] ?? '-') ?>
+                                            </td>
+
+                                            <td>
+                                                <?= htmlspecialchars($data['keterangan'] ?? '-') ?>
+                                            </td>
+
+                                            <td>
+                                                <?= htmlspecialchars($data['tindakan'] ?? '-') ?>
+                                            </td>
+
+                                            <td>
 
                                                 <span class="badge bg-<?= $warnaStatus ?>">
+
                                                     <?= htmlspecialchars($status) ?>
+
                                                 </span>
 
                                             </td>
@@ -414,7 +520,6 @@ if (!$result) {
 
                                     <?php
                                         }
-
                                     }
                                     ?>
 
@@ -425,6 +530,7 @@ if (!$result) {
                         </div>
 
                     </div>
+
 
                     <!-- BAGIAN BAWAH -->
                     <div class="card-footer bg-white p-3">
@@ -439,6 +545,7 @@ if (!$result) {
                     </div>
 
                 </div>
+
 
                 <!-- FOOTER -->
                 <footer class="text-center text-secondary small mt-4">
@@ -455,16 +562,15 @@ if (!$result) {
 
 </div>
 
-<!-- jQuery -->
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-<!-- DataTables -->
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
 
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
 
-<!-- Bootstrap -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
 
 <script>
 

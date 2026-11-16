@@ -1,3 +1,4 @@
+
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -39,7 +40,7 @@ $menuAdmin = [
 $menuGuru = [
     ["Dashboard", "dashboard.php"],
     ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
-    
+    ["Tindakan", "data_tindakan.php"],
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
     ["About Me", "about_me.php"]
@@ -52,6 +53,7 @@ $menuGuru = [
 $menuWali = [
     ["Dashboard", "dashboard.php"],
     ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
+    ["Tindakan", "data_tindakan.php"],
     ["Data Siswa", "walikelas/data_siswa.php"],
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
@@ -100,7 +102,6 @@ $kartuAdmin = [
     ["Data Siswa", "Mengelola informasi data siswa.", "data_siswa.php", $totalSiswa],
     ["Data Guru", "Mengelola informasi data guru.", "data_guru.php", $totalGuru],
     ["Data Kelas", "Mengelola data kelas siswa.", "data_kelas.php", $totalKelas],
-    
 ];
 
 // ======================================
@@ -129,7 +130,10 @@ $totalPoinWali = 0;
 $isWaliKelas = ($role == 'wali kelas');
 $guru_id = 0;
 
-// Cari guru berdasarkan akun login
+// ======================================
+// CARI GURU BERDASARKAN AKUN LOGIN
+// ======================================
+
 if ($role == 'guru' || $role == 'wali kelas') {
 
     $stmtGuru = mysqli_prepare($koneksi, "
@@ -147,11 +151,16 @@ if ($role == 'guru' || $role == 'wali kelas') {
         $hasilGuru = mysqli_stmt_get_result($stmtGuru);
         $dataGuru = mysqli_fetch_assoc($hasilGuru);
 
+        mysqli_stmt_close($stmtGuru);
+
         if ($dataGuru) {
 
             $guru_id = (int) $dataGuru['id'];
 
-            // Ambil penugasan wali kelas yang masih aktif
+            // ======================================
+            // AMBIL PENUGASAN WALI KELAS AKTIF
+            // ======================================
+
             $stmtKelas = mysqli_prepare($koneksi, "
                 SELECT
                     wk.id,
@@ -172,7 +181,12 @@ if ($role == 'guru' || $role == 'wali kelas') {
 
             if ($stmtKelas) {
 
-                mysqli_stmt_bind_param($stmtKelas, "i", $guru_id);
+                mysqli_stmt_bind_param(
+                    $stmtKelas,
+                    "i",
+                    $guru_id
+                );
+
                 mysqli_stmt_execute($stmtKelas);
 
                 $hasilKelas = mysqli_stmt_get_result($stmtKelas);
@@ -181,18 +195,22 @@ if ($role == 'guru' || $role == 'wali kelas') {
                     $daftarKelas[] = $barisKelas;
                 }
 
+                mysqli_stmt_close($stmtKelas);
+
                 // Jika memiliki penugasan aktif, berarti wali kelas
                 if (count($daftarKelas) > 0) {
 
                     $isWaliKelas = true;
 
-                    // Ambil data siswa dan statistik sesuai kelas serta tahun ajaran
                     foreach ($daftarKelas as $kelas) {
 
                         $kelas_id = (int) $kelas['kelas_id'];
                         $tahun_ajaran_id = (int) $kelas['tahun_ajaran_id'];
 
-                        // Hitung siswa
+                        // ======================================
+                        // HITUNG SISWA
+                        // ======================================
+
                         $stmtJumlahSiswa = mysqli_prepare($koneksi, "
                             SELECT COUNT(DISTINCT siswa_id) AS total
                             FROM t_kelas_siswa
@@ -213,12 +231,18 @@ if ($role == 'guru' || $role == 'wali kelas') {
                             mysqli_stmt_execute($stmtJumlahSiswa);
 
                             $hasilJumlahSiswa = mysqli_stmt_get_result($stmtJumlahSiswa);
+
                             $dataJumlahSiswa = mysqli_fetch_assoc($hasilJumlahSiswa);
 
                             $totalSiswaWali += (int) ($dataJumlahSiswa['total'] ?? 0);
+
+                            mysqli_stmt_close($stmtJumlahSiswa);
                         }
 
-                        // Ambil daftar siswa
+                        // ======================================
+                        // AMBIL DAFTAR SISWA
+                        // ======================================
+
                         $stmtDaftarSiswa = mysqli_prepare($koneksi, "
                             SELECT DISTINCT
                                 s.nis,
@@ -251,9 +275,14 @@ if ($role == 'guru' || $role == 'wali kelas') {
                             while ($siswa = mysqli_fetch_assoc($hasilDaftarSiswa)) {
                                 $daftarSiswa[] = $siswa;
                             }
+
+                            mysqli_stmt_close($stmtDaftarSiswa);
                         }
 
-                        // Hitung pelanggaran berdasarkan kelas dan tahun ajaran
+                        // ======================================
+                        // HITUNG PELANGGARAN
+                        // ======================================
+
                         $stmtPelanggaran = mysqli_prepare($koneksi, "
                             SELECT
                                 COUNT(*) AS total,
@@ -275,10 +304,13 @@ if ($role == 'guru' || $role == 'wali kelas') {
                             mysqli_stmt_execute($stmtPelanggaran);
 
                             $hasilPelanggaran = mysqli_stmt_get_result($stmtPelanggaran);
+
                             $dataPelanggaran = mysqli_fetch_assoc($hasilPelanggaran);
 
                             $totalPelanggaranWali += (int) ($dataPelanggaran['total'] ?? 0);
                             $totalPoinWali += (int) ($dataPelanggaran['total_poin'] ?? 0);
+
+                            mysqli_stmt_close($stmtPelanggaran);
                         }
                     }
                 }
@@ -409,7 +441,7 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
                                 fw-bold flex-shrink-0"
                          style="width: 42px; height: 42px;">
 
-                        <?= strtoupper(substr($nama, 0, 1)) ?>
+                        <?= htmlspecialchars(strtoupper(substr($nama, 0, 1))) ?>
 
                     </div>
 
@@ -443,11 +475,9 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
                     </h2>
 
                     <p class="text-light mb-0 lh-lg">
-
                         Selamat datang di Sistem Informasi Pelanggaran Siswa.
                         Gunakan menu yang tersedia untuk melihat dan mengelola
                         informasi sesuai hak akses akunmu.
-
                     </p>
 
                 </div>
@@ -488,7 +518,9 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
 
                                     <div class="card-body p-4">
 
-                                       
+                                        <p class="text-primary fw-bold small mb-3">
+                                            MENU <?= str_pad($nomor, 2, "0", STR_PAD_LEFT) ?>
+                                        </p>
 
                                         <h5 class="card-title fw-bold">
                                             <?= htmlspecialchars($item[0]) ?>
@@ -615,6 +647,40 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
                                     </h2>
 
                                 </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- MENU DATA TINDAKAN WALI KELAS -->
+                    <div class="card border-0 shadow-sm mb-4">
+
+                        <div class="card-body p-4">
+
+                            <div class="d-flex justify-content-between
+                                        align-items-center flex-wrap gap-3">
+
+                                <div>
+
+                                    <h5 class="fw-bold mb-2">
+                                        Data Tindakan Siswa
+                                    </h5>
+
+                                    <p class="text-secondary small mb-0">
+                                        Melihat dan mengelola tindakan atas
+                                        pelanggaran siswa.
+                                    </p>
+
+                                </div>
+
+                                <a href="data_tindakan.php"
+                                   class="btn btn-primary">
+
+                                    Data Tindakan
+
+                                </a>
 
                             </div>
 
@@ -818,7 +884,6 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
                     </div>
 
                 <?php } ?>
-                <br> <br> <br> <br> <br> <br> <br> <br> <br> <br>
 
                 <!-- FOOTER -->
                 <footer class="text-center text-secondary small mt-4">

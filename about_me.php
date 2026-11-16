@@ -1,4 +1,3 @@
-
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -45,7 +44,7 @@ $menuAdmin = [
 $menuGuru = [
     ["Dashboard", "dashboard.php"],
     ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
-   
+    ["Tindakan", "data_tindakan.php"],
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
     ["About Me", "about_me.php"]
@@ -58,7 +57,9 @@ $menuGuru = [
 $menuWali = [
     ["Dashboard", "dashboard.php"],
     ["Catatan Pelanggaran", "data_catatan_pelanggaran.php"],
+    ["Tindakan", "data_tindakan.php"],
     ["Data Siswa", "walikelas/data_siswa.php"],
+    
     ["Riwayat", "data_riwayat.php"],
     ["Rekap Poin", "data_rekap_poin.php"],
     ["Laporan", "walikelas/data_laporan.php"],
@@ -143,38 +144,42 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
 
     <div class="row">
 
-      <!-- SIDEBAR -->
-<aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
+        <!-- SIDEBAR -->
+        <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
 
-    <h5 class="fw-bold mb-1">Sistem Informasi</h5>
-    <h6 class="fw-bold">Pelanggaran Siswa</h6>
-    <p class="text-secondary small mb-4">SMK Muhammadiyah Kota Tasikmalaya</p>
+            <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+            <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
-    <p class="text-secondary small fw-bold mb-2">MENU NAVIGASI</p>
+            <p class="text-secondary small mb-4">
+                SMK Muhammadiyah Kota Tasikmalaya
+            </p>
 
-    <nav class="nav flex-column gap-1">
+            <p class="text-secondary small fw-bold mb-2">
+                MENU NAVIGASI
+            </p>
 
-        <?php foreach ($menu as $item) { ?>
+            <nav class="nav flex-column gap-1">
 
-            <a href="<?= htmlspecialchars($item[1]); ?>"
-               class="nav-link rounded py-2 <?= $halamanAktif == basename($item[1]) ? 'active bg-primary text-white' : 'text-white'; ?>">
+                <?php foreach ($menu as $item) { ?>
 
-                <?= htmlspecialchars($item[0]); ?>
+                    <a href="<?= htmlspecialchars($item[1]); ?>"
+                       class="nav-link rounded py-2 <?= $halamanAktif == basename($item[1]) ? 'active bg-primary text-white' : 'text-white'; ?>">
 
-            </a>
+                        <?= htmlspecialchars($item[0]); ?>
 
-        <?php } ?>
+                    </a>
 
-        
+                <?php } ?>
 
-        <hr class="border-secondary my-2">
+                <hr class="border-secondary my-2">
 
-        <a href="logout.php" class="nav-link text-danger rounded py-2">
-            Logout
-        </a>
+                <a href="logout.php" class="nav-link text-danger rounded py-2">
+                    Logout
+                </a>
 
-    </nav>
-</aside>
+            </nav>
+
+        </aside>
 
         <!-- KONTEN UTAMA -->
         <main class="col-md-9 col-lg-10 p-0">
@@ -451,7 +456,7 @@ $halamanAktif = basename($_SERVER['PHP_SELF']);
 
                                     <strong>Teknologi:</strong>
                                     PHP Native, MySQL, HTML, JavaScript,
-                                    dan Bootstrap.
+                                    Bootstrap, dan CSS.
 
                                 </p>
 

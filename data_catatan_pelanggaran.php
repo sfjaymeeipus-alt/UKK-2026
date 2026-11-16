@@ -1,6 +1,5 @@
 
 <?php
-
 include "middleware/auth.php";
 include "config/koneksi.php";
 
@@ -10,56 +9,51 @@ $role = $_SESSION['role'] ?? '';
 $nama = $_SESSION['nama'] ?? 'Pengguna';
 $user_id = (int) ($_SESSION['user_id'] ?? 0);
 
-if (!in_array($role, ['admin', 'guru'])) {
+if (!in_array($role, ['admin', 'guru', 'wali kelas'])) {
     exit("Anda tidak memiliki akses");
 }
 
-// ======================================
-// AMBIL IDENTITAS GURU YANG LOGIN
-// ======================================
-
+// IDENTITAS GURU LOGIN
 $guruLoginId = 0;
 $namaGuruLogin = '';
 
-if ($role == 'guru') {
+$isWaliKelas = ($role == 'wali kelas');
 
-    $stmtGuruLogin = mysqli_prepare($koneksi, "
+if ($role == 'guru' || $role == 'wali kelas') {
+
+    $stmt = mysqli_prepare($koneksi, "
         SELECT id, nama
         FROM t_guru
         WHERE user_id = ?
         LIMIT 1
     ");
 
-    mysqli_stmt_bind_param($stmtGuruLogin, "i", $user_id);
-    mysqli_stmt_execute($stmtGuruLogin);
+    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_execute($stmt);
 
-    $resultGuruLogin = mysqli_stmt_get_result($stmtGuruLogin);
-    $dataGuruLogin = mysqli_fetch_assoc($resultGuruLogin);
+    $dataGuruLogin = mysqli_stmt_get_result($stmt)->fetch_assoc();
 
-    mysqli_stmt_close($stmtGuruLogin);
+    mysqli_stmt_close($stmt);
 
     if (!$dataGuruLogin) {
-        exit("Data guru tidak ditemukan untuk akun yang sedang login.");
+        exit("Data guru tidak ditemukan.");
     }
 
     $guruLoginId = (int) $dataGuruLogin['id'];
     $namaGuruLogin = $dataGuruLogin['nama'];
 }
 
-// ======================================
 // CEK WALI KELAS
-// ======================================
-
-$isWaliKelas = false;
-
 if ($role == 'guru') {
 
     $stmt = mysqli_prepare($koneksi, "
         SELECT wk.id
         FROM t_wali_kelas wk
         JOIN t_guru g ON g.id = wk.guru_id
+        JOIN t_tahun_ajaran ta ON ta.id = wk.tahun_ajaran_id
         WHERE g.user_id = ?
           AND wk.status_aktif = 1
+          AND ta.status_aktif = 1
         LIMIT 1
     ");
 
@@ -71,27 +65,20 @@ if ($role == 'guru') {
     mysqli_stmt_close($stmt);
 }
 
-// ======================================
 // NOTIFIKASI
-// ======================================
-
-function setPesan($pesan, $jenis = 'success') {
+function setPesan($pesan, $jenis = 'success')
+{
     $_SESSION['pesan_hapus'] = $pesan;
     $_SESSION['jenis_pesan'] = $jenis;
 }
 
-// ======================================
-// MEMBERSIHKAN NAMA PELANGGARAN
-// ======================================
-
-function bersihkanNamaPelanggaran($nama) {
+// BERSIHKAN NAMA PELANGGARAN
+function bersihkanNamaPelanggaran($nama)
+{
     return trim(preg_replace('/\s+[0-9]+$/', '', $nama));
 }
 
-// ======================================
 // DATA SISWA AKTIF
-// ======================================
-
 $dataSiswa = [];
 
 $result = mysqli_query($koneksi, "
@@ -118,10 +105,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     $dataSiswa[] = $row;
 }
 
-// ======================================
 // DATA PELANGGARAN
-// ======================================
-
 $dataPelanggaran = [];
 $namaTerpakai = [];
 
@@ -142,7 +126,6 @@ $result = mysqli_query($koneksi, "
 while ($row = mysqli_fetch_assoc($result)) {
 
     $namaPelanggaran = bersihkanNamaPelanggaran($row['nama_kategori']);
-
     $key = strtolower(trim($namaPelanggaran));
 
     if (isset($namaTerpakai[$key])) {
@@ -155,12 +138,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     $dataPelanggaran[] = $row;
 }
 
-// ======================================
 // DATA GURU
-// ADMIN: SEMUA GURU
-// GURU: HANYA GURU YANG LOGIN
-// ======================================
-
 $dataGuru = [];
 
 if ($role == 'admin') {
@@ -169,20 +147,10 @@ if ($role == 'admin') {
         SELECT id, nama
         FROM t_guru
         WHERE status_aktif = 1
-        ORDER BY nama ASC, id ASC
+        ORDER BY nama ASC
     ");
 
-    $namaGuruTerpakai = [];
-
     while ($row = mysqli_fetch_assoc($result)) {
-
-        $key = strtolower(trim($row['nama']));
-
-        if (isset($namaGuruTerpakai[$key])) {
-            continue;
-        }
-
-        $namaGuruTerpakai[$key] = true;
         $dataGuru[] = $row;
     }
 
@@ -194,12 +162,9 @@ if ($role == 'admin') {
     ];
 }
 
-// ======================================
-// FUNGSI MENGAMBIL DATA BERDASARKAN ID
-// ======================================
-
-function ambilData($koneksi, $query, $id) {
-
+// AMBIL DATA BERDASARKAN ID
+function ambilData($koneksi, $query, $id)
+{
     $stmt = mysqli_prepare($koneksi, $query);
 
     mysqli_stmt_bind_param($stmt, "i", $id);
@@ -212,12 +177,9 @@ function ambilData($koneksi, $query, $id) {
     return $data ?: false;
 }
 
-// ======================================
-// MENGAMBIL DATA SISWA
-// ======================================
-
-function ambilDataSiswa($koneksi, $id) {
-
+// DATA SISWA
+function ambilDataSiswa($koneksi, $id)
+{
     return ambilData($koneksi, "
         SELECT
             s.id AS siswa_id,
@@ -235,12 +197,9 @@ function ambilDataSiswa($koneksi, $id) {
     ", $id);
 }
 
-// ======================================
-// MENGAMBIL DATA PELANGGARAN
-// ======================================
-
-function ambilDataPelanggaran($koneksi, $id) {
-
+// DATA PELANGGARAN
+function ambilDataPelanggaran($koneksi, $id)
+{
     $data = ambilData($koneksi, "
         SELECT
             p.id,
@@ -263,12 +222,9 @@ function ambilDataPelanggaran($koneksi, $id) {
     return $data;
 }
 
-// ======================================
-// MENGAMBIL DATA GURU
-// ======================================
-
-function ambilDataGuru($koneksi, $id) {
-
+// DATA GURU
+function ambilDataGuru($koneksi, $id)
+{
     return ambilData($koneksi, "
         SELECT id, nama
         FROM t_guru
@@ -278,10 +234,7 @@ function ambilDataGuru($koneksi, $id) {
     ", $id);
 }
 
-// ======================================
-// PROSES PERBARUI STATUS CATATAN
-// ======================================
-
+// PERBARUI STATUS CATATAN
 if (isset($_POST['perbarui_status'])) {
 
     try {
@@ -300,12 +253,10 @@ if (isset($_POST['perbarui_status'])) {
         }
 
         if (!in_array($status_baru, $statusDiizinkan, true)) {
-            throw new Exception("Status yang dipilih tidak valid.");
+            throw new Exception("Status tidak valid.");
         }
 
         if ($role == 'guru') {
-
-            // GURU HANYA BOLEH MEMPERBARUI CATATAN MILIKNYA
 
             $stmt = mysqli_prepare($koneksi, "
                 UPDATE t_pelanggaran_siswa
@@ -324,8 +275,6 @@ if (isset($_POST['perbarui_status'])) {
 
         } else {
 
-            // ADMIN BOLEH MEMPERBARUI SEMUA CATATAN
-
             $stmt = mysqli_prepare($koneksi, "
                 UPDATE t_pelanggaran_siswa
                 SET status = ?
@@ -338,22 +287,17 @@ if (isset($_POST['perbarui_status'])) {
                 $status_baru,
                 $catatan_id
             );
-
         }
 
         mysqli_stmt_execute($stmt);
 
         if (mysqli_stmt_affected_rows($stmt) > 0) {
-
-            setPesan("Status catatan pelanggaran berhasil diperbarui.");
-
+            setPesan("Status catatan berhasil diperbarui.");
         } else {
-
             setPesan(
                 "Tidak ada perubahan status atau catatan tidak ditemukan.",
                 "warning"
             );
-
         }
 
         mysqli_stmt_close($stmt);
@@ -364,17 +308,13 @@ if (isset($_POST['perbarui_status'])) {
             "Gagal memperbarui status: " . $e->getMessage(),
             "danger"
         );
-
     }
 
     header("Location: data_catatan_pelanggaran.php");
     exit;
 }
 
-// ======================================
-// PROSES SIMPAN CATATAN PELANGGARAN
-// ======================================
-
+// SIMPAN CATATAN PELANGGARAN
 if (isset($_POST['simpan_tambah'])) {
 
     try {
@@ -382,7 +322,7 @@ if (isset($_POST['simpan_tambah'])) {
         $siswa_id = (int) ($_POST['siswa_id'] ?? 0);
         $pelanggaran_id = (int) ($_POST['pelanggaran_id'] ?? 0);
 
-        if ($role == 'guru') {
+        if ($role == 'guru' || $role == 'wali kelas') {
             $guru_id = $guruLoginId;
         } else {
             $guru_id = (int) ($_POST['guru_id'] ?? 0);
@@ -390,7 +330,6 @@ if (isset($_POST['simpan_tambah'])) {
 
         $tanggal = trim($_POST['tanggal'] ?? '');
         $keterangan = trim($_POST['keterangan'] ?? '');
-        $tindakan = trim($_POST['tindakan'] ?? '');
         $status = trim($_POST['status'] ?? '');
 
         if (
@@ -403,13 +342,18 @@ if (isset($_POST['simpan_tambah'])) {
             throw new Exception("Semua data wajib diisi.");
         }
 
+        $statusDiizinkan = [
+            'Diproses',
+            'Ditindaklanjuti',
+            'Selesai'
+        ];
+
+        if (!in_array($status, $statusDiizinkan, true)) {
+            throw new Exception("Status tidak valid.");
+        }
+
         $siswa = ambilDataSiswa($koneksi, $siswa_id);
-
-        $pelanggaran = ambilDataPelanggaran(
-            $koneksi,
-            $pelanggaran_id
-        );
-
+        $pelanggaran = ambilDataPelanggaran($koneksi, $pelanggaran_id);
         $guru = ambilDataGuru($koneksi, $guru_id);
 
         if (!$siswa) {
@@ -432,6 +376,9 @@ if (isset($_POST['simpan_tambah'])) {
         $kategori_id = (int) $pelanggaran['pelanggaran_kategori_id'];
         $poin = (int) $pelanggaran['poin'];
         $nama_guru = $guru['nama'];
+
+        // TINDAKAN DIISI MELALUI HALAMAN DATA TINDAKAN
+        $tindakan = '';
 
         $sql = "
             INSERT INTO t_pelanggaran_siswa (
@@ -492,12 +439,7 @@ if (isset($_POST['simpan_tambah'])) {
     exit;
 }
 
-// ======================================
-// DATA TABEL CATATAN PELANGGARAN
-// ADMIN: SELURUH DATA
-// GURU: DATA YANG DICATAT SENDIRI
-// ======================================
-
+// DATA TABEL CATATAN
 $dataCatatan = [];
 
 $sqlCatatan = "
@@ -505,36 +447,27 @@ $sqlCatatan = "
         ps.id,
         ps.nama_siswa,
         ps.nama_kelas,
-
         COALESCE(
             NULLIF(pk.nama, ''),
             NULLIF(p.nama, ''),
             NULLIF(ps.nama_pelanggaran, '0'),
             '-'
         ) AS nama_pelanggaran,
-
         COALESCE(
             NULLIF(g.nama, ''),
             NULLIF(ps.nama_guru, '0'),
             '-'
         ) AS nama_guru,
-
         ps.tanggal,
         ps.poin,
-        ps.tindakan,
         ps.status
-
     FROM t_pelanggaran_siswa ps
-
     LEFT JOIN t_pelanggaran p
         ON p.id = ps.pelanggaran_id
-
     LEFT JOIN t_pelanggaran_kategori pk
         ON pk.id = ps.pelanggaran_kategori_id
-
     LEFT JOIN t_guru g
         ON g.id = ps.guru_id
-
     WHERE LOWER(TRIM(ps.status)) <> 'selesai'
 ";
 
@@ -542,30 +475,13 @@ if ($role == 'guru') {
     $sqlCatatan .= " AND ps.guru_id = " . $guruLoginId;
 }
 
-$sqlCatatan .= "
-    ORDER BY ps.tanggal DESC, ps.id DESC
-";
+$sqlCatatan .= " ORDER BY ps.tanggal DESC, ps.id DESC";
 
 $result = mysqli_query($koneksi, $sqlCatatan);
 
 while ($row = mysqli_fetch_assoc($result)) {
     $dataCatatan[] = $row;
 }
-
-// ======================================
-// DAFTAR TINDAKAN
-// ======================================
-
-$daftarTindakan = [
-    "Teguran",
-    "Teguran Lisan",
-    "Teguran Tertulis",
-    "Pembinaan",
-    "Konseling",
-    "Panggilan Orang Tua",
-    "Pemanggilan Orang Tua",
-    "Skorsing"
-];
 
 ?>
 
@@ -579,17 +495,11 @@ $daftarTindakan = [
 
     <title>Catatan Pelanggaran - Sistem Informasi Pelanggaran Siswa</title>
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
-        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
-        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
 
 </head>
 
@@ -600,107 +510,109 @@ $daftarTindakan = [
 <div class="row">
 
     <!-- SIDEBAR -->
+<aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
 
-    <aside class="col-md-3 col-lg-2 bg-dark text-white p-3 position-sticky top-0 vh-100 overflow-auto align-self-start">
+    <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+    <h6 class="fw-bold">Pelanggaran Siswa</h6>
 
-        <h5 class="fw-bold mb-1">Sistem Informasi</h5>
+    <p class="text-secondary small mb-4">
+        SMK Muhammadiyah Kota Tasikmalaya
+    </p>
 
-        <h6 class="fw-bold">Pelanggaran Siswa</h6>
+    <p class="text-secondary small fw-bold mb-2">
+        MENU NAVIGASI
+    </p>
 
-        <p class="text-secondary small mb-4">
-            SMK Muhammadiyah Kota Tasikmalaya
-        </p>
+    <nav class="nav flex-column gap-1">
 
-        <p class="text-secondary small fw-bold mb-2">
-            MENU NAVIGASI
-        </p>
+        <a href="dashboard.php" class="nav-link text-white rounded py-2">
+            Dashboard
+        </a>
 
-        <nav class="nav flex-column gap-1">
+        <a href="data_catatan_pelanggaran.php" class="nav-link active bg-primary text-white rounded py-2">
+            Catatan Pelanggaran
+        </a>
 
-            <a href="dashboard.php"
-               class="nav-link text-white rounded py-2">
-                Dashboard
+        <?php if ($role == 'admin') { ?>
+
+            <a href="data_tindakan.php" class="nav-link text-white rounded py-2">
+                Tindakan
             </a>
 
-            <a href="data_catatan_pelanggaran.php"
-               class="nav-link active bg-primary text-white rounded py-2">
-                Catatan Pelanggaran
+            <a href="walikelas/data_siswa.php" class="nav-link text-white rounded py-2">
+                Data Siswa
             </a>
 
-            <?php if ($role == 'admin') { ?>
+            <a href="walikelas/data_laporan.php" class="nav-link text-white rounded py-2">
+                Laporan
+            </a>
 
-                <a href="data_tindakan.php"
-                   class="nav-link text-white rounded py-2">
-                    Tindakan
-                </a>
+        <?php } elseif ($isWaliKelas) { ?>
 
-                <a href="walikelas/data_siswa.php"
-                   class="nav-link text-white rounded py-2">
-                    Data Siswa
-                </a>
+            <a href="data_tindakan.php" class="nav-link text-white rounded py-2">
+                Tindakan
+            </a>
 
-                <a href="walikelas/data_laporan.php"
-                   class="nav-link text-white rounded py-2">
-                    Laporan
-                </a>
+            <a href="walikelas/data_siswa.php" class="nav-link text-white rounded py-2">
+                Data Siswa
+            </a>
 
-            <?php } elseif ($isWaliKelas) { ?>
-
-                <a href="walikelas/data_siswa.php"
-                   class="nav-link text-white rounded py-2">
-                    Data Siswa
-                </a>
-
-            <?php } else { ?>
-
-               
-            <?php } ?>
-
-            <a href="data_riwayat.php"
-               class="nav-link text-white rounded py-2">
+            <a href="data_riwayat.php" class="nav-link text-white rounded py-2">
                 Riwayat
             </a>
 
-            <a href="data_rekap_poin.php"
-               class="nav-link text-white rounded py-2">
+            <a href="data_rekap_poin.php" class="nav-link text-white rounded py-2">
                 Rekap Poin
             </a>
 
-            <?php if ($role == 'admin' || $isWaliKelas) { ?>
+            <a href="walikelas/data_laporan.php" class="nav-link text-white rounded py-2">
+                Laporan
+            </a>
 
-                <a href="walikelas/data_laporan.php"
-                   class="nav-link text-white rounded py-2">
-                    Laporan
-                </a>
-
-            <?php } ?>
-
-            <a href="about_me.php"
-               class="nav-link text-white rounded py-2">
+            <a href="about_me.php" class="nav-link text-white rounded py-2">
                 About Me
             </a>
 
-            <hr class="border-secondary my-2">
+        <?php } else { ?>
 
-            <a href="logout.php"
-               class="nav-link text-danger rounded py-2">
-                Logout
+            <a href="data_tindakan.php" class="nav-link text-white rounded py-2">
+                Tindakan
             </a>
 
-        </nav>
+        <?php } ?>
 
-    </aside>
+        <?php if ($role != 'wali kelas' && !$isWaliKelas) { ?>
+
+            <a href="data_riwayat.php" class="nav-link text-white rounded py-2">
+                Riwayat
+            </a>
+
+            <a href="data_rekap_poin.php" class="nav-link text-white rounded py-2">
+                Rekap Poin
+            </a>
+
+            <a href="about_me.php" class="nav-link text-white rounded py-2">
+                About Me
+            </a>
+
+        <?php } ?>
+
+        <hr class="border-secondary my-2">
+
+        <a href="logout.php" class="nav-link text-danger rounded py-2">
+            Logout
+        </a>
+
+    </nav>
+
+</aside>
 
     <!-- KONTEN -->
-
     <main class="col-md-9 col-lg-10 p-0">
-
-        <!-- HEADER -->
 
         <header class="bg-white border-bottom p-3 p-md-4 d-flex justify-content-between align-items-center">
 
             <div>
-
                 <h4 class="fw-bold text-dark mb-1">
                     Catatan Pelanggaran
                 </h4>
@@ -708,7 +620,6 @@ $daftarTindakan = [
                 <small class="text-secondary">
                     Sistem Informasi Pelanggaran Siswa
                 </small>
-
             </div>
 
             <div class="d-flex align-items-center gap-2">
@@ -720,7 +631,7 @@ $daftarTindakan = [
                     </div>
 
                     <small class="text-secondary">
-                        <?= htmlspecialchars(ucfirst($role)); ?>
+                        <?= htmlspecialchars(ucwords($role)); ?>
                     </small>
 
                 </div>
@@ -728,15 +639,13 @@ $daftarTindakan = [
                 <div class="bg-primary-subtle text-primary rounded-circle d-flex justify-content-center align-items-center fw-bold flex-shrink-0"
                      style="width:42px;height:42px;">
 
-                    <?= strtoupper(substr($nama, 0, 1)); ?>
+                    <?= htmlspecialchars(strtoupper(substr($nama, 0, 1))); ?>
 
                 </div>
 
             </div>
 
         </header>
-
-        <!-- ISI HALAMAN -->
 
         <section class="p-3 p-md-4">
 
@@ -754,25 +663,18 @@ $daftarTindakan = [
 
                             <small class="text-secondary">
 
-                                <?php if ($role == 'guru') { ?>
-
-                                    Daftar catatan pelanggaran yang Anda buat.
-
-                                <?php } else { ?>
-
-                                    Daftar seluruh catatan pelanggaran siswa.
-
-                                <?php } ?>
+                                <?= $role == 'guru'
+                                    ? 'Daftar catatan pelanggaran yang Anda buat.'
+                                    : 'Daftar seluruh catatan pelanggaran siswa.'; ?>
 
                             </small>
 
                         </div>
 
-                        <button
-                            type="button"
-                            class="btn btn-primary"
-                            data-bs-toggle="modal"
-                            data-bs-target="#modalTambahCatatan">
+                        <button type="button"
+                                class="btn btn-primary"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalTambahCatatan">
 
                             Tambah Catatan
 
@@ -791,7 +693,6 @@ $daftarTindakan = [
                             <thead class="table-light">
 
                                 <tr>
-
                                     <th>No</th>
                                     <th>Nama Siswa</th>
                                     <th>Kelas</th>
@@ -799,10 +700,8 @@ $daftarTindakan = [
                                     <th>Nama Guru</th>
                                     <th>Tanggal</th>
                                     <th>Poin</th>
-                                    <th>Tindakan</th>
                                     <th>Status</th>
                                     <th>Aksi</th>
-
                                 </tr>
 
                             </thead>
@@ -817,9 +716,7 @@ $daftarTindakan = [
 
                                         <tr>
 
-                                            <td>
-                                                <?= $no++; ?>
-                                            </td>
+                                            <td><?= $no++; ?></td>
 
                                             <td>
                                                 <?= htmlspecialchars($catatan['nama_siswa']); ?>
@@ -848,10 +745,6 @@ $daftarTindakan = [
                                             </td>
 
                                             <td>
-                                                <?= htmlspecialchars($catatan['tindakan'] ?: '-'); ?>
-                                            </td>
-
-                                            <td>
                                                 <?= htmlspecialchars($catatan['status']); ?>
                                             </td>
 
@@ -861,24 +754,20 @@ $daftarTindakan = [
                                                       action="data_catatan_pelanggaran.php"
                                                       onsubmit="return confirm('Yakin ingin memperbarui status catatan ini?');">
 
-                                                    <input
-                                                        type="hidden"
-                                                        name="catatan_id"
-                                                        value="<?= (int) $catatan['id']; ?>">
+                                                    <input type="hidden"
+                                                           name="catatan_id"
+                                                           value="<?= (int) $catatan['id']; ?>">
 
-                                                    <select
-                                                        name="status_baru"
-                                                        class="form-select form-select-sm mb-2"
-                                                        required>
+                                                    <select name="status_baru"
+                                                            class="form-select form-select-sm mb-2"
+                                                            required>
 
-                                                        <option
-                                                            value="Diproses"
+                                                        <option value="Diproses"
                                                             <?= $catatan['status'] == 'Diproses' ? 'selected' : ''; ?>>
                                                             Diproses
                                                         </option>
 
-                                                        <option
-                                                            value="Ditindaklanjuti"
+                                                        <option value="Ditindaklanjuti"
                                                             <?= $catatan['status'] == 'Ditindaklanjuti' ? 'selected' : ''; ?>>
                                                             Ditindaklanjuti
                                                         </option>
@@ -889,10 +778,9 @@ $daftarTindakan = [
 
                                                     </select>
 
-                                                    <button
-                                                        type="submit"
-                                                        name="perbarui_status"
-                                                        class="btn btn-success btn-sm w-100">
+                                                    <button type="submit"
+                                                            name="perbarui_status"
+                                                            class="btn btn-success btn-sm w-100">
 
                                                         Perbarui
 
@@ -910,10 +798,8 @@ $daftarTindakan = [
 
                                     <tr>
 
-                                        <td colspan="10" class="text-center text-secondary">
-
+                                        <td colspan="9" class="text-center text-secondary">
                                             Belum ada data catatan pelanggaran.
-
                                         </td>
 
                                     </tr>
@@ -930,12 +816,8 @@ $daftarTindakan = [
 
             </div>
 
-            <!-- FOOTER -->
-
             <footer class="text-center text-secondary small mt-4">
-
                 Sistem Informasi Pelanggaran Siswa &copy; 2026
-
             </footer>
 
         </section>
@@ -943,12 +825,10 @@ $daftarTindakan = [
     </main>
 
 </div>
+
 </div>
 
-<!-- ====================================== -->
 <!-- MODAL TAMBAH CATATAN -->
-<!-- ====================================== -->
-
 <div class="modal fade"
      id="modalTambahCatatan"
      tabindex="-1"
@@ -973,12 +853,10 @@ $daftarTindakan = [
 
                 </div>
 
-                <button
-                    type="button"
-                    class="btn-close"
-                    data-bs-dismiss="modal"
-                    aria-label="Close">
-                </button>
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
 
             </div>
 
@@ -989,26 +867,23 @@ $daftarTindakan = [
                       id="formTambahCatatan">
 
                     <!-- NAMA SISWA -->
-
                     <div class="mb-3">
 
                         <label for="tambah_siswa" class="form-label fw-semibold">
                             Nama Siswa
                         </label>
 
-                        <select
-                            name="siswa_id"
-                            id="tambah_siswa"
-                            class="form-select"
-                            required>
+                        <select name="siswa_id"
+                                id="tambah_siswa"
+                                class="form-select"
+                                required>
 
                             <option value=""></option>
 
                             <?php foreach ($dataSiswa as $siswa) { ?>
 
-                                <option
-                                    value="<?= (int) $siswa['siswa_id']; ?>"
-                                    data-kelas="<?= htmlspecialchars($siswa['nama_kelas'], ENT_QUOTES, 'UTF-8'); ?>">
+                                <option value="<?= (int) $siswa['siswa_id']; ?>"
+                                        data-kelas="<?= htmlspecialchars($siswa['nama_kelas'], ENT_QUOTES, 'UTF-8'); ?>">
 
                                     <?= htmlspecialchars($siswa['nama_siswa']); ?>
 
@@ -1021,35 +896,31 @@ $daftarTindakan = [
                     </div>
 
                     <!-- KELAS -->
-
                     <div class="mb-3">
 
                         <label for="tambah_kelas" class="form-label fw-semibold">
                             Kelas
                         </label>
 
-                        <input
-                            type="text"
-                            id="tambah_kelas"
-                            class="form-control"
-                            placeholder="Kelas otomatis terisi"
-                            readonly>
+                        <input type="text"
+                               id="tambah_kelas"
+                               class="form-control"
+                               placeholder="Kelas otomatis terisi"
+                               readonly>
 
                     </div>
 
-                    <!-- NAMA PELANGGARAN -->
-
+                    <!-- PELANGGARAN -->
                     <div class="mb-3">
 
                         <label for="tambah_pelanggaran" class="form-label fw-semibold">
                             Nama Pelanggaran
                         </label>
 
-                        <select
-                            name="pelanggaran_id"
-                            id="tambah_pelanggaran"
-                            class="form-select"
-                            required>
+                        <select name="pelanggaran_id"
+                                id="tambah_pelanggaran"
+                                class="form-select"
+                                required>
 
                             <option value="">
                                 Pilih Nama Pelanggaran
@@ -1057,9 +928,8 @@ $daftarTindakan = [
 
                             <?php foreach ($dataPelanggaran as $pelanggaran) { ?>
 
-                                <option
-                                    value="<?= (int) $pelanggaran['id']; ?>"
-                                    data-poin="<?= (int) $pelanggaran['poin']; ?>">
+                                <option value="<?= (int) $pelanggaran['id']; ?>"
+                                        data-poin="<?= (int) $pelanggaran['poin']; ?>">
 
                                     <?= htmlspecialchars($pelanggaran['nama']); ?>
 
@@ -1071,38 +941,33 @@ $daftarTindakan = [
 
                     </div>
 
-                    <!-- NAMA GURU -->
-
+                    <!-- GURU -->
                     <div class="mb-3">
 
                         <label class="form-label fw-semibold">
                             Nama Guru Pencatat
                         </label>
 
-                        <?php if ($role == 'guru') { ?>
+                        <?php if ($role == 'guru' || $role == 'wali kelas') { ?>
 
-                            <input
-                                type="text"
-                                class="form-control"
-                                value="<?= htmlspecialchars($namaGuruLogin); ?>"
-                                readonly>
+                            <input type="text"
+                                   class="form-control"
+                                   value="<?= htmlspecialchars($namaGuruLogin); ?>"
+                                   readonly>
 
                         <?php } else { ?>
 
-                            <select
-                                name="guru_id"
-                                id="tambah_guru"
-                                class="form-select"
-                                required>
+                            <select name="guru_id"
+                                    id="tambah_guru"
+                                    class="form-select"
+                                    required>
 
                                 <option value=""></option>
 
                                 <?php foreach ($dataGuru as $guru) { ?>
 
                                     <option value="<?= (int) $guru['id']; ?>">
-
                                         <?= htmlspecialchars($guru['nama']); ?>
-
                                     </option>
 
                                 <?php } ?>
@@ -1114,96 +979,60 @@ $daftarTindakan = [
                     </div>
 
                     <!-- TANGGAL -->
-
                     <div class="mb-3">
 
                         <label class="form-label fw-semibold">
                             Tanggal
                         </label>
 
-                        <input
-                            type="date"
-                            name="tanggal"
-                            id="tanggal_otomatis"
-                            class="form-control"
-                            required>
+                        <input type="date"
+                               name="tanggal"
+                               id="tanggal_otomatis"
+                               class="form-control"
+                               required>
 
                     </div>
 
                     <!-- POIN -->
-
                     <div class="mb-3">
 
                         <label for="tambah_poin" class="form-label fw-semibold">
                             Poin
                         </label>
 
-                        <input
-                            type="number"
-                            id="tambah_poin"
-                            class="form-control"
-                            min="0"
-                            value="0"
-                            readonly>
+                        <input type="number"
+                               id="tambah_poin"
+                               class="form-control"
+                               min="0"
+                               value="0"
+                               readonly>
 
                     </div>
 
                     <!-- KETERANGAN -->
-
-                    <div class="mb-3">
+                    <div class="mb-4">
 
                         <label class="form-label fw-semibold">
                             Keterangan
                         </label>
 
-                        <textarea
-                            name="keterangan"
-                            class="form-control"
-                            rows="3"
-                            placeholder="Masukkan keterangan jika diperlukan"></textarea>
-
-                    </div>
-
-                    <!-- TINDAKAN -->
-
-                    <div class="mb-3">
-
-                        <label class="form-label fw-semibold">
-                            Tindakan
-                        </label>
-
-                        <select name="tindakan" class="form-select">
-
-                            <option value="">
-                                Pilih Tindakan
-                            </option>
-
-                            <?php foreach ($daftarTindakan as $tindakan) { ?>
-
-                                <option value="<?= htmlspecialchars($tindakan); ?>">
-
-                                    <?= htmlspecialchars($tindakan); ?>
-
-                                </option>
-
-                            <?php } ?>
-
-                        </select>
+                        <textarea name="keterangan"
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="Masukkan keterangan jika diperlukan"></textarea>
 
                     </div>
 
                     <!-- STATUS -->
-
                     <div class="mb-4">
 
                         <label class="form-label fw-semibold">
                             Status
                         </label>
 
-                        <select
-                            name="status"
-                            class="form-select"
-                            required>
+                        <select name="status"
+                                class="form-select"
+                                required>
 
                             <option value="">
                                 Pilih Status
@@ -1226,30 +1055,26 @@ $daftarTindakan = [
                     </div>
 
                     <!-- TOMBOL -->
-
                     <div class="d-flex justify-content-end gap-2">
 
-                        <button
-                            type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                data-bs-dismiss="modal">
 
                             Batal
 
                         </button>
 
-                        <button
-                            type="reset"
-                            class="btn btn-outline-secondary">
+                        <button type="reset"
+                                class="btn btn-outline-secondary">
 
                             Reset
 
                         </button>
 
-                        <button
-                            type="submit"
-                            name="simpan_tambah"
-                            class="btn btn-primary">
+                        <button type="submit"
+                                name="simpan_tambah"
+                                class="btn btn-primary">
 
                             Simpan Catatan
 
@@ -1267,10 +1092,7 @@ $daftarTindakan = [
 
 </div>
 
-<!-- ====================================== -->
-<!-- TOAST NOTIFIKASI -->
-<!-- ====================================== -->
-
+<!-- TOAST -->
 <?php if (isset($_SESSION['pesan_hapus'])) {
 
     $jenis = $_SESSION['jenis_pesan'] ?? 'success';
@@ -1290,27 +1112,21 @@ $daftarTindakan = [
 <div class="toast-container position-fixed top-0 end-0 p-3"
      style="z-index:9999;">
 
-    <div
-        id="notifikasiToast"
-        class="toast align-items-center text-bg-<?= $jenis; ?> border-0"
-        role="alert"
-        aria-live="assertive"
-        aria-atomic="true">
+    <div id="notifikasiToast"
+         class="toast align-items-center text-bg-<?= $jenis; ?> border-0"
+         role="alert"
+         aria-live="assertive"
+         aria-atomic="true">
 
         <div class="d-flex">
 
             <div class="toast-body">
-
                 <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
-
             </div>
 
-            <button
-                type="button"
-                class="btn-close btn-close-white me-2 m-auto"
-                data-bs-dismiss="toast"
-                aria-label="Close">
-            </button>
+            <button type="button"
+                    class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast"></button>
 
         </div>
 
@@ -1319,15 +1135,9 @@ $daftarTindakan = [
 </div>
 
 <?php
-
 unset($_SESSION['pesan_hapus'], $_SESSION['jenis_pesan']);
-
 }
 ?>
-
-<!-- ====================================== -->
-<!-- JAVASCRIPT -->
-<!-- ====================================== -->
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
@@ -1337,8 +1147,7 @@ unset($_SESSION['pesan_hapus'], $_SESSION['jenis_pesan']);
 
 <script>
 
-// PENCARIAN NAMA SISWA
-
+// PENCARIAN SISWA
 $('#tambah_siswa').select2({
     theme: 'bootstrap-5',
     placeholder: 'Cari nama siswa...',
@@ -1347,8 +1156,7 @@ $('#tambah_siswa').select2({
     dropdownParent: $('#modalTambahCatatan')
 });
 
-// PENCARIAN NAMA GURU KHUSUS ADMIN
-
+// PENCARIAN GURU ADMIN
 <?php if ($role == 'admin') { ?>
 
 $('#tambah_guru').select2({
@@ -1361,8 +1169,7 @@ $('#tambah_guru').select2({
 
 <?php } ?>
 
-// KELAS OTOMATIS SETELAH MEMILIH SISWA
-
+// KELAS OTOMATIS
 $('#tambah_siswa').on('change', function() {
 
     const kelas = $(this).find(':selected').attr('data-kelas') || '';
@@ -1372,7 +1179,6 @@ $('#tambah_siswa').on('change', function() {
 });
 
 // POIN OTOMATIS
-
 document.getElementById('tambah_pelanggaran').addEventListener('change', function() {
 
     const pilihan = this.options[this.selectedIndex];
@@ -1383,7 +1189,6 @@ document.getElementById('tambah_pelanggaran').addEventListener('change', functio
 });
 
 // RESET FORM
-
 document.getElementById('formTambahCatatan').addEventListener('reset', function() {
 
     setTimeout(function() {
@@ -1397,9 +1202,7 @@ document.getElementById('formTambahCatatan').addEventListener('reset', function(
         <?php } ?>
 
         document.getElementById('tambah_kelas').value = '';
-
         document.getElementById('tambah_pelanggaran').value = '';
-
         document.getElementById('tambah_poin').value = 0;
 
         isiTanggalHariIni();
@@ -1408,8 +1211,7 @@ document.getElementById('formTambahCatatan').addEventListener('reset', function(
 
 });
 
-// NOTIFIKASI TOAST
-
+// TOAST
 document.addEventListener('DOMContentLoaded', function() {
 
     const toastElement = document.getElementById('notifikasiToast');
@@ -1425,15 +1227,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // TANGGAL OTOMATIS
-
 function isiTanggalHariIni() {
 
     const tanggal = new Date();
 
     const tahun = tanggal.getFullYear();
-
     const bulan = String(tanggal.getMonth() + 1).padStart(2, '0');
-
     const hari = String(tanggal.getDate()).padStart(2, '0');
 
     document.getElementById('tanggal_otomatis').value =
