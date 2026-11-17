@@ -59,11 +59,9 @@ if ($role == 'guru') {
     );
 
     mysqli_stmt_bind_param($stmtGuru, "i", $user_id);
-
     mysqli_stmt_execute($stmtGuru);
 
     $resultGuru = mysqli_stmt_get_result($stmtGuru);
-
     $guru = mysqli_fetch_assoc($resultGuru);
 
     mysqli_stmt_close($stmtGuru);
@@ -108,7 +106,6 @@ if ($role == 'guru') {
     $stmtWali = mysqli_prepare($koneksi, $sqlWali);
 
     mysqli_stmt_bind_param($stmtWali, "i", $guru_id);
-
     mysqli_stmt_execute($stmtWali);
 
     $resultWali = mysqli_stmt_get_result($stmtWali);
@@ -148,7 +145,7 @@ $menuGuru = [
     ['Tindakan', '../data_tindakan.php'],
     ['Riwayat', '../data_riwayat.php'],
     ['Rekap Poin', '../data_rekap_poin.php'],
-    ['About Me', '../about_me.php']
+    
 ];
 
 $menuWali = [
@@ -159,21 +156,15 @@ $menuWali = [
     ['Riwayat', '../data_riwayat.php'],
     ['Rekap Poin', '../data_rekap_poin.php'],
     ['Laporan', 'data_laporan.php'],
-    ['About Me', '../about_me.php']
+   
 ];
 
 if ($role == 'admin') {
-
     $menu = $menuAdmin;
-
 } elseif ($isWaliKelas) {
-
     $menu = $menuWali;
-
 } else {
-
     $menu = $menuGuru;
-
 }
 
 $halamanAktif = basename($_SERVER['PHP_SELF']);
@@ -198,7 +189,6 @@ if ($role == 'guru' && $isWaliKelas) {
         ";
 
         $parameter[] = (int) $kelas['kelas_id'];
-
         $parameter[] = (int) $kelas['tahun_ajaran_id'];
 
         $tipeParameter .= "ii";
@@ -211,7 +201,6 @@ if ($role == 'guru' && $isWaliKelas) {
     $kondisiLaporan = "ps.guru_id = ?";
 
     $parameter[] = $guru_id;
-
     $tipeParameter = "i";
 }
 
@@ -222,7 +211,6 @@ if ($role == 'guru' && $isWaliKelas) {
 $sqlStatistik = "
     SELECT
         COUNT(*) AS total_pelanggaran,
-
         COALESCE(SUM(ps.poin), 0) AS total_poin,
 
         SUM(
@@ -285,17 +273,11 @@ while ($row = mysqli_fetch_assoc($resultSiswa)) {
 }
 
 // ======================================
-// PROSES DATA LAPORAN
+// DATA LAPORAN
 // ======================================
 
 $detailLaporan = [];
-
 $siswaTerpilih = 0;
-
-// ======================================
-// QUERY DATA LAPORAN
-// DISAMAKAN DENGAN LAPORAN ADMIN
-// ======================================
 
 if ($role == 'guru' && $isWaliKelas) {
 
@@ -411,20 +393,23 @@ $infoPeriode = 'Semua tanggal';
 $totalPoinSiswa = 0;
 
 foreach ($detailLaporan as $data) {
-
     $totalPoinSiswa += (int) ($data['poin'] ?? 0);
-
 }
 
 // ======================================
-// NAMA KELAS
+// NAMA KELAS DAN TAHUN
 // ======================================
 
 $namaKelas = [];
+$namaTahun = [];
 
 foreach ($daftarKelas as $kelas) {
     $namaKelas[] = $kelas['nama_kelas'];
+    $namaTahun[] = $kelas['nama_tahun_ajaran'];
 }
+
+$kelasTampil = implode(', ', array_unique($namaKelas));
+$tahunTampil = implode(', ', array_unique($namaTahun));
 
 ?>
 
@@ -446,19 +431,182 @@ foreach ($daftarKelas as $kelas) {
 
     <style>
 
+        body {
+            background: #f8f9fa;
+        }
+
+        /* =====================================
+           TAMPILAN KOP LAPORAN
+        ===================================== */
+
+        .kop-cetak {
+            display: none;
+        }
+
+        .logo-cetak {
+            width: 70px;
+            height: 75px;
+            object-fit: contain;
+        }
+
+        .kop-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 90px;
+            border-bottom: 4px solid #172554;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .logo-container {
+            position: absolute;
+            left: 5px;
+        }
+
+        .kop-judul {
+            text-align: center;
+        }
+
+        .kop-judul h4 {
+            font-size: 19px;
+            font-weight: bold;
+            color: #172554;
+            margin-bottom: 4px;
+        }
+
+        .kop-judul h5 {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+
+        .kop-judul p {
+            font-size: 10px;
+            margin: 0;
+        }
+
+        .periode-cetak {
+            text-align: center;
+            font-size: 10px;
+            margin-bottom: 15px;
+        }
+
+        /* =====================================
+           TABEL CETAK
+        ===================================== */
+
+        #tabelLaporan {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #tabelLaporan thead th {
+            background: #172554;
+            color: white;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 11px;
+        }
+
+        #tabelLaporan th,
+        #tabelLaporan td {
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+
+        /* =====================================
+           RINGKASAN CETAK
+        ===================================== */
+
+        .ringkasan-cetak {
+            display: none;
+        }
+
+        .ringkasan-container {
+            display: flex;
+            width: 100%;
+            margin-top: 15px;
+            border: 1px solid #93c5fd;
+            border-radius: 5px;
+            background: #e0edff;
+            padding: 12px;
+        }
+
+        .ringkasan-item {
+            width: 50%;
+            text-align: center;
+        }
+
+        .ringkasan-item:first-child {
+            border-right: 1px solid #64748b;
+        }
+
+        .ringkasan-item small {
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .ringkasan-item h4 {
+            font-size: 19px;
+            font-weight: bold;
+            color: #172554;
+            margin: 3px 0 0;
+        }
+
+        /* =====================================
+           TANDA TANGAN
+        ===================================== */
+
+        .tanda-tangan-cetak {
+            display: none;
+        }
+
+        .tanda-tangan-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+            font-size: 10px;
+        }
+
+        .pencetak {
+            width: 50%;
+        }
+
+        .ttd {
+            width: 250px;
+            text-align: center;
+        }
+
+        .garis-ttd {
+            width: 180px;
+            border-bottom: 1px solid #172554;
+            margin: 65px auto 5px;
+        }
+
+        /* =====================================
+           CETAK LAPORAN
+        ===================================== */
+
         @media print {
 
             @page {
                 size: A4 landscape;
-                margin: 5mm;
+                margin: 8mm;
             }
 
             html,
             body {
                 width: 100% !important;
+                height: auto !important;
                 margin: 0 !important;
                 padding: 0 !important;
                 background: white !important;
+                font-family: Arial, sans-serif !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
             body * {
@@ -478,79 +626,196 @@ foreach ($daftarKelas as $kelas) {
                 margin: 0 !important;
                 padding: 0 !important;
                 border: none !important;
+                border-radius: 0 !important;
                 box-shadow: none !important;
                 background: white !important;
-                zoom: 0.85;
             }
 
-            #areaCetak button,
+            /* HILANGKAN TOMBOL DAN FILTER */
+
+            .d-print-none,
             #areaCetak .row,
             #areaCetak #infoData,
             #areaCetak #pagination {
                 display: none !important;
             }
 
-            #areaCetak h5 {
-                font-size: 12px !important;
-                margin-bottom: 4px !important;
-                color: black !important;
+            /* TAMPILKAN KOP */
+
+            .kop-cetak {
+                display: block !important;
             }
 
-            #areaCetak p {
-                font-size: 8px !important;
-                margin-bottom: 5px !important;
-                color: black !important;
+            .kop-container {
+                display: flex !important;
+                border-bottom: 4px solid #172554 !important;
+                margin-bottom: 12px !important;
+                min-height: 80px !important;
             }
+
+            .logo-cetak {
+                display: block !important;
+                width: 65px !important;
+                height: 70px !important;
+            }
+
+            .kop-judul h4 {
+                font-size: 19px !important;
+                color: #172554 !important;
+                margin-bottom: 3px !important;
+            }
+
+            .kop-judul h5 {
+                font-size: 13px !important;
+                margin-bottom: 3px !important;
+            }
+
+            .kop-judul p {
+                font-size: 9px !important;
+            }
+
+            .periode-cetak {
+                display: block !important;
+                font-size: 9px !important;
+                margin-bottom: 10px !important;
+            }
+
+            /* TABEL */
 
             #areaCetak .table-responsive {
                 overflow: visible !important;
+                width: 100% !important;
             }
 
-            #areaCetak table {
+            #tabelLaporan {
+                display: table !important;
                 width: 100% !important;
-                font-size: 7px !important;
-                margin: 0 !important;
                 border-collapse: collapse !important;
                 table-layout: auto !important;
+                font-size: 8px !important;
+                margin: 0 !important;
             }
 
-            #areaCetak th,
-            #areaCetak td {
-                padding: 3px 4px !important;
-                border: 1px solid black !important;
-                color: black !important;
-                line-height: 1.1 !important;
-                vertical-align: middle !important;
-            }
-
-            #areaCetak thead th {
-                background: #e5e5e5 !important;
-                font-weight: bold !important;
-            }
-
-            #areaCetak tfoot td {
-                font-weight: bold !important;
-                background: #eeeeee !important;
-            }
-
-            #areaCetak tr {
-                break-inside: avoid !important;
-                page-break-inside: avoid !important;
-            }
-
-            #areaCetak thead {
+            #tabelLaporan thead {
                 display: table-header-group !important;
             }
 
-            #areaCetak tfoot {
+            #tabelLaporan tbody {
                 display: table-row-group !important;
             }
 
-            #areaCetak .badge {
-                color: black !important;
+            #tabelLaporan tfoot {
+                display: table-row-group !important;
+            }
+
+            #tabelLaporan tr {
+                display: table-row !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            #tabelLaporan th,
+            #tabelLaporan td {
+                display: table-cell !important;
+                padding: 5px 4px !important;
+                border: 1px solid #64748b !important;
+                color: #111827 !important;
+                font-size: 8px !important;
+                vertical-align: middle !important;
+            }
+
+            #tabelLaporan thead th {
+                background: #172554 !important;
+                color: white !important;
+                font-weight: bold !important;
+                text-align: center !important;
+            }
+
+            #tabelLaporan tfoot td {
+                background: #e5e7eb !important;
+                font-weight: bold !important;
+            }
+
+            #tabelLaporan .badge {
                 background: white !important;
-                border: 1px solid black !important;
+                color: black !important;
+                border: 1px solid #333 !important;
                 font-size: 7px !important;
+            }
+
+            /* TAMPILKAN RINGKASAN */
+
+            .ringkasan-cetak {
+                display: block !important;
+            }
+
+            .ringkasan-container {
+                display: flex !important;
+                background: #e0edff !important;
+                border: 1px solid #93c5fd !important;
+                padding: 10px !important;
+                margin-top: 12px !important;
+                break-inside: avoid !important;
+            }
+
+            .ringkasan-item {
+                display: block !important;
+                width: 50% !important;
+                text-align: center !important;
+            }
+
+            .ringkasan-item:first-child {
+                border-right: 1px solid #64748b !important;
+            }
+
+            .ringkasan-item small {
+                font-size: 10px !important;
+                font-weight: bold !important;
+            }
+
+            .ringkasan-item h4 {
+                font-size: 17px !important;
+                color: #172554 !important;
+                margin: 3px 0 0 !important;
+            }
+
+            /* TANDA TANGAN */
+
+            .tanda-tangan-cetak {
+                display: block !important;
+            }
+
+            .tanda-tangan-container {
+                display: flex !important;
+                justify-content: space-between !important;
+                margin-top: 20px !important;
+                font-size: 9px !important;
+                break-inside: avoid !important;
+            }
+
+            .pencetak {
+                display: block !important;
+                width: 50% !important;
+            }
+
+            .ttd {
+                display: block !important;
+                width: 230px !important;
+                text-align: center !important;
+            }
+
+            .garis-ttd {
+                display: block !important;
+                width: 180px !important;
+                border-bottom: 1px solid #172554 !important;
+                margin: 55px auto 5px !important;
+            }
+
+            /* PAKSA WARNA TABEL */
+
+            .table-dark {
+                --bs-table-bg: #172554 !important;
+                --bs-table-color: white !important;
             }
 
         }
@@ -635,7 +900,7 @@ foreach ($daftarKelas as $kelas) {
 
             <!-- HEADER -->
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
 
                 <div>
 
@@ -679,7 +944,7 @@ foreach ($daftarKelas as $kelas) {
 
             <?php if ($role == 'guru' && $isWaliKelas) { ?>
 
-                <div class="card border-0 shadow-sm mb-4">
+                <div class="card border-0 shadow-sm mb-4 d-print-none">
 
                     <div class="card-body">
 
@@ -699,7 +964,7 @@ foreach ($daftarKelas as $kelas) {
 
             <!-- STATISTIK -->
 
-            <div class="row g-3 mb-4">
+            <div class="row g-3 mb-4 d-print-none">
 
                 <div class="col-md-3">
 
@@ -787,7 +1052,7 @@ foreach ($daftarKelas as $kelas) {
 
             <?php if (!($role == 'guru' && $isWaliKelas)) { ?>
 
-                <div class="card border-0 shadow-sm mb-4">
+                <div class="card border-0 shadow-sm mb-4 d-print-none">
 
                     <div class="card-body">
 
@@ -852,7 +1117,7 @@ foreach ($daftarKelas as $kelas) {
 
             <?php } ?>
 
-            <!-- AREA CETAK DAN DATA LAPORAN -->
+            <!-- AREA LAPORAN -->
 
             <?php if (($role == 'guru' && $isWaliKelas) || isset($_POST['tampilkan'])) { ?>
 
@@ -860,7 +1125,67 @@ foreach ($daftarKelas as $kelas) {
 
                     <div class="card-body">
 
-                        <div class="d-flex justify-content-between align-items-center mb-3">
+                        <!-- =================================
+                             KOP CETAK
+                        ================================== -->
+
+                        <div class="kop-cetak">
+
+                            <div class="kop-container">
+
+                                <div class="logo-container">
+
+                                    <img
+                                        src="/UKK-2026/logo.png?v=2"
+                                        class="logo-cetak"
+                                        alt="Logo Sekolah"
+                                        onerror="this.style.display='none'"
+                                    >
+
+                                </div>
+
+                                <div class="kop-judul">
+
+                                    <h4>
+                                        SMK MUHAMMADIYAH KOTA TASIKMALAYA
+                                    </h4>
+
+                                    <h5>
+                                        REKAPITULASI PELANGGARAN SISWA
+                                    </h5>
+
+                                    <p>
+                                        SISTEM INFORMASI PELANGGARAN SISWA
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                            <div class="periode-cetak">
+
+                                <strong>
+                                    Periode:
+                                    <?= htmlspecialchars($tahunTampil ?: $infoPeriode); ?>
+                                </strong>
+
+                                <br>
+
+                                Wali Kelas:
+                                <?= htmlspecialchars($nama); ?>
+
+                                |
+
+                                Kelas:
+                                <?= htmlspecialchars($kelasTampil ?: '-'); ?>
+
+                            </div>
+
+                        </div>
+
+                        <!-- HEADER WEB -->
+
+                        <div class="d-flex justify-content-between align-items-center mb-3 d-print-none">
 
                             <h5 class="fw-bold mb-0">
                                 Data Laporan Pelanggaran
@@ -876,7 +1201,7 @@ foreach ($daftarKelas as $kelas) {
 
                         </div>
 
-                        <p class="text-muted">
+                        <p class="text-muted d-print-none">
 
                             Kelas:
 
@@ -891,9 +1216,9 @@ foreach ($daftarKelas as $kelas) {
 
                         </p>
 
-                        <!-- PENCARIAN DAN JUMLAH DATA -->
+                        <!-- PENCARIAN -->
 
-                        <div class="row mb-3">
+                        <div class="row mb-3 d-print-none">
 
                             <div class="col-md-6 mb-2">
 
@@ -958,11 +1283,7 @@ foreach ($daftarKelas as $kelas) {
 
                                 <tbody>
 
-                                    <?php
-
-                                    $no = 1;
-
-                                    ?>
+                                    <?php $no = 1; ?>
 
                                     <?php foreach ($detailLaporan as $data) { ?>
 
@@ -973,11 +1294,9 @@ foreach ($daftarKelas as $kelas) {
                                             </td>
 
                                             <td>
-
                                                 <?= !empty($data['tanggal'])
                                                     ? date('d-m-Y', strtotime($data['tanggal']))
                                                     : '-'; ?>
-
                                             </td>
 
                                             <td>
@@ -991,8 +1310,6 @@ foreach ($daftarKelas as $kelas) {
                                             <td>
                                                 <?= htmlspecialchars($data['nama_kelas'] ?? '-'); ?>
                                             </td>
-
-                                            <!-- JENIS PELANGGARAN -->
 
                                             <td>
                                                 <?= htmlspecialchars($data['nama_pelanggaran_tampil'] ?? '-'); ?>
@@ -1035,11 +1352,9 @@ foreach ($daftarKelas as $kelas) {
                                     <?php if (count($detailLaporan) == 0) { ?>
 
                                         <tr>
-
                                             <td colspan="10" class="text-center">
                                                 Tidak ada data laporan pelanggaran.
                                             </td>
-
                                         </tr>
 
                                     <?php } ?>
@@ -1068,9 +1383,97 @@ foreach ($daftarKelas as $kelas) {
 
                         </div>
 
-                        <!-- INFORMASI DATA DAN PAGINATION -->
+                        <!-- =================================
+                             RINGKASAN CETAK
+                        ================================== -->
 
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+                        <div class="ringkasan-cetak">
+
+                            <div class="ringkasan-container">
+
+                                <div class="ringkasan-item">
+
+                                    <small>
+                                        Jumlah Kejadian
+                                    </small>
+
+                                    <h4>
+                                        <?= number_format(count($detailLaporan), 0, ',', '.'); ?>
+                                    </h4>
+
+                                </div>
+
+                                <div class="ringkasan-item">
+
+                                    <small>
+                                        Total Poin
+                                    </small>
+
+                                    <h4>
+                                        <?= number_format($totalPoinSiswa, 0, ',', '.'); ?>
+                                    </h4>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- =================================
+                             TANDA TANGAN CETAK
+                        ================================== -->
+
+                        <div class="tanda-tangan-cetak">
+
+                            <div class="tanda-tangan-container">
+
+                                <div class="pencetak">
+
+                                    <p>
+                                        Dicetak oleh:
+                                    </p>
+
+                                    <strong>
+                                        Sistem Informasi Pelanggaran Siswa
+                                    </strong>
+
+                                    <br>
+
+                                    <small>
+                                        SMK Muhammadiyah Kota Tasikmalaya
+                                    </small>
+
+                                </div>
+
+                                <div class="ttd">
+
+                                    <p>
+                                        Tasikmalaya, <?= date('d F Y'); ?>
+                                    </p>
+
+                                    <p>
+                                        Mengetahui,
+                                    </p>
+
+                                    <p>
+                                        Wali Kelas
+                                    </p>
+
+                                    <div class="garis-ttd"></div>
+
+                                    <strong>
+                                        <?= htmlspecialchars($nama); ?>
+                                    </strong>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- INFORMASI DATA WEB -->
+
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 d-print-none">
 
                             <small id="infoData" class="text-muted"></small>
 
@@ -1088,7 +1491,7 @@ foreach ($daftarKelas as $kelas) {
 
             <!-- FOOTER -->
 
-            <footer class="text-center text-muted mt-4">
+            <footer class="text-center text-muted mt-4 d-print-none">
 
                 <small>
                     © <?= date('Y'); ?> Sistem Informasi Pelanggaran Siswa
@@ -1133,9 +1536,7 @@ if (tabel) {
         const kataKunci = cariData.value.toLowerCase();
 
         const barisFilter = semuaBaris.filter(function(baris) {
-
             return baris.innerText.toLowerCase().includes(kataKunci);
-
         });
 
         const batasData = jumlahData.value === 'all'
@@ -1158,7 +1559,6 @@ if (tabel) {
         });
 
         const mulai = (halamanSekarang - 1) * batasData;
-
         const akhir = mulai + batasData;
 
         barisFilter.slice(mulai, akhir).forEach(function(baris) {
@@ -1194,19 +1594,14 @@ if (tabel) {
             const tombol = document.createElement('button');
 
             tombol.className = 'page-link';
-
             tombol.innerText = i;
 
             tombol.onclick = function() {
-
                 halamanSekarang = i;
-
                 tampilkanData();
-
             };
 
             li.appendChild(tombol);
-
             pagination.appendChild(li);
 
         }
@@ -1214,30 +1609,30 @@ if (tabel) {
     }
 
     jumlahData.addEventListener('change', function() {
-
         halamanSekarang = 1;
-
         tampilkanData();
-
     });
 
     cariData.addEventListener('input', function() {
-
         halamanSekarang = 1;
-
         tampilkanData();
-
     });
 
     // ======================================
-    // CETAK LAPORAN
+    // CETAK SEMUA DATA
     // ======================================
 
+    let kondisiBaris = [];
+
     window.addEventListener('beforeprint', function() {
+
+        kondisiBaris = [];
 
         const semuaBaris = tabel.querySelectorAll('tbody tr');
 
         semuaBaris.forEach(function(baris) {
+
+            kondisiBaris.push(baris.style.display);
 
             baris.style.display = 'table-row';
 
@@ -1247,11 +1642,17 @@ if (tabel) {
 
     window.addEventListener('afterprint', function() {
 
+        const semuaBaris = tabel.querySelectorAll('tbody tr');
+
+        semuaBaris.forEach(function(baris, index) {
+
+            baris.style.display = kondisiBaris[index] || '';
+
+        });
+
         tampilkanData();
 
     });
-
-    // JALANKAN PERTAMA KALI
 
     tampilkanData();
 

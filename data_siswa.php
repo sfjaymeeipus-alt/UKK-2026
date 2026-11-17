@@ -1,3 +1,4 @@
+
 <?php
 include "middleware/auth.php";
 include "config/koneksi.php";
@@ -12,13 +13,12 @@ $nama = $_SESSION['nama'];
 // PROSES EDIT DATA SISWA
 if (isset($_POST['simpan_edit'])) {
 
-    $id = (int) $_POST['id'];
-    $nis = trim($_POST['nis']);
-    $nisn = trim($_POST['nisn']);
-    $nama_siswa = trim($_POST['nama']);
+    $id = (int) ($_POST['id'] ?? 0);
+    $nis = trim($_POST['nis'] ?? '');
+    $nisn = trim($_POST['nisn'] ?? '');
+    $nama_siswa = trim($_POST['nama'] ?? '');
 
-    // Menyesuaikan nilai jenis kelamin
-    $jenis_kelamin = strtoupper(trim($_POST['jenis_kelamin']));
+    $jenis_kelamin = strtoupper(trim($_POST['jenis_kelamin'] ?? ''));
 
     if ($jenis_kelamin == 'LAKI-LAKI') {
         $jenis_kelamin = 'L';
@@ -26,9 +26,9 @@ if (isset($_POST['simpan_edit'])) {
         $jenis_kelamin = 'P';
     }
 
-    $tanggal_lahir = trim($_POST['tanggal_lahir']);
-    $alamat = trim($_POST['alamat']);
-    $status_aktif = (int) $_POST['status_aktif'];
+    $tanggal_lahir = trim($_POST['tanggal_lahir'] ?? '');
+    $alamat = trim($_POST['alamat'] ?? '');
+    $status_aktif = (int) ($_POST['status_aktif'] ?? 0);
 
     if (
         $id <= 0 || $nis == "" || $nisn == "" ||
@@ -39,9 +39,24 @@ if (isset($_POST['simpan_edit'])) {
         $_SESSION['pesan_hapus'] = "Semua data siswa wajib diisi.";
         $_SESSION['jenis_pesan'] = "danger";
 
+    } elseif (!preg_match('/^[0-9]{8}$/', $nis)) {
+
+        $_SESSION['pesan_hapus'] = "NIS wajib tepat 8 digit angka.";
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } elseif (!preg_match('/^[0-9]{10}$/', $nisn)) {
+
+        $_SESSION['pesan_hapus'] = "NISN wajib tepat 10 digit angka.";
+        $_SESSION['jenis_pesan'] = "danger";
+
     } elseif (!in_array($jenis_kelamin, ['L', 'P'])) {
 
         $_SESSION['pesan_hapus'] = "Jenis kelamin tidak valid.";
+        $_SESSION['jenis_pesan'] = "danger";
+
+    } elseif (!in_array($status_aktif, [0, 1])) {
+
+        $_SESSION['pesan_hapus'] = "Status siswa tidak valid.";
         $_SESSION['jenis_pesan'] = "danger";
 
     } else {
@@ -341,7 +356,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
                         </div>
 
-                        <!-- TOMBOL TAMBAH SISWA -->
                         <button type="button"
                                 class="btn btn-primary"
                                 data-bs-toggle="modal"
@@ -357,13 +371,11 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
                         <div class="table-responsive">
 
                             <table id="tabelSiswa"
-                                   class="table table-bordered table-hover
-                                          align-middle mb-0">
+                                   class="table table-bordered table-hover align-middle mb-0">
 
                                 <thead class="table-dark">
 
                                     <tr>
-
                                         <th>No</th>
                                         <th>NIS</th>
                                         <th>NISN</th>
@@ -373,7 +385,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
                                         <th>Alamat</th>
                                         <th>Status</th>
                                         <th>Aksi</th>
-
                                     </tr>
 
                                 </thead>
@@ -386,52 +397,33 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
                                 if ($query && mysqli_num_rows($query) > 0) {
 
                                     while ($data = mysqli_fetch_assoc($query)) {
-
                                 ?>
 
                                     <tr>
 
-                                        <td>
-                                            <?= $no++; ?>
-                                        </td>
+                                        <td><?= $no++; ?></td>
 
-                                        <td>
-                                            <?= htmlspecialchars($data['nis'] ?? ''); ?>
-                                        </td>
+                                        <td><?= htmlspecialchars($data['nis'] ?? ''); ?></td>
 
-                                        <td>
-                                            <?= htmlspecialchars($data['nisn'] ?? ''); ?>
-                                        </td>
+                                        <td><?= htmlspecialchars($data['nisn'] ?? ''); ?></td>
 
-                                        <td>
-                                            <?= htmlspecialchars($data['nama'] ?? ''); ?>
-                                        </td>
+                                        <td><?= htmlspecialchars($data['nama'] ?? ''); ?></td>
 
-                                        <td>
-                                            <?= htmlspecialchars($data['jenis_kelamin'] ?? ''); ?>
-                                        </td>
+                                        <td><?= htmlspecialchars($data['jenis_kelamin'] ?? ''); ?></td>
 
-                                        <td>
-                                            <?= htmlspecialchars($data['tanggal_lahir'] ?? ''); ?>
-                                        </td>
+                                        <td><?= htmlspecialchars($data['tanggal_lahir'] ?? ''); ?></td>
 
-                                        <td>
-                                            <?= htmlspecialchars($data['alamat'] ?? ''); ?>
-                                        </td>
+                                        <td><?= htmlspecialchars($data['alamat'] ?? ''); ?></td>
 
                                         <td>
 
                                             <?php if (($data['status_aktif'] ?? 0) == 1) { ?>
 
-                                                <span class="badge bg-success">
-                                                    Aktif
-                                                </span>
+                                                <span class="badge bg-success">Aktif</span>
 
                                             <?php } else { ?>
 
-                                                <span class="badge bg-danger">
-                                                    Tidak Aktif
-                                                </span>
+                                                <span class="badge bg-danger">Tidak Aktif</span>
 
                                             <?php } ?>
 
@@ -439,7 +431,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
                                         <td class="text-nowrap">
 
-                                            <!-- TOMBOL EDIT MODAL -->
                                             <button
                                                 type="button"
                                                 class="btn btn-warning btn-sm tombolEdit"
@@ -507,10 +498,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 </div>
 
 
-<!-- ====================================================== -->
 <!-- MODAL TAMBAH SISWA -->
-<!-- ====================================================== -->
-
 <div class="modal fade"
      id="modalTambahSiswa"
      tabindex="-1"
@@ -525,11 +513,8 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
                 <div>
 
-                    <h5 class="modal-title fw-bold"
-                        id="judulModalTambah">
-
+                    <h5 class="modal-title fw-bold" id="judulModalTambah">
                         Tambah Data Siswa
-
                     </h5>
 
                     <small class="text-secondary">
@@ -546,7 +531,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
             </div>
 
-            <!-- FORM TAMBAH -->
             <form method="POST" action="tambah_siswa.php">
 
                 <div class="modal-body">
@@ -555,84 +539,72 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
                         <div class="col-md-6 mb-3">
 
-                            <label for="tambah_nis"
-                                   class="form-label fw-semibold">
+                            <label for="tambah_nis" class="form-label fw-semibold">
                                 NIS
                             </label>
 
-                            <input
-                                type="text"
-                                name="nis"
-                                id="tambah_nis"
-                                class="form-control"
-                                maxlength="8"
-                                minlength="8"
-                                pattern="[0-9]{8}"
-                                title="NIS harus terdiri dari tepat 8 angka."
-                                required>
+                            <input type="text"
+                                   name="nis"
+                                   id="tambah_nis"
+                                   class="form-control"
+                                   maxlength="8"
+                                   minlength="8"
+                                   pattern="[0-9]{8}"
+                                   inputmode="numeric"
+                                   oninput="batasiAngka(this, 8)"
+                                   title="NIS harus terdiri dari tepat 8 angka."
+                                   required>
 
                         </div>
 
                         <div class="col-md-6 mb-3">
 
-                            <label for="tambah_nisn"
-                                   class="form-label fw-semibold">
+                            <label for="tambah_nisn" class="form-label fw-semibold">
                                 NISN
                             </label>
 
-                            <input
-                                type="text"
-                                name="nisn"
-                                id="tambah_nisn"
-                                class="form-control"
-                                maxlength="10"
-                                minlength="10"
-                                pattern="[0-9]{10}"
-                                title="NISN harus terdiri dari tepat 10 angka."
-                                required>
+                            <input type="text"
+                                   name="nisn"
+                                   id="tambah_nisn"
+                                   class="form-control"
+                                   maxlength="10"
+                                   minlength="10"
+                                   pattern="[0-9]{10}"
+                                   inputmode="numeric"
+                                   oninput="batasiAngka(this, 10)"
+                                   title="NISN harus terdiri dari tepat 10 angka."
+                                   required>
 
                         </div>
 
                         <div class="col-md-6 mb-3">
 
-                            <label for="tambah_nama"
-                                   class="form-label fw-semibold">
+                            <label for="tambah_nama" class="form-label fw-semibold">
                                 Nama Siswa
                             </label>
 
-                            <input
-                                type="text"
-                                name="nama"
-                                id="tambah_nama"
-                                class="form-control"
-                                required>
+                            <input type="text"
+                                   name="nama"
+                                   id="tambah_nama"
+                                   class="form-control"
+                                   required>
 
                         </div>
 
                         <div class="col-md-6 mb-3">
 
-                            <label for="tambah_jk"
-                                   class="form-label fw-semibold">
+                            <label for="tambah_jk" class="form-label fw-semibold">
                                 Jenis Kelamin
                             </label>
 
-                            <select
-                                name="jenis_kelamin"
-                                id="tambah_jk"
-                                class="form-select"
-                                required>
+                            <select name="jenis_kelamin"
+                                    id="tambah_jk"
+                                    class="form-select"
+                                    required>
 
-                                <option value="">
-                                    Pilih Jenis Kelamin
-                                </option>
-
-                                <option value="L">
-                                    Laki-laki
-                                </option>
-
-                                <option value="P">
-                                    Perempuan
-                                </option>
+                                <option value="">Pilih Jenis Kelamin</option>
+                                <option value="L">Laki-laki</option>
+                                <option value="P">Perempuan</option>
 
                             </select>
 
@@ -640,40 +612,31 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
                         <div class="col-md-6 mb-3">
 
-                            <label for="tambah_tanggal"
-                                   class="form-label fw-semibold">
+                            <label for="tambah_tanggal" class="form-label fw-semibold">
                                 Tanggal Lahir
                             </label>
 
-                            <input
-                                type="date"
-                                name="tanggal_lahir"
-                                id="tambah_tanggal"
-                                class="form-control"
-                                required>
+                            <input type="date"
+                                   name="tanggal_lahir"
+                                   id="tambah_tanggal"
+                                   class="form-control"
+                                   required>
 
                         </div>
 
                         <div class="col-md-6 mb-3">
 
-                            <label for="tambah_status"
-                                   class="form-label fw-semibold">
+                            <label for="tambah_status" class="form-label fw-semibold">
                                 Status Siswa
                             </label>
 
-                            <select
-                                name="status_aktif"
-                                id="tambah_status"
-                                class="form-select"
-                                required>
+                            <select name="status_aktif"
+                                    id="tambah_status"
+                                    class="form-select"
+                                    required>
 
-                                <option value="1">
-                                    Aktif
-                                </option>
-
-                                <option value="0">
-                                    Tidak Aktif
-                                </option>
+                                <option value="1">Aktif</option>
+                                <option value="0">Tidak Aktif</option>
 
                             </select>
 
@@ -681,17 +644,15 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
                         <div class="col-12 mb-3">
 
-                            <label for="tambah_alamat"
-                                   class="form-label fw-semibold">
+                            <label for="tambah_alamat" class="form-label fw-semibold">
                                 Alamat
                             </label>
 
-                            <textarea
-                                name="alamat"
-                                id="tambah_alamat"
-                                class="form-control"
-                                rows="3"
-                                required></textarea>
+                            <textarea name="alamat"
+                                      id="tambah_alamat"
+                                      class="form-control"
+                                      rows="3"
+                                      required></textarea>
 
                         </div>
 
@@ -701,20 +662,14 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
                 <div class="modal-footer">
 
-                    <button type="submit"
-                            name="simpan"
-                            class="btn btn-primary">
-
+                    <button type="submit" name="simpan" class="btn btn-primary">
                         Simpan
-
                     </button>
 
                     <button type="button"
                             class="btn btn-secondary"
                             data-bs-dismiss="modal">
-
                         Batal
-
                     </button>
 
                 </div>
@@ -728,10 +683,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 </div>
 
 
-<!-- ====================================================== -->
 <!-- MODAL EDIT SISWA -->
-<!-- ====================================================== -->
-
 <div class="modal fade"
      id="modalEditSiswa"
      tabindex="-1"
@@ -746,11 +698,8 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
                 <div>
 
-                    <h5 class="modal-title fw-bold"
-                        id="judulModalEdit">
-
+                    <h5 class="modal-title fw-bold" id="judulModalEdit">
                         Edit Data Siswa
-
                     </h5>
 
                     <small class="text-secondary">
@@ -767,21 +716,17 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
             </div>
 
-            <!-- FORM EDIT -->
-            <form method="POST" action="data_siswa.php">
+            <form method="POST" action="data_siswa.php" id="formEditSiswa">
 
                 <div class="modal-body">
 
-                    <input type="hidden"
-                           name="id"
-                           id="edit_id">
+                    <input type="hidden" name="id" id="edit_id">
 
                     <div class="row">
 
                         <div class="col-md-6 mb-3">
 
-                            <label for="edit_nis"
-                                   class="form-label fw-semibold">
+                            <label for="edit_nis" class="form-label fw-semibold">
                                 NIS
                             </label>
 
@@ -789,14 +734,20 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
                                    name="nis"
                                    id="edit_nis"
                                    class="form-control"
+                                   maxlength="8"
+                                   minlength="8"
+                                   pattern="[0-9]{8}"
+                                   inputmode="numeric"
+                                   autocomplete="off"
+                                   oninput="batasiAngka(this, 8)"
+                                   title="NIS harus terdiri dari tepat 8 angka."
                                    required>
 
                         </div>
 
                         <div class="col-md-6 mb-3">
 
-                            <label for="edit_nisn"
-                                   class="form-label fw-semibold">
+                            <label for="edit_nisn" class="form-label fw-semibold">
                                 NISN
                             </label>
 
@@ -804,14 +755,20 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
                                    name="nisn"
                                    id="edit_nisn"
                                    class="form-control"
+                                   maxlength="10"
+                                   minlength="10"
+                                   pattern="[0-9]{10}"
+                                   inputmode="numeric"
+                                   autocomplete="off"
+                                   oninput="batasiAngka(this, 10)"
+                                   title="NISN harus terdiri dari tepat 10 angka."
                                    required>
 
                         </div>
 
                         <div class="col-md-6 mb-3">
 
-                            <label for="edit_nama"
-                                   class="form-label fw-semibold">
+                            <label for="edit_nama" class="form-label fw-semibold">
                                 Nama Siswa
                             </label>
 
@@ -825,8 +782,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
                         <div class="col-md-6 mb-3">
 
-                            <label for="edit_jk"
-                                   class="form-label fw-semibold">
+                            <label for="edit_jk" class="form-label fw-semibold">
                                 Jenis Kelamin
                             </label>
 
@@ -835,17 +791,9 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
                                     class="form-select"
                                     required>
 
-                                <option value="">
-                                    Pilih Jenis Kelamin
-                                </option>
-
-                                <option value="L">
-                                    Laki-laki
-                                </option>
-
-                                <option value="P">
-                                    Perempuan
-                                </option>
+                                <option value="">Pilih Jenis Kelamin</option>
+                                <option value="L">Laki-laki</option>
+                                <option value="P">Perempuan</option>
 
                             </select>
 
@@ -853,8 +801,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
                         <div class="col-md-6 mb-3">
 
-                            <label for="edit_tanggal"
-                                   class="form-label fw-semibold">
+                            <label for="edit_tanggal" class="form-label fw-semibold">
                                 Tanggal Lahir
                             </label>
 
@@ -868,8 +815,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
                         <div class="col-md-6 mb-3">
 
-                            <label for="edit_status"
-                                   class="form-label fw-semibold">
+                            <label for="edit_status" class="form-label fw-semibold">
                                 Status Siswa
                             </label>
 
@@ -878,13 +824,8 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
                                     class="form-select"
                                     required>
 
-                                <option value="1">
-                                    Aktif
-                                </option>
-
-                                <option value="0">
-                                    Tidak Aktif
-                                </option>
+                                <option value="1">Aktif</option>
+                                <option value="0">Tidak Aktif</option>
 
                             </select>
 
@@ -892,8 +833,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 
                         <div class="col-12 mb-3">
 
-                            <label for="edit_alamat"
-                                   class="form-label fw-semibold">
+                            <label for="edit_alamat" class="form-label fw-semibold">
                                 Alamat
                             </label>
 
@@ -914,17 +854,13 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
                     <button type="submit"
                             name="simpan_edit"
                             class="btn btn-primary">
-
                         Simpan Perubahan
-
                     </button>
 
                     <button type="button"
                             class="btn btn-secondary"
                             data-bs-dismiss="modal">
-
                         Batal
-
                     </button>
 
                 </div>
@@ -951,66 +887,87 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 
+<!-- PEMBATAS INPUT NIS DAN NISN -->
+<script>
+
+function batasiAngka(input, maksimal) {
+
+    let nilai = input.value;
+
+    // HANYA BOLEH ANGKA
+    nilai = nilai.replace(/[^0-9]/g, '');
+
+    // BATASI JUMLAH DIGIT
+    if (nilai.length > maksimal) {
+        nilai = nilai.substring(0, maksimal);
+    }
+
+    input.value = nilai;
+}
+
+</script>
+
+
 <!-- INISIALISASI DATATABLES -->
 <script>
 
-    $(document).ready(function () {
+$(document).ready(function () {
 
-        $('#tabelSiswa').DataTable({
+    $('#tabelSiswa').DataTable({
 
-            pageLength: 10,
+        pageLength: 10,
 
-            lengthMenu: [5, 10, 25, 50, 100],
+        lengthMenu: [5, 10, 25, 50, 100],
 
-            ordering: true,
+        ordering: true,
 
-            searching: true,
+        searching: true,
 
-            paging: true,
+        paging: true,
 
-            info: true,
+        info: true,
 
-            columnDefs: [
-                {
-                    targets: 8,
-                    orderable: false,
-                    searchable: false
-                }
-            ],
+        columnDefs: [
+            {
+                targets: 8,
+                orderable: false,
+                searchable: false
+            }
+        ],
 
-            language: {
+        language: {
 
-                search: "Cari data:",
+            search: "Cari data:",
 
-                lengthMenu: "Tampilkan _MENU_ data",
+            lengthMenu: "Tampilkan _MENU_ data",
 
-                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+            info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
 
-                infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+            infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
 
-                infoFiltered: "(difilter dari _MAX_ total data)",
+            infoFiltered: "(difilter dari _MAX_ total data)",
 
-                zeroRecords: "Data siswa tidak ditemukan",
+            zeroRecords: "Data siswa tidak ditemukan",
 
-                emptyTable: "Belum ada data siswa",
+            emptyTable: "Belum ada data siswa",
 
-                paginate: {
+            paginate: {
 
-                    first: "Pertama",
+                first: "Pertama",
 
-                    last: "Terakhir",
+                last: "Terakhir",
 
-                    next: "Berikutnya",
+                next: "Berikutnya",
 
-                    previous: "Sebelumnya"
-
-                }
+                previous: "Sebelumnya"
 
             }
 
-        });
+        }
 
     });
+
+});
 
 </script>
 
@@ -1018,54 +975,92 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 <!-- MENGISI DATA KE MODAL EDIT -->
 <script>
 
-    document.querySelectorAll('.tombolEdit').forEach(function (tombol) {
+document.querySelectorAll('.tombolEdit').forEach(function (tombol) {
 
-        tombol.addEventListener('click', function () {
+    tombol.addEventListener('click', function () {
 
-            document.getElementById('edit_id').value =
-                this.getAttribute('data-id');
+        document.getElementById('edit_id').value =
+            this.getAttribute('data-id');
 
-            document.getElementById('edit_nis').value =
-                this.getAttribute('data-nis');
+        document.getElementById('edit_nis').value =
+            this.getAttribute('data-nis');
 
-            document.getElementById('edit_nisn').value =
-                this.getAttribute('data-nisn');
+        document.getElementById('edit_nisn').value =
+            this.getAttribute('data-nisn');
 
-            document.getElementById('edit_nama').value =
-                this.getAttribute('data-nama');
+        // PASTIKAN DATA YANG MASUK SESUAI BATAS DIGIT
+        batasiAngka(document.getElementById('edit_nis'), 8);
+        batasiAngka(document.getElementById('edit_nisn'), 10);
 
-            // MENGAMBIL JENIS KELAMIN DARI DATABASE
-            let jenisKelamin = this.getAttribute('data-jk');
+        document.getElementById('edit_nama').value =
+            this.getAttribute('data-nama');
 
-            jenisKelamin = jenisKelamin.trim().toUpperCase();
+        // MENGAMBIL JENIS KELAMIN DARI DATABASE
+        let jenisKelamin = this.getAttribute('data-jk');
 
-            // MENYESUAIKAN NILAI DATABASE DENGAN DROPDOWN
-            if (jenisKelamin == 'L' || jenisKelamin == 'LAKI-LAKI') {
+        jenisKelamin = jenisKelamin.trim().toUpperCase();
 
-                document.getElementById('edit_jk').value = 'L';
+        if (jenisKelamin == 'L' || jenisKelamin == 'LAKI-LAKI') {
 
-            } else if (jenisKelamin == 'P' || jenisKelamin == 'PEREMPUAN') {
+            document.getElementById('edit_jk').value = 'L';
 
-                document.getElementById('edit_jk').value = 'P';
+        } else if (jenisKelamin == 'P' || jenisKelamin == 'PEREMPUAN') {
 
-            } else {
+            document.getElementById('edit_jk').value = 'P';
 
-                document.getElementById('edit_jk').value = '';
+        } else {
 
-            }
+            document.getElementById('edit_jk').value = '';
 
-            document.getElementById('edit_tanggal').value =
-                this.getAttribute('data-tanggal');
+        }
 
-            document.getElementById('edit_alamat').value =
-                this.getAttribute('data-alamat');
+        document.getElementById('edit_tanggal').value =
+            this.getAttribute('data-tanggal');
 
-            document.getElementById('edit_status').value =
-                this.getAttribute('data-status');
+        document.getElementById('edit_alamat').value =
+            this.getAttribute('data-alamat');
 
-        });
+        document.getElementById('edit_status').value =
+            this.getAttribute('data-status');
 
     });
+
+});
+
+</script>
+
+
+<!-- VALIDASI FORM EDIT -->
+<script>
+
+document.getElementById('formEditSiswa').addEventListener('submit', function(e) {
+
+    const nis = document.getElementById('edit_nis').value;
+    const nisn = document.getElementById('edit_nisn').value;
+
+    if (!/^[0-9]{8}$/.test(nis)) {
+
+        e.preventDefault();
+
+        alert('NIS wajib tepat 8 digit angka.');
+
+        document.getElementById('edit_nis').focus();
+
+        return false;
+    }
+
+    if (!/^[0-9]{10}$/.test(nisn)) {
+
+        e.preventDefault();
+
+        alert('NISN wajib tepat 10 digit angka.');
+
+        document.getElementById('edit_nisn').focus();
+
+        return false;
+    }
+
+});
 
 </script>
 
@@ -1074,12 +1069,14 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 <?php if (isset($_SESSION['pesan_hapus'])) { ?>
 
     <?php
+
     $jenis_pesan = $_SESSION['jenis_pesan'] ?? 'success';
 
     $jenis_pesan = in_array(
         $jenis_pesan,
         ['success', 'danger', 'warning', 'info', 'primary', 'secondary', 'dark']
     ) ? $jenis_pesan : 'success';
+
     ?>
 
     <div class="toast-container position-fixed top-0 end-0 p-3"
@@ -1110,8 +1107,10 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
     </div>
 
     <?php
+
     unset($_SESSION['pesan_hapus']);
     unset($_SESSION['jenis_pesan']);
+
     ?>
 
 <?php } ?>
@@ -1120,24 +1119,23 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_siswa ORDER BY id ASC");
 <!-- MENAMPILKAN TOAST -->
 <script>
 
-    document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", function () {
 
-        var toastElement = document.getElementById("notifikasiToast");
+    var toastElement = document.getElementById("notifikasiToast");
 
-        if (toastElement) {
+    if (toastElement) {
 
-            var toast = new bootstrap.Toast(toastElement, {
-                delay: 3000
-            });
+        var toast = new bootstrap.Toast(toastElement, {
+            delay: 3000
+        });
 
-            toast.show();
+        toast.show();
 
-        }
+    }
 
-    });
+});
 
 </script>
-
 
 </body>
 </html>

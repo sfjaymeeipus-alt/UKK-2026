@@ -1,3 +1,4 @@
+
 <?php
 
 include "middleware/auth.php";
@@ -9,6 +10,8 @@ if ($_SESSION['role'] != 'admin') {
 }
 
 $nama = $_SESSION['nama'];
+$daftar_jurusan = ['RPL', 'TKJ', 'BD', 'TKR', 'TSM'];
+$daftar_tingkat = ['X', 'XI', 'XII'];
 
 // PROSES TAMBAH DATA KELAS
 if (isset($_POST['simpan_tambah'])) {
@@ -18,14 +21,18 @@ if (isset($_POST['simpan_tambah'])) {
     $jurusan = trim($_POST['jurusan']);
     $status_aktif = (int) $_POST['status_aktif'];
 
-    if ($nama_kelas == "" || $tingkat == "" || $jurusan == "") {
+    if (
+        $nama_kelas == "" ||
+        !in_array($tingkat, $daftar_tingkat) ||
+        !in_array($jurusan, $daftar_jurusan) ||
+        !in_array($status_aktif, [0, 1])
+    ) {
 
-        $_SESSION['pesan_hapus'] = "Semua data kelas wajib diisi.";
+        $_SESSION['pesan_hapus'] = "Data kelas tidak valid.";
         $_SESSION['jenis_pesan'] = "danger";
 
     } else {
 
-        // CEK NAMA KELAS YANG SAMA
         $cek = mysqli_prepare(
             $koneksi,
             "SELECT id FROM t_kelas WHERE nama = ?"
@@ -59,15 +66,11 @@ if (isset($_POST['simpan_tambah'])) {
             );
 
             if (mysqli_stmt_execute($insert)) {
-
                 $_SESSION['pesan_hapus'] = "Data kelas berhasil ditambahkan.";
                 $_SESSION['jenis_pesan'] = "success";
-
             } else {
-
                 $_SESSION['pesan_hapus'] = "Gagal menambahkan data kelas.";
                 $_SESSION['jenis_pesan'] = "danger";
-
             }
 
             mysqli_stmt_close($insert);
@@ -90,14 +93,19 @@ if (isset($_POST['simpan_edit'])) {
     $jurusan = trim($_POST['jurusan']);
     $status_aktif = (int) $_POST['status_aktif'];
 
-    if ($id <= 0 || $nama_kelas == "" || $tingkat == "" || $jurusan == "") {
+    if (
+        $id <= 0 ||
+        $nama_kelas == "" ||
+        !in_array($tingkat, $daftar_tingkat) ||
+        !in_array($jurusan, $daftar_jurusan) ||
+        !in_array($status_aktif, [0, 1])
+    ) {
 
-        $_SESSION['pesan_hapus'] = "Semua data kelas wajib diisi.";
+        $_SESSION['pesan_hapus'] = "Data kelas tidak valid.";
         $_SESSION['jenis_pesan'] = "danger";
 
     } else {
 
-        // CEK NAMA KELAS YANG SAMA
         $cek = mysqli_prepare(
             $koneksi,
             "SELECT id FROM t_kelas WHERE nama = ? AND id != ?"
@@ -132,15 +140,11 @@ if (isset($_POST['simpan_edit'])) {
             );
 
             if (mysqli_stmt_execute($update)) {
-
                 $_SESSION['pesan_hapus'] = "Data kelas berhasil diperbarui.";
                 $_SESSION['jenis_pesan'] = "success";
-
             } else {
-
                 $_SESSION['pesan_hapus'] = "Gagal mengubah data kelas.";
                 $_SESSION['jenis_pesan'] = "danger";
-
             }
 
             mysqli_stmt_close($update);
@@ -169,11 +173,9 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
     <title>Data Kelas - Sistem Informasi Pelanggaran Siswa</title>
 
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet">
 
-    <!-- DataTables Bootstrap 5 CSS -->
     <link href="https://cdn.datatables.net/2.3.4/css/dataTables.bootstrap5.min.css"
           rel="stylesheet">
 
@@ -184,7 +186,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 <div class="container-fluid">
     <div class="row">
 
-        <!-- SIDEBAR (TETAP SAAT DI-SCROLL) -->
+        <!-- SIDEBAR -->
         <aside class="col-md-3 col-lg-2 bg-dark text-white min-vh-100 p-3 align-self-start"
                style="position: sticky; top: 0; height: 100vh; overflow-y: auto;">
 
@@ -201,56 +203,32 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
             <nav class="nav flex-column gap-1">
 
-                <a href="dashboard.php" class="nav-link text-white rounded py-2">
-                    Dashboard
-                </a>
+                <a href="dashboard.php" class="nav-link text-white rounded py-2">Dashboard</a>
 
-                <a href="data_siswa.php" class="nav-link text-white rounded py-2">
-                    Data Siswa
-                </a>
+                <a href="data_siswa.php" class="nav-link text-white rounded py-2">Data Siswa</a>
 
-                <a href="data_guru.php" class="nav-link text-white rounded py-2">
-                    Data Guru
-                </a>
+                <a href="data_guru.php" class="nav-link text-white rounded py-2">Data Guru</a>
 
                 <a href="data_kelas.php"
-                   class="nav-link active bg-primary text-white rounded py-2">
-                    Kelas
-                </a>
+                   class="nav-link active bg-primary text-white rounded py-2">Kelas</a>
 
-                <a href="data_tahun_ajaran.php" class="nav-link text-white rounded py-2">
-                    Tahun Ajaran
-                </a>
+                <a href="data_tahun_ajaran.php" class="nav-link text-white rounded py-2">Tahun Ajaran</a>
 
-                <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">
-                    Penempatan Siswa
-                </a>
+                <a href="data_penempatan_siswa.php" class="nav-link text-white rounded py-2">Penempatan Siswa</a>
 
-                <a href="data_wali_kelas.php" class="nav-link text-white rounded py-2">
-                    Wali Kelas
-                </a>
+                <a href="data_wali_kelas.php" class="nav-link text-white rounded py-2">Wali Kelas</a>
 
-                <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">
-                    Kategori Pelanggaran
-                </a>
+                <a href="data_kategori_pelanggaran.php" class="nav-link text-white rounded py-2">Kategori Pelanggaran</a>
 
-                <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">
-                    Jenis Pelanggaran
-                </a>
+                <a href="data_jenis_pelanggaran.php" class="nav-link text-white rounded py-2">Jenis Pelanggaran</a>
 
-                <a href="data_laporan.php" class="nav-link text-white rounded py-2">
-                    Laporan
-                </a>
+                <a href="data_laporan.php" class="nav-link text-white rounded py-2">Laporan</a>
 
-                <a href="about_me.php" class="nav-link text-white rounded py-2">
-                    About Me
-                </a>
+                <a href="about_me.php" class="nav-link text-white rounded py-2">About Me</a>
 
                 <hr class="border-secondary my-2">
 
-                <a href="logout.php" class="nav-link text-danger rounded py-2">
-                    Logout
-                </a>
+                <a href="logout.php" class="nav-link text-danger rounded py-2">Logout</a>
 
             </nav>
 
@@ -265,9 +243,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
                 <div>
 
-                    <h4 class="fw-bold text-dark mb-1">
-                        Data Kelas
-                    </h4>
+                    <h4 class="fw-bold text-dark mb-1">Data Kelas</h4>
 
                     <small class="text-secondary">
                         Sistem Informasi Pelanggaran Siswa
@@ -303,7 +279,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
             <!-- ISI HALAMAN -->
             <section class="p-3 p-md-4">
 
-                <!-- KARTU DATA -->
                 <div class="card border-0 shadow-sm rounded-3">
 
                     <div class="card-header bg-white p-3 p-md-4
@@ -312,9 +287,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
                         <div>
 
-                            <h5 class="fw-bold mb-1">
-                                Daftar Kelas
-                            </h5>
+                            <h5 class="fw-bold mb-1">Daftar Kelas</h5>
 
                             <small class="text-secondary">
                                 Informasi nama kelas, tingkat, jurusan, dan status.
@@ -322,7 +295,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
                         </div>
 
-                        <!-- TOMBOL TAMBAH -->
                         <button type="button"
                                 class="btn btn-primary"
                                 data-bs-toggle="modal"
@@ -340,8 +312,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
                         <div class="table-responsive">
 
                             <table id="tabelKelas"
-                                   class="table table-bordered table-hover
-                                          align-middle mb-0">
+                                   class="table table-bordered table-hover align-middle mb-0">
 
                                 <thead class="table-dark">
 
@@ -359,13 +330,11 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
                                 <tbody>
 
                                 <?php
-
                                 $no = 1;
 
                                 if ($query && mysqli_num_rows($query) > 0) {
 
                                     while ($data = mysqli_fetch_assoc($query)) {
-
                                 ?>
 
                                     <tr>
@@ -388,15 +357,11 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
                                             <?php if (($data['status_aktif'] ?? 0) == 1) { ?>
 
-                                                <span class="badge bg-success">
-                                                    Aktif
-                                                </span>
+                                                <span class="badge bg-success">Aktif</span>
 
                                             <?php } else { ?>
 
-                                                <span class="badge bg-danger">
-                                                    Tidak Aktif
-                                                </span>
+                                                <span class="badge bg-danger">Tidak Aktif</span>
 
                                             <?php } ?>
 
@@ -404,21 +369,15 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
                                         <td class="text-nowrap">
 
-                                            <!-- TOMBOL EDIT MODAL -->
                                             <button
                                                 type="button"
                                                 class="btn btn-warning btn-sm tombolEdit"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#modalEditKelas"
-
                                                 data-id="<?= htmlspecialchars($data['id'], ENT_QUOTES, 'UTF-8'); ?>"
-
                                                 data-nama="<?= htmlspecialchars($data['nama'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-
                                                 data-tingkat="<?= htmlspecialchars($data['tingkat'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-
                                                 data-jurusan="<?= htmlspecialchars($data['jurusan'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
-
                                                 data-status="<?= htmlspecialchars($data['status_aktif'] ?? '0', ENT_QUOTES, 'UTF-8'); ?>">
 
                                                 Edit
@@ -438,11 +397,8 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
                                     </tr>
 
                                 <?php
-
                                     }
-
                                 }
-
                                 ?>
 
                                 </tbody>
@@ -467,11 +423,8 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
                 </div>
 
-                <!-- FOOTER -->
                 <footer class="text-center text-secondary small mt-4">
-
                     Sistem Informasi Pelanggaran Siswa &copy; 2026
-
                 </footer>
 
             </section>
@@ -482,10 +435,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 </div>
 
 
-<!-- ===================================================== -->
 <!-- MODAL TAMBAH KELAS -->
-<!-- ===================================================== -->
-
 <div class="modal fade"
      id="modalTambahKelas"
      tabindex="-1"
@@ -496,7 +446,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
         <div class="modal-content border-0 shadow rounded-3">
 
-            <!-- HEADER MODAL -->
             <div class="modal-header bg-white">
 
                 <div>
@@ -519,7 +468,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
             </div>
 
-            <!-- FORM TAMBAH -->
             <form method="POST" action="data_kelas.php">
 
                 <div class="modal-body">
@@ -572,9 +520,9 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
                             <option value="">Pilih Jurusan</option>
                             <option value="RPL">RPL</option>
                             <option value="TKJ">TKJ</option>
-                            <option value="TBSM">TBSM</option>
-                            <option value="AKL">AKL</option>
-                            <option value="OTKP">OTKP</option>
+                            <option value="BD">BD</option>
+                            <option value="TKR">TKR</option>
+                            <option value="TSM">TSM</option>
 
                         </select>
 
@@ -600,7 +548,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
                 </div>
 
-                <!-- FOOTER MODAL -->
                 <div class="modal-footer">
 
                     <button type="submit"
@@ -630,10 +577,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 </div>
 
 
-<!-- ===================================================== -->
 <!-- MODAL EDIT KELAS -->
-<!-- ===================================================== -->
-
 <div class="modal fade"
      id="modalEditKelas"
      tabindex="-1"
@@ -644,7 +588,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
         <div class="modal-content border-0 shadow rounded-3">
 
-            <!-- HEADER MODAL -->
             <div class="modal-header bg-white">
 
                 <div>
@@ -667,7 +610,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
             </div>
 
-            <!-- FORM EDIT -->
             <form method="POST" action="data_kelas.php">
 
                 <div class="modal-body">
@@ -710,7 +652,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
                     </div>
 
-                    <!-- JURUSAN TETAP DROPDOWN -->
                     <div class="mb-3">
 
                         <label for="edit_jurusan" class="form-label fw-semibold">
@@ -725,9 +666,9 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
                             <option value="">Pilih Jurusan</option>
                             <option value="RPL">RPL</option>
                             <option value="TKJ">TKJ</option>
-                            <option value="TBSM">TBSM</option>
-                            <option value="AKL">AKL</option>
-                            <option value="OTKP">OTKP</option>
+                            <option value="BD">BD</option>
+                            <option value="TKR">TKR</option>
+                            <option value="TSM">TSM</option>
 
                         </select>
 
@@ -753,7 +694,6 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 
                 </div>
 
-                <!-- FOOTER MODAL -->
                 <div class="modal-footer">
 
                     <button type="submit"
@@ -786,13 +726,12 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 <!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-<!-- DataTables JavaScript -->
+<!-- DataTables -->
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.min.js"></script>
 
-<!-- DataTables Bootstrap 5 JavaScript -->
 <script src="https://cdn.datatables.net/2.3.4/js/dataTables.bootstrap5.min.js"></script>
 
-<!-- Bootstrap JavaScript -->
+<!-- Bootstrap -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 
@@ -889,10 +828,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
 </script>
 
 
-<!-- ===================================================== -->
 <!-- NOTIFIKASI MELAYANG -->
-<!-- ===================================================== -->
-
 <?php if (isset($_SESSION['pesan_hapus'])) { ?>
 
     <?php
@@ -918,9 +854,7 @@ $query = mysqli_query($koneksi, "SELECT * FROM t_kelas ORDER BY id ASC");
             <div class="d-flex">
 
                 <div class="toast-body">
-
                     <?= htmlspecialchars($_SESSION['pesan_hapus']); ?>
-
                 </div>
 
                 <button type="button"

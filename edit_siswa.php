@@ -1,4 +1,3 @@
-
 <?php
 
 include "middleware/auth.php";
@@ -28,7 +27,6 @@ if (!$data) {
 
 $error = "";
 
-// Menyesuaikan nilai jenis kelamin dari database
 function formatJenisKelamin($nilai)
 {
     $nilai = strtoupper(trim($nilai));
@@ -49,7 +47,7 @@ if (isset($_POST['update'])) {
     $nis = trim($_POST['nis'] ?? '');
     $nisn = trim($_POST['nisn'] ?? '');
 
-    $nama_siswa = mysqli_real_escape_string($koneksi, $_POST['nama'] ?? '');
+    $nama_siswa = mysqli_real_escape_string($koneksi, trim($_POST['nama'] ?? ''));
 
     $jenis_kelamin = formatJenisKelamin($_POST['jenis_kelamin'] ?? '');
 
@@ -57,9 +55,9 @@ if (isset($_POST['update'])) {
     $alamat = mysqli_real_escape_string($koneksi, $_POST['alamat'] ?? '');
     $status_aktif = (int) ($_POST['status_aktif'] ?? 0);
 
-    if (!preg_match('/^[0-9]{10}$/', $nis)) {
+    if (!preg_match('/^[0-9]{1,8}$/', $nis)) {
 
-        $error = "NIS wajib tepat 10 digit angka.";
+        $error = "NIS maksimal 8 digit angka.";
 
     } elseif (!preg_match('/^[0-9]{10}$/', $nisn)) {
 
@@ -258,6 +256,7 @@ if (isset($_POST['update'])) {
 
                         <form method="POST" id="formEditSiswa">
 
+                            <!-- NIS -->
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">NIS</label>
 
@@ -265,16 +264,19 @@ if (isset($_POST['update'])) {
                                        name="nis"
                                        id="nis"
                                        class="form-control"
-                                       maxlength="10"
-                                       minlength="10"
-                                       pattern="[0-9]{10}"
+                                       maxlength="8"
                                        inputmode="numeric"
                                        autocomplete="off"
-                                       oninput="batasiInput(this)"
+                                       oninput="batasiInput(this, 8)"
                                        value="<?= htmlspecialchars($data['nis'] ?? ''); ?>"
                                        required>
+
+                                <small class="text-secondary">
+                                    Maksimal 8 digit angka.
+                                </small>
                             </div>
 
+                            <!-- NISN -->
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">NISN</label>
 
@@ -284,16 +286,21 @@ if (isset($_POST['update'])) {
                                        class="form-control"
                                        maxlength="10"
                                        minlength="10"
-                                       pattern="[0-9]{10}"
                                        inputmode="numeric"
                                        autocomplete="off"
-                                       oninput="batasiInput(this)"
+                                       oninput="batasiInput(this, 10)"
                                        value="<?= htmlspecialchars($data['nisn'] ?? ''); ?>"
                                        required>
+
+                                <small class="text-secondary">
+                                    Wajib tepat 10 digit angka.
+                                </small>
                             </div>
 
+                            <!-- NAMA SISWA -->
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Nama Siswa</label>
+
                                 <input type="text"
                                        name="nama"
                                        class="form-control"
@@ -301,6 +308,7 @@ if (isset($_POST['update'])) {
                                        required>
                             </div>
 
+                            <!-- JENIS KELAMIN -->
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Jenis Kelamin</label>
 
@@ -321,8 +329,10 @@ if (isset($_POST['update'])) {
                                 </select>
                             </div>
 
+                            <!-- TANGGAL LAHIR -->
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Tanggal Lahir</label>
+
                                 <input type="date"
                                        name="tanggal_lahir"
                                        class="form-control"
@@ -330,14 +340,17 @@ if (isset($_POST['update'])) {
                                        required>
                             </div>
 
+                            <!-- ALAMAT -->
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Alamat</label>
+
                                 <textarea name="alamat"
                                           class="form-control"
                                           rows="3"
                                           required><?= htmlspecialchars($data['alamat'] ?? ''); ?></textarea>
                             </div>
 
+                            <!-- STATUS -->
                             <div class="mb-4">
                                 <label class="form-label fw-semibold">Status</label>
 
@@ -388,15 +401,15 @@ if (isset($_POST['update'])) {
 
 <script>
 
-// Membatasi NIS dan NISN maksimal 10 digit angka
-function batasiInput(input) {
+// Membatasi input hanya angka dan sesuai jumlah digit
+function batasiInput(input, maksimal) {
 
     let nilai = input.value;
 
     nilai = nilai.replace(/[^0-9]/g, '');
 
-    if (nilai.length > 10) {
-        nilai = nilai.substring(0, 10);
+    if (nilai.length > maksimal) {
+        nilai = nilai.substring(0, maksimal);
     }
 
     input.value = nilai;
@@ -408,16 +421,16 @@ document.getElementById("formEditSiswa").addEventListener("submit", function(e) 
     const nis = document.getElementById("nis").value;
     const nisn = document.getElementById("nisn").value;
 
-    if (!/^[0-9]{10}$/.test(nis)) {
+    if (!/^[0-9]{1,8}$/.test(nis)) {
         e.preventDefault();
-        alert("NIS harus tepat 10 digit angka.");
+        alert("NIS maksimal 8 digit angka.");
         document.getElementById("nis").focus();
         return;
     }
 
     if (!/^[0-9]{10}$/.test(nisn)) {
         e.preventDefault();
-        alert("NISN harus tepat 10 digit angka.");
+        alert("NISN wajib tepat 10 digit angka.");
         document.getElementById("nisn").focus();
         return;
     }

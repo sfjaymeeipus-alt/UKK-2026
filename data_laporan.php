@@ -116,18 +116,28 @@ $sqlStatistik = "
     SELECT
         COUNT(*) AS total_pelanggaran,
         COALESCE(SUM(poin), 0) AS total_poin,
+
         SUM(CASE
             WHEN status = 'Selesai' THEN 1
             ELSE 0
         END) AS total_selesai,
+
         SUM(CASE
             WHEN status != 'Selesai' OR status IS NULL THEN 1
             ELSE 0
         END) AS total_proses
+
     FROM t_pelanggaran_siswa
+    $kondisi
 ";
 
-$resultStatistik = queryLaporan($koneksi, $sqlStatistik);
+$resultStatistik = queryLaporan(
+    $koneksi,
+    $sqlStatistik,
+    $tipe,
+    $parameter
+);
+
 $statistik = mysqli_fetch_assoc($resultStatistik);
 
 // ======================================
@@ -138,7 +148,7 @@ $sqlKelas = "
     SELECT DISTINCT nama_kelas
     FROM t_pelanggaran_siswa
     WHERE nama_kelas IS NOT NULL
-      AND nama_kelas != ''
+    AND nama_kelas != ''
     ORDER BY nama_kelas ASC
 ";
 
@@ -225,6 +235,12 @@ foreach ($detailLaporan as $data) {
     $totalPoinSiswa += (int) ($data['poin'] ?? 0);
 }
 
+// ======================================
+// JUMLAH KEJADIAN
+// ======================================
+
+$jumlahKejadian = count($detailLaporan);
+
 ?>
 
 <!DOCTYPE html>
@@ -244,15 +260,32 @@ foreach ($detailLaporan as $data) {
 
     <style>
 
+        body {
+            background: #f8f9fa;
+        }
+
         /* ==================================
            CETAK LAPORAN
         ================================== */
+
+        .kopCetak,
+        .tabelCetak,
+        .ringkasanCetak,
+        .footerCetak {
+            display: none;
+        }
+
+        .logoCetak {
+            width: 65px;
+            height: 70px;
+            object-fit: contain;
+        }
 
         @media print {
 
             @page {
                 size: A4 landscape;
-                margin: 5mm;
+                margin: 8mm;
             }
 
             html,
@@ -261,6 +294,9 @@ foreach ($detailLaporan as $data) {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: white !important;
+                font-family: Arial, sans-serif !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
             body * {
@@ -280,97 +316,182 @@ foreach ($detailLaporan as $data) {
                 margin: 0 !important;
                 padding: 0 !important;
                 border: none !important;
+                border-radius: 0 !important;
                 box-shadow: none !important;
                 background: white !important;
-
-                /* Memperkecil tampilan cetak */
                 zoom: 0.85;
             }
 
-            /* Hilangkan tombol */
+            /* HILANGKAN BAGIAN LAYAR */
 
-            #areaCetak button {
+            #areaCetak .layarSaja {
                 display: none !important;
             }
 
-            /* Hilangkan pencarian dan pagination */
+            /* KOP LAPORAN */
 
-            #areaCetak .row {
-                display: none !important;
+            .kopCetak {
+                display: block !important;
             }
 
-            #areaCetak #infoData,
-            #areaCetak #pagination {
-                display: none !important;
+            .kopContainer {
+                position: relative !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                min-height: 80px !important;
+                border-bottom: 4px solid #172554 !important;
+                padding-bottom: 10px !important;
+                margin-bottom: 12px !important;
             }
 
-            /* Judul */
-
-            #areaCetak h5 {
-                font-size: 12px !important;
-                margin-bottom: 4px !important;
-                color: black !important;
+            .logoContainer {
+                position: absolute !important;
+                left: 5px !important;
             }
 
-            #areaCetak p {
-                font-size: 8px !important;
-                margin-bottom: 5px !important;
-                color: black !important;
+            .logoCetak {
+                display: block !important;
+                width: 65px !important;
+                height: 70px !important;
             }
 
-            /* Tabel */
-
-            #areaCetak .table-responsive {
-                overflow: visible !important;
+            .kopJudul {
+                text-align: center !important;
             }
 
-            #areaCetak table {
-                width: 100% !important;
-                font-size: 7px !important;
+            .kopJudul h4 {
+                font-size: 19px !important;
+                font-weight: bold !important;
+                color: #172554 !important;
+                margin-bottom: 3px !important;
+            }
+
+            .kopJudul h5 {
+                font-size: 13px !important;
+                font-weight: bold !important;
+                margin-bottom: 3px !important;
+            }
+
+            .kopJudul p {
+                font-size: 9px !important;
                 margin: 0 !important;
+            }
+
+            /* PERIODE */
+
+            .periodeCetak {
+                display: block !important;
+                text-align: center !important;
+                font-size: 9px !important;
+                margin-bottom: 10px !important;
+                color: black !important;
+            }
+
+            /* TABEL CETAK */
+
+            .tabelLayar {
+                display: none !important;
+            }
+
+            .tabelCetak {
+                display: table !important;
+                width: 100% !important;
                 border-collapse: collapse !important;
                 table-layout: auto !important;
+                font-size: 8px !important;
+                margin: 0 !important;
             }
 
-            #areaCetak th,
-            #areaCetak td {
-                padding: 3px 4px !important;
-                border: 1px solid black !important;
-                color: black !important;
-                line-height: 1.1 !important;
-                vertical-align: middle !important;
+            .tabelCetak thead {
+                display: table-header-group !important;
             }
 
-            #areaCetak thead th {
-                background: #e5e5e5 !important;
-                font-weight: bold !important;
+            .tabelCetak tbody {
+                display: table-row-group !important;
             }
 
-            #areaCetak tfoot td {
-                font-weight: bold !important;
-                background: #eeeeee !important;
-            }
-
-            #areaCetak tr {
+            .tabelCetak tr {
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
             }
 
-            #areaCetak thead {
-                display: table-header-group !important;
+            .tabelCetak th,
+            .tabelCetak td {
+                padding: 5px 4px !important;
+                border: 1px solid #64748b !important;
+                color: #111827 !important;
+                font-size: 8px !important;
+                vertical-align: middle !important;
             }
 
-            #areaCetak tfoot {
-                display: table-row-group !important;
+            .tabelCetak thead th {
+                background: #172554 !important;
+                color: white !important;
+                font-weight: bold !important;
+                text-align: center !important;
             }
 
-            /* Hilangkan efek warna bootstrap */
+            /* RINGKASAN */
 
-            #areaCetak .badge {
+            .ringkasanCetak {
+                display: flex !important;
+                width: 100% !important;
+                margin-top: 12px !important;
+                border: 1px solid #93c5fd !important;
+                border-radius: 5px !important;
+                background: #e0edff !important;
+                padding: 10px !important;
+                color: #172554 !important;
+                break-inside: avoid !important;
+            }
+
+            .ringkasanCetak > div {
+                display: block !important;
+                width: 50% !important;
+                text-align: center !important;
+            }
+
+            .ringkasanCetak > div:first-child {
+                border-right: 1px solid #64748b !important;
+            }
+
+            .ringkasanCetak small {
+                font-size: 10px !important;
+                font-weight: bold !important;
+            }
+
+            .ringkasanCetak h4 {
+                font-size: 17px !important;
+                font-weight: bold !important;
+                color: #172554 !important;
+                margin: 3px 0 0 !important;
+            }
+
+            /* TANDA TANGAN */
+
+            .footerCetak {
+                display: flex !important;
+                justify-content: space-between !important;
+                margin-top: 20px !important;
+                font-size: 9px !important;
                 color: black !important;
-                background: white !important;
-                border: 1px solid black !important;
-                font-size: 7px !important;
+                break-inside: avoid !important;
+            }
+
+            .ttdCetak {
+                width: 230px !important;
+                text-align: center !important;
+            }
+
+            .garisTtd {
+                width: 180px !important;
+                border-bottom: 1px solid #172554 !important;
+                margin: 55px auto 5px !important;
+            }
+
+            .footerCetak p {
+                margin-bottom: 3px !important;
             }
 
         }
@@ -691,7 +812,64 @@ foreach ($detailLaporan as $data) {
 
                 <div class="card-body">
 
-                    <div class="d-flex justify-content-between align-items-center mb-3">
+                    <!-- KOP KHUSUS CETAK -->
+
+                    <div class="kopCetak">
+
+                        <div class="kopContainer">
+
+                            <div class="logoContainer">
+
+                                <img
+                                    src="logo.png"
+                                    class="logoCetak"
+                                    alt="Logo Sekolah"
+                                    onerror="this.style.display='none'"
+                                >
+
+                            </div>
+
+                            <div class="kopJudul">
+
+                                <h4>
+                                    SMK MUHAMMADIYAH KOTA TASIKMALAYA
+                                </h4>
+
+                                <h5>
+                                    REKAPITULASI PELANGGARAN SISWA
+                                </h5>
+
+                                <p>
+                                    SISTEM INFORMASI PELANGGARAN SISWA
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <p class="periodeCetak">
+
+                        <strong>
+                            LAPORAN PELANGGARAN SISWA
+                        </strong>
+
+                        <br>
+
+                        Periode:
+                        <?= htmlspecialchars($infoPeriode); ?>
+
+                        <br>
+
+                        Kelas:
+                        <?= htmlspecialchars($kelasTerpilih ?: 'Semua Kelas'); ?>
+
+                    </p>
+
+                    <!-- HEADER LAYAR -->
+
+                    <div class="d-flex justify-content-between align-items-center mb-3 layarSaja">
 
                         <h5 class="fw-bold mb-0">
                             Data Laporan Pelanggaran
@@ -709,7 +887,7 @@ foreach ($detailLaporan as $data) {
 
                     <!-- INFORMASI LAPORAN -->
 
-                    <p class="text-muted mb-3">
+                    <p class="text-muted mb-3 layarSaja">
 
                         Kelas:
                         <?= htmlspecialchars($kelasTerpilih ?: 'Semua Kelas'); ?>
@@ -723,7 +901,7 @@ foreach ($detailLaporan as $data) {
 
                     <!-- PENCARIAN -->
 
-                    <div class="row mb-3">
+                    <div class="row mb-3 layarSaja">
 
                         <div class="col-md-6 mb-2">
 
@@ -760,12 +938,12 @@ foreach ($detailLaporan as $data) {
 
                     </div>
 
-                    <!-- TABEL -->
+                    <!-- TABEL LAYAR -->
 
-                    <div class="table-responsive">
+                    <div class="table-responsive layarSaja">
 
                         <table
-                            class="table table-bordered table-striped table-hover align-middle"
+                            class="table table-bordered table-striped table-hover align-middle tabelLayar"
                             id="tabelLaporan"
                         >
 
@@ -790,17 +968,13 @@ foreach ($detailLaporan as $data) {
 
                             <tbody>
 
-                                <?php
-                                $no = 1;
-                                ?>
+                                <?php $no = 1; ?>
 
                                 <?php foreach ($detailLaporan as $data) { ?>
 
                                     <tr>
 
-                                        <td>
-                                            <?= $no++; ?>
-                                        </td>
+                                        <td><?= $no++; ?></td>
 
                                         <td>
                                             <?= !empty($data['tanggal'])
@@ -861,11 +1035,9 @@ foreach ($detailLaporan as $data) {
                                 <?php if (count($detailLaporan) == 0) { ?>
 
                                     <tr>
-
                                         <td colspan="10" class="text-center">
                                             Tidak ada data laporan pelanggaran.
                                         </td>
-
                                     </tr>
 
                                 <?php } ?>
@@ -894,9 +1066,173 @@ foreach ($detailLaporan as $data) {
 
                     </div>
 
+                    <!-- TABEL KHUSUS CETAK -->
+
+                    <table class="tabelCetak">
+
+                        <thead>
+
+                            <tr>
+
+                                <th>No</th>
+                                <th>Tanggal</th>
+                                <th>NIS</th>
+                                <th>Nama Siswa</th>
+                                <th>Kelas</th>
+                                <th>Jenis Pelanggaran</th>
+                                <th>Poin</th>
+                                <th>Guru</th>
+                                <th>Status</th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            <?php $noCetak = 1; ?>
+
+                            <?php foreach ($detailLaporan as $data) { ?>
+
+                                <tr>
+
+                                    <td style="text-align:center;">
+                                        <?= $noCetak++; ?>
+                                    </td>
+
+                                    <td>
+                                        <?= !empty($data['tanggal'])
+                                            ? date('d-m-Y', strtotime($data['tanggal']))
+                                            : '-'; ?>
+                                    </td>
+
+                                    <td>
+                                        <?= htmlspecialchars($data['nis'] ?? '-'); ?>
+                                    </td>
+
+                                    <td>
+                                        <?= htmlspecialchars($data['nama_siswa'] ?? '-'); ?>
+                                    </td>
+
+                                    <td>
+                                        <?= htmlspecialchars($data['nama_kelas'] ?? '-'); ?>
+                                    </td>
+
+                                    <td>
+                                        <?= htmlspecialchars($data['nama_pelanggaran_tampil'] ?? '-'); ?>
+                                    </td>
+
+                                    <td style="text-align:center;">
+                                        <?= (int) ($data['poin'] ?? 0); ?>
+                                    </td>
+
+                                    <td>
+                                        <?= htmlspecialchars($data['nama_guru'] ?? '-'); ?>
+                                    </td>
+
+                                    <td style="text-align:center;">
+                                        <?= htmlspecialchars($data['status'] ?: 'Dalam Proses'); ?>
+                                    </td>
+
+                                </tr>
+
+                            <?php } ?>
+
+                            <?php if (count($detailLaporan) == 0) { ?>
+
+                                <tr>
+                                    <td colspan="9" style="text-align:center;">
+                                        Tidak ada data laporan pelanggaran.
+                                    </td>
+                                </tr>
+
+                            <?php } ?>
+
+                        </tbody>
+
+                    </table>
+
+                    <!-- RINGKASAN CETAK -->
+
+                    <div class="ringkasanCetak">
+
+                        <div>
+
+                            <small>
+                                Jumlah Kejadian
+                            </small>
+
+                            <h4>
+                                <?= number_format($jumlahKejadian, 0, ',', '.'); ?>
+                            </h4>
+
+                        </div>
+
+                        <div>
+
+                            <small>
+                                Total Poin
+                            </small>
+
+                            <h4>
+                                <?= number_format($totalPoinSiswa, 0, ',', '.'); ?>
+                            </h4>
+
+                        </div>
+
+                    </div>
+
+                    <!-- FOOTER CETAK -->
+
+                    <div class="footerCetak">
+
+                        <div>
+
+                            <p>
+                                Dicetak oleh:
+                            </p>
+
+                            <strong>
+                                <?= htmlspecialchars($nama); ?>
+                            </strong>
+
+                            <p>
+                                Sistem Informasi Pelanggaran Siswa
+                            </p>
+
+                            <small>
+                                SMK Muhammadiyah Kota Tasikmalaya
+                            </small>
+
+                        </div>
+
+                        <div class="ttdCetak">
+
+                            <p>
+                                Tasikmalaya, <?= date('d F Y'); ?>
+                            </p>
+
+                            <p>
+                                Mengetahui,
+                            </p>
+
+                            <p>
+                                Kepala Sekolah
+                            </p>
+
+                            <div class="garisTtd"></div>
+
+                            <p>
+                                (........................................)
+                            </p>
+
+                        </div>
+
+                    </div>
+
                     <!-- INFO DATA -->
 
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3 layarSaja">
 
                         <small id="infoData" class="text-muted"></small>
 
@@ -910,9 +1246,9 @@ foreach ($detailLaporan as $data) {
 
             </div>
 
-            <!-- FOOTER -->
+            <!-- FOOTER HALAMAN -->
 
-            <footer class="text-center text-muted mt-4">
+            <footer class="text-center text-muted mt-4 layarSaja">
 
                 <small>
                     © <?= date('Y'); ?> Sistem Informasi Pelanggaran Siswa
@@ -956,14 +1292,14 @@ function tampilkanData() {
     });
 
     const batasData = jumlahData.value === 'all'
-        ? barisFilter.length
+        ? Math.max(barisFilter.length, 1)
         : parseInt(jumlahData.value);
 
     const totalData = barisFilter.length;
 
     const totalHalaman = Math.max(
         1,
-        Math.ceil(totalData / Math.max(batasData, 1))
+        Math.ceil(totalData / batasData)
     );
 
     if (halamanSekarang > totalHalaman) {
@@ -975,10 +1311,7 @@ function tampilkanData() {
     });
 
     const mulai = (halamanSekarang - 1) * batasData;
-
-    const akhir = jumlahData.value === 'all'
-        ? totalData
-        : mulai + batasData;
+    const akhir = mulai + batasData;
 
     barisFilter.slice(mulai, akhir).forEach(function(baris) {
         baris.style.display = '';
@@ -1038,10 +1371,8 @@ cariData.addEventListener('input', function() {
 });
 
 // ======================================
-// PERSIAPAN CETAK
+// CETAK SELURUH DATA
 // ======================================
-
-// Tampilkan seluruh data saat mencetak.
 
 window.addEventListener('beforeprint', function() {
 
@@ -1053,13 +1384,13 @@ window.addEventListener('beforeprint', function() {
 
 });
 
-// Kembalikan pagination setelah mencetak.
-
 window.addEventListener('afterprint', function() {
     tampilkanData();
 });
 
-// Jalankan pertama kali.
+// ======================================
+// JALANKAN PERTAMA KALI
+// ======================================
 
 tampilkanData();
 
