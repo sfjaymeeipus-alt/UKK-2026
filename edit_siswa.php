@@ -1,5 +1,6 @@
 
 <?php
+
 include "middleware/auth.php";
 include "config/koneksi.php";
 
@@ -45,22 +46,34 @@ $jenis_kelamin_db = formatJenisKelamin($data['jenis_kelamin'] ?? '');
 
 if (isset($_POST['update'])) {
 
-    $nis = mysqli_real_escape_string($koneksi, $_POST['nis']);
-    $nisn = mysqli_real_escape_string($koneksi, $_POST['nisn']);
-    $nama_siswa = mysqli_real_escape_string($koneksi, $_POST['nama']);
+    $nis = trim($_POST['nis'] ?? '');
+    $nisn = trim($_POST['nisn'] ?? '');
 
-    $jenis_kelamin = mysqli_real_escape_string(
-        $koneksi,
-        formatJenisKelamin($_POST['jenis_kelamin'] ?? '')
-    );
+    $nama_siswa = mysqli_real_escape_string($koneksi, $_POST['nama'] ?? '');
 
-    $tanggal_lahir = mysqli_real_escape_string($koneksi, $_POST['tanggal_lahir']);
-    $alamat = mysqli_real_escape_string($koneksi, $_POST['alamat']);
-    $status_aktif = (int) $_POST['status_aktif'];
+    $jenis_kelamin = formatJenisKelamin($_POST['jenis_kelamin'] ?? '');
 
-    if ($jenis_kelamin == '') {
+    $tanggal_lahir = mysqli_real_escape_string($koneksi, $_POST['tanggal_lahir'] ?? '');
+    $alamat = mysqli_real_escape_string($koneksi, $_POST['alamat'] ?? '');
+    $status_aktif = (int) ($_POST['status_aktif'] ?? 0);
+
+    if (!preg_match('/^[0-9]{10}$/', $nis)) {
+
+        $error = "NIS wajib tepat 10 digit angka.";
+
+    } elseif (!preg_match('/^[0-9]{10}$/', $nisn)) {
+
+        $error = "NISN wajib tepat 10 digit angka.";
+
+    } elseif ($jenis_kelamin == '') {
+
         $error = "Jenis kelamin harus dipilih.";
+
     } else {
+
+        $nis = mysqli_real_escape_string($koneksi, $nis);
+        $nisn = mysqli_real_escape_string($koneksi, $nisn);
+        $jenis_kelamin = mysqli_real_escape_string($koneksi, $jenis_kelamin);
 
         $update = mysqli_query($koneksi, "
             UPDATE t_siswa SET
@@ -82,7 +95,6 @@ if (isset($_POST['update'])) {
         }
     }
 
-    // Menampilkan kembali nilai yang dimasukkan
     $data['nis'] = $nis;
     $data['nisn'] = $nisn;
     $data['nama'] = $nama_siswa;
@@ -244,28 +256,38 @@ if (isset($_POST['update'])) {
                             </div>
                         <?php } ?>
 
-                        <form method="POST">
+                        <form method="POST" id="formEditSiswa">
 
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">NIS</label>
+
                                 <input type="text"
                                        name="nis"
+                                       id="nis"
                                        class="form-control"
                                        maxlength="10"
                                        minlength="10"
                                        pattern="[0-9]{10}"
+                                       inputmode="numeric"
+                                       autocomplete="off"
+                                       oninput="batasiInput(this)"
                                        value="<?= htmlspecialchars($data['nis'] ?? ''); ?>"
                                        required>
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">NISN</label>
+
                                 <input type="text"
                                        name="nisn"
+                                       id="nisn"
+                                       class="form-control"
                                        maxlength="10"
                                        minlength="10"
                                        pattern="[0-9]{10}"
-                                       class="form-control"
+                                       inputmode="numeric"
+                                       autocomplete="off"
+                                       oninput="batasiInput(this)"
                                        value="<?= htmlspecialchars($data['nisn'] ?? ''); ?>"
                                        required>
                             </div>
@@ -363,6 +385,46 @@ if (isset($_POST['update'])) {
 
     </div>
 </div>
+
+<script>
+
+// Membatasi NIS dan NISN maksimal 10 digit angka
+function batasiInput(input) {
+
+    let nilai = input.value;
+
+    nilai = nilai.replace(/[^0-9]/g, '');
+
+    if (nilai.length > 10) {
+        nilai = nilai.substring(0, 10);
+    }
+
+    input.value = nilai;
+}
+
+// Validasi sebelum form dikirim
+document.getElementById("formEditSiswa").addEventListener("submit", function(e) {
+
+    const nis = document.getElementById("nis").value;
+    const nisn = document.getElementById("nisn").value;
+
+    if (!/^[0-9]{10}$/.test(nis)) {
+        e.preventDefault();
+        alert("NIS harus tepat 10 digit angka.");
+        document.getElementById("nis").focus();
+        return;
+    }
+
+    if (!/^[0-9]{10}$/.test(nisn)) {
+        e.preventDefault();
+        alert("NISN harus tepat 10 digit angka.");
+        document.getElementById("nisn").focus();
+        return;
+    }
+
+});
+
+</script>
 
 </body>
 </html>
