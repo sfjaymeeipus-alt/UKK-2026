@@ -223,10 +223,10 @@ if (isset($_POST['simpan'])) {
                                 name="nis"
                                 id="nis"
                                 class="form-control"
-                                maxlength="10"
-                                minlength="10"
-                                pattern="[0-9]{10}"
-                                title="NIS harus terdiri dari tepat 10 angka."
+                                maxlength="6"
+                                minlength="6"
+                                pattern="[0-9]{6}"
+                                title="NIS harus terdiri dari tepat 6 angka."
                                 required>
 
                         </div>
